@@ -4,7 +4,7 @@
 - **Date:** 2026-10-05
 - **Stage:** Business
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001 and Decision 0002
+- **Binding repository decisions:** Decision 0001, Decision 0003, and Decision 0005
 
 ## 1. Product thesis
 
@@ -83,21 +83,29 @@ The model should avoid one-time consumption of support capital where possible an
 
 ## 5. Operating model
 
-Decision 0002 supersedes the original proposal's mandatory split between Badban as guarantor and a separate external lender.
+Decision 0005 defines a **hybrid credit delivery model**.
 
-The target customer journey uses a **single operating entity** for:
+The preferred channel is for Badban to operate the asset, backing, and guarantee layer while connecting to external credit providers such as banks and Qard-al-Hasan funds. In this channel, the external provider remains the lender of record and provides the loan liquidity, while Badban provides and manages the approved backing / guarantee.
 
-- approved asset intake, sale, or allocation;
-- asset administration;
-- ownership/custody state;
-- valuation and revaluation;
-- backing calculation;
-- credit origination;
-- disbursement;
-- repayment servicing;
-- release, restriction, or enforcement of backing.
+Badban may also lend directly when the required funding, legal, regulatory, accounting, risk, and operational conditions are satisfied.
 
-This is a unified customer and transaction model. Internal separation of duties is still required for governance, risk, audit, fraud prevention, and regulatory implementation.
+The target model is therefore:
+
+```
+Approved Asset / Asset Position
+        ↓
+Badban Valuation & Backing Engine
+        ↓
+Guarantee / Credit Capacity
+        ↓
+Credit Provider
+   ├─ External Bank
+   ├─ External Qard-al-Hasan Fund
+   ├─ Other Approved Lender
+   └─ Badban Direct Lending (optional)
+```
+
+The product must support one coherent customer experience while always preserving the identity of the lender of record and the responsibility split for approval, disbursement, servicing, delinquency, guarantee claims, and enforcement.
 
 ## 6. Asset model
 
@@ -158,21 +166,33 @@ Policy Allocation
 
 However, the percentages, entitlement rules, accounting treatment, timing, and legal ownership of each allocation are **not yet fixed**.
 
-The unified lending model adds a second economic flow that must be designed separately:
+Credit delivery introduces two possible funding flows.
+
+For the preferred external-lender channel:
 
 ```
-Funding Liquidity
-      ↓
+Badban Backing / Guarantee
+        +
+External Lender Liquidity
+        ↓
+External Loan / Credit
+```
+
+For optional Badban direct lending:
+
+```
+Badban Direct Lending Liquidity
+        ↓
 Credit Disbursement
-      ↓
+        ↓
 Outstanding Receivable
-      ↓
+        ↓
 Repayment
-      ↓
-Revolving Liquidity / Reserve / Recognized Income
+        ↓
+Revolving Direct Lending Liquidity
 ```
 
-The source of lending liquidity and its relationship to the managed asset base are unresolved business decisions.
+Decision 0004 is currently proposed to formalize the separation between backing assets and Badban's direct-lending liquidity if the direct-lending channel is enabled.
 
 ## 9. Actors
 
@@ -180,10 +200,11 @@ Current business actors are:
 
 - **Participant / Beneficiary** — receives an attributed backing position and financial services.
 - **Supporting Institution** — may provide initial capital, eligibility inputs, or program sponsorship.
-- **Badban Operating Entity** — operates the integrated asset-backed credit flow.
+- **Badban Operating Entity** — operates the asset, valuation, backing, guarantee, integration, and control layer; it may also be a lender when direct lending is enabled.
 - **Asset/Custody Function** — controls custody, ownership evidence, settlement, and asset operations; may be internal or delegated.
 - **Valuation / Market Data Function** — supplies approved values under policy.
-- **Credit & Servicing Function** — originates and services credit within the operating entity.
+- **Credit Provider / Lender** — a bank, Qard-al-Hasan fund, other approved lender, or Badban itself when direct lending is enabled.
+- **Credit Integration & Servicing Coordination Function** — maintains provider/product integration, synchronized loan state, repayment status, guarantee exposure, and claims/release coordination.
 - **Risk Function** — defines and enforces credit, asset, concentration, liquidity, and default controls.
 - **Governance Bodies** — approve policy, risk appetite, admissible Asset Types, and material changes.
 - **Control / Audit Function** — independently monitors compliance, accounting integrity, and operational controls.
@@ -198,7 +219,7 @@ The following controls are part of the business baseline:
 2. no credit capacity is created from an unvalued, ineligible, unavailable, or already-encumbered asset position;
 3. valuation and credit state must come from authoritative records;
 4. asset ownership, custody, encumbrance, and release status must be auditable;
-5. a unified operator does not mean one person or one unchecked function controls all steps;
+5. a unified customer experience does not erase the legal identity of the lender of record or internal separation of duties;
 6. risk limits and reserves must be defined before scale;
 7. product reporting must make asset value, backing usage, outstanding debt, repayment status, and available capacity transparent;
 8. changes to policy that affect financial rights or risk exposure must be versioned and auditable.
@@ -207,10 +228,14 @@ The following controls are part of the business baseline:
 
 The original proposal remains an important source for Badban's social mission, capital-preservation philosophy, wealth-generation engine, risk reserve, governance principles, financial-future concept, and measurement of financial/social impact.
 
-Two parts are now explicitly changed by repository decisions:
+The following source assumptions are now explicitly refined by repository decisions:
 
 - **Gold is not the product model.** It is one configurable Asset Type.
-- **A separate external lender is not mandatory for the core flow.** The target model uses a unified asset-and-credit operator.
+- **Asset Type and ownership/funding type are separate dimensions.**
+- **The preferred credit-delivery model reconnects Badban to external banks and Qard-al-Hasan funds as lenders, with Badban providing the backing / guarantee layer.**
+- **Badban direct lending remains an optional supported channel, not the mandatory default.**
+
+This preserves the original proposal's external-lender guarantee concept while extending it so the platform can also support direct lending when approved.
 
 All other source assumptions remain either working inputs or open questions until separately accepted.
 
@@ -220,7 +245,7 @@ Before Technical architecture begins, the following questions must be resolved a
 
 1. **Asset ownership model:** who legally owns each asset position, and under what conditions?
 2. **Exit rights:** what happens to principal/backing when support ends?
-3. **Loan funding model:** where does lending liquidity come from?
+3. **Direct-lending funding model:** if Badban direct lending is enabled, where does its lending liquidity come from?
 4. **Credit product rules:** principal limits, tenor, repayment structure, pricing/fees, grace periods.
 5. **Default waterfall:** collection, cure periods, use of reserves, asset enforcement, residual value.
 6. **Asset-to-credit formula:** haircuts, LTV/advance rates, concentration and liquidity adjustments.
