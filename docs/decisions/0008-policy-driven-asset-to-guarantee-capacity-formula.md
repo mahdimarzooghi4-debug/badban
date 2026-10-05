@@ -1,6 +1,6 @@
 # Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Risk / Asset Valuation / Guarantee Capacity
 - **Dependencies:** Decision 0001; Decision 0003; Decision 0005; Decision 0006; Decision 0007; Decision 0009
@@ -9,7 +9,7 @@
 
 Badban needs one deterministic and auditable way to convert approved Asset Positions into usable guarantee capacity without assuming that the asset is gold or that every asset uses the same risk percentage.
 
-## Proposed Decision
+## Decision
 
 Badban shall calculate capacity through a versioned policy pipeline. Capacity is measured in units of **guarantee exposure**, not directly as loan principal.
 
