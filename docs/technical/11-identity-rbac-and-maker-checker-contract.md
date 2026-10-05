@@ -1,6 +1,6 @@
 # Badban Identity, RBAC, and Maker-Checker Contract
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Technical
 - **Scope:** bounded external-lender pilot
