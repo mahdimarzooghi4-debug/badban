@@ -45,6 +45,18 @@ class NatsJetStreamTransport:
         ack = await self._client.jetstream().publish(subject, payload)
         return ack.stream, ack.seq
 
+    async def consume_one(self, subject: str, timeout: float = 2.0) -> bytes:
+        """Consume and acknowledge one persisted JetStream message."""
+        await self.connect()
+        assert self._client is not None
+        subscription = await self._client.jetstream().subscribe(subject, manual_ack=True)
+        try:
+            message = await subscription.next_msg(timeout=timeout)
+            await message.ack()
+            return message.data
+        finally:
+            await subscription.unsubscribe()
+
     async def delete_stream(self, name: str) -> None:
         await self.connect()
         assert self._client is not None
