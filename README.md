@@ -10,15 +10,15 @@ Business ✓
 → Technical ✓
 → Scrum/Product Backlog ✓
 → Sprint 01 ✓
-→ Code (foundation scope only)
-→ Code Review
-→ Stage
+→ Code ✓ (Sprint 01 foundation scope)
+→ Code Review ✓
+→ Stage (not yet authorized)
 → QA/Testing
 → Release Approval
 → Production
 ```
 
-Decision 0021 authorizes code only for Sprint 01 BL-001 through BL-005.
+Decision 0021 authorized code only for Sprint 01 BL-001 through BL-005. Decision 0022 records Code Review completion; Stage remains unauthorized.
 
 ## Sprint 01 stack
 
