@@ -42,6 +42,8 @@ jobs:
       BADBAN_NATS_URL: nats://localhost:4222
       BADBAN_LOG_LEVEL: INFO
       BADBAN_OTEL_SERVICE_NAME: badban-ci
+      BADBAN_OIDC_ISSUER: https://issuer.test/realms/badban
+      BADBAN_OIDC_AUDIENCE: badban-api
 
     steps:
       - uses: actions/checkout@v4
