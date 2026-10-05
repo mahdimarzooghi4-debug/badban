@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   secret-scan:
@@ -61,16 +61,7 @@ jobs:
           python -m badban.worker --check
 
       - name: Format
-        run: |
-          ruff format .
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add .
-            git commit -m "style: apply ruff formatting"
-            git push
-            exit 1
-          fi
+        run: ruff format --check .
 
       - name: Lint
         run: ruff check .
