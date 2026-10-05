@@ -1,6 +1,6 @@
 # Decision 0006 — External Lender Integration and Guarantee Lifecycle
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Product / Guarantee Operations / External Lender Integration
 - **Dependencies:** Decision 0001 — Configurable Asset Input; Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model
@@ -21,7 +21,7 @@ The business model now needs an explicit lifecycle for how Badban:
 
 Without a common lifecycle, each lender integration could create incompatible rules, double-use backing, or release collateral before the underlying debt is actually closed.
 
-## Proposed Decision
+## Decision
 
 Badban shall use one generic **Guarantee Lifecycle** across all external lenders.
 
