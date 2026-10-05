@@ -14,7 +14,10 @@ Real-money activation remains separately gated.
 
 ## Technical documents
 
-- [00 — Technical Foundation](./00-technical-foundation.md)
+- [00 — Technical Foundation](./00-technical-foundation.md) — **Accepted**
+- [01 — System Context and Trust Boundaries](./01-system-context-and-trust-boundaries.md) — **Proposed**
+- [02 — Domain Aggregate Boundaries](./02-domain-aggregate-boundaries.md) — **Proposed**
+- [03 — State Machines and Transition Contracts](./03-state-machines-and-transition-contracts.md) — **Proposed**
 
 ## Binding inputs
 
