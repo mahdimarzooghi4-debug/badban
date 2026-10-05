@@ -1,6 +1,6 @@
 # Decision 0013 — Participant Exit and Entitlement Rules
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Participant Lifecycle / Ownership / Entitlements / Exit
 - **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0006 — External Lender Integration and Guarantee Lifecycle; Decision 0007 — Default, Claim, Recovery, and Loss Waterfall; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0012 — Policy-Driven Return Allocation
@@ -19,7 +19,7 @@ The evolving Badban model additionally distinguishes participant-owned assets fr
 
 Therefore exit cannot be implemented as one generic action such as “close participant and return everything” or “return everything to the program.”
 
-## Proposed Decision
+## Decision
 
 Badban shall treat participant exit as a **controlled financial transition**, not as an immediate deletion or blanket asset release.
 
