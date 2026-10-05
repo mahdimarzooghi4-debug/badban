@@ -1,6 +1,6 @@
 # Decision 0011 — Configurable Credit Product Rules
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Product / Credit Products / Provider Integration
 - **Dependencies:** Decision 0005 — Hybrid Credit Delivery Model; Decision 0006 — External Lender Integration and Guarantee Lifecycle; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0009 — One-to-One External Loan and Badban Guarantee; Decision 0010 — Risk Appetite and Guarantee Reserve Framework
@@ -29,7 +29,7 @@ Badban must support these differences while preserving the one-to-one rule:
 External Loan Principal = Issued Badban Guarantee Amount
 ```
 
-## Proposed Decision
+## Decision
 
 Badban shall maintain a versioned **Credit Product Registry**.
 
