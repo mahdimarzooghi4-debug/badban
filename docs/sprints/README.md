@@ -1,6 +1,6 @@
 # Badban Sprints
 
-- **Delivery State:** Sprint 02 Code + Code Review Complete; Stage Deferred; Sprint 03 Planning Next
+- **Delivery State:** Sprint 02 Code + Code Review Complete; Stage Deferred; Sprint 03 Proposed
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 - **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
@@ -60,3 +60,15 @@ Therefore Sprint 03 planning must select only currently Ready dependency-unblock
 Direct Lending remains outside scope.
 
 Sprint development while Stage is deferred does not grant QA/Testing, Release Approval, Production, provider-production certification, or real-money activation.
+
+## Current Sprint Planning
+
+- [Sprint 03 — Control, Valuation, and Journal Foundations](./03-sprint-03-control-valuation-journal-foundations.md) — **Proposed**
+
+Proposed Sprint 03 scope:
+
+- BL-008 Maker-Checker / ApprovalRequest
+- BL-012 Immutable Valuation Observation
+- BL-030 Append-Only Journal Engine
+
+Decision 0026 is **Proposed**. Sprint 03 Code is not yet authorized.
