@@ -1,6 +1,6 @@
 # Badban Sprints
 
-- **Delivery State:** Sprint 02 Accepted — Code Authorized; Stage Deferred
+- **Delivery State:** Sprint 02 Code + Code Review Complete; Stage Deferred; Sprint 03 Planning Next
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 - **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
@@ -13,11 +13,12 @@ Decision 0023 defers execution of the Stage gate while the environment is unavai
 
 Reviewed Sprint outputs merged to `main` accumulate into the future Stage candidate.
 
-## Completed Sprint
+## Completed Sprints
 
 - [Sprint 01 — Implementation Foundation](./01-sprint-01-implementation-foundation-plan.md) — **Accepted / Code + Code Review Complete**
+- [Sprint 02 — Identity and Core Participant / Asset State](./02-sprint-02-identity-core-participant-asset-state.md) — **Completed / Code + Code Review Complete**
 
-Sprint 01 scope:
+### Sprint 01 scope
 
 - BL-001 Implementation Stack Decision Pack
 - BL-002 Repository and CI Quality-Gate Blueprint
@@ -31,11 +32,7 @@ Relevant gates:
 - Decision 0021 — Sprint 01 Code Authorized — **Accepted**
 - Decision 0022 — Sprint 01 Code Review Complete; Stage Not Yet Authorized — **Accepted**
 
-## Current Sprint Planning
-
-- [Sprint 02 — Identity and Core Participant / Asset State](./02-sprint-02-identity-core-participant-asset-state.md) — **Accepted / Active**
-
-Proposed Sprint 02 scope:
+### Sprint 02 scope
 
 - BL-006 Central Identity Integration
 - BL-007 RBAC and Scoped Authorization Engine
@@ -44,13 +41,21 @@ Proposed Sprint 02 scope:
 - BL-011 Asset Position and Ownership/Funding Classification
 - BL-044 Audit and Evidence Trace baseline
 
-## Sprint 02 Gate
+Relevant gates:
 
-Decision 0024 is **Accepted**. Code is authorized only for the selected Sprint 02 scope.
+- Decision 0024 — Sprint 02 Code Authorization — **Accepted**
+- Decision 0025 — Sprint 02 Code Review Complete; Stage Still Deferred — **Accepted**
+
+## Dependency Note Before Sprint 03
+
+The Product Backlog candidate Slice 2 cannot be taken as-is:
+
+- BL-013 depends on BL-008 Maker-Checker, which is not yet Done;
+- BL-032 depends on BL-030 Journal Engine in addition to policy/capacity items.
+
+Therefore Sprint 03 planning must select only currently Ready dependency-unblocking work rather than bypass those prerequisites.
 
 ## Scope Guard
-
-Sprint work must remain inside the bounded external-lender pilot.
 
 Direct Lending remains outside scope.
 
