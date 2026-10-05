@@ -1,6 +1,6 @@
 # Decision 0020 — Initial Implementation Stack for Bounded Pilot
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Technical Implementation / Sprint 01 Foundation
 - **Dependencies:** Decision 0018; Decision 0019; Accepted Technical 00-15; BL-001
@@ -9,7 +9,7 @@
 
 Use a Python/PostgreSQL modular application stack for the bounded external-lender pilot, with explicit separation between the transactional core, asynchronous workers, provider adapters, identity, evidence storage, secrets, and observability.
 
-The proposed initial implementation stack is:
+The accepted initial implementation stack is:
 
 ### Backend / Domain
 
