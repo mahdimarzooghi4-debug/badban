@@ -164,7 +164,7 @@ async def test_identity_scoped_program_asset_journey(
             },
         )
         assert position_response.status_code == 201
-        assert position_response.json()["quantity"] == "123.123456780000000000"
+        assert Decimal(position_response.json()["quantity"]) == Decimal("123.12345678")
         assert "market_value" not in position_response.json()
         assert "guarantee_capacity" not in position_response.json()
 
