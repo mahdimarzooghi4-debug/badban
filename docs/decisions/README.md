@@ -42,3 +42,5 @@ Each decision should include:
 - [0015 — Accounting and Financial Sub-Ledger Model](./0015-accounting-and-financial-sub-ledger-model.md)
 - [0016 — Pilot Boundary and Initial Policy-Pack Governance](./0016-pilot-boundary-and-initial-policy-pack-governance.md)
 - [0017 — Business Stage Complete for Bounded Pilot; Technical Stage Authorized](./0017-business-stage-complete-technical-authorized.md)
+
+- [0018 — Technical Stage Complete for Bounded Pilot; Scrum/Product Backlog Authorized](./0018-technical-stage-complete-product-backlog-authorized.md)
