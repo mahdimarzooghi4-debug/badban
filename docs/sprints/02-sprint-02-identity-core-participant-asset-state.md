@@ -1,12 +1,12 @@
 # Sprint 02 — Identity and Core Participant / Asset State
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Sprint Planning
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0019; Decision 0023
 - **Depends on:** Sprint 01 foundation merged and reviewed
-- **Code Authorization:** NOT YET GRANTED
+- **Code Authorization:** GRANTED BY DECISION 0024
 
 ## 1. Sprint Goal
 
