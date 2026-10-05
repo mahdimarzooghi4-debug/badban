@@ -31,4 +31,5 @@ Badban Direct Lending is outside the initial pilot and must not be implemented a
 
 Any future direct-lending architecture must wait for its Business/legal gates.
 
-- [06 — Policy and Versioning Runtime Model](./06-policy-and-versioning-runtime-model.md) — **Proposed**
+- [06 — Policy and Versioning Runtime Model](./06-policy-and-versioning-runtime-model.md) — **Accepted**
+- [07 — API Command and Query Contracts](./07-api-command-and-query-contracts.md) — **Proposed**
