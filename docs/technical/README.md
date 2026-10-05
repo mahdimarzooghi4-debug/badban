@@ -21,6 +21,8 @@ Real-money activation remains separately gated.
 - [04 — Relational Data Model and Persistence Constraints](./04-relational-data-model-and-persistence-constraints.md) — **Accepted**
 - [05 — Ledger Account Taxonomy and Posting Templates](./05-ledger-account-taxonomy-and-posting-templates.md) — **Accepted**
 
+- [08 — Domain and Integration Event Contracts](./08-domain-and-integration-event-contracts.md) — **Proposed**
+
 ## Binding inputs
 
 Technical design must comply with Accepted decisions in [../decisions](../decisions/README.md), especially Decisions 0008–0017.
@@ -32,4 +34,4 @@ Badban Direct Lending is outside the initial pilot and must not be implemented a
 Any future direct-lending architecture must wait for its Business/legal gates.
 
 - [06 — Policy and Versioning Runtime Model](./06-policy-and-versioning-runtime-model.md) — **Accepted**
-- [07 — API Command and Query Contracts](./07-api-command-and-query-contracts.md) — **Proposed**
+- [07 — API Command and Query Contracts](./07-api-command-and-query-contracts.md) — **Accepted**
