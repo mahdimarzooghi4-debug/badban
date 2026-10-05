@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -213,7 +214,7 @@ class AssetPosition(Base, VersionedMixin):
     asset_type_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("asset_types.id", ondelete="RESTRICT"), nullable=False
     )
-    quantity: Mapped[Any] = mapped_column(Numeric(38, 18), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
     ownership_class: Mapped[str] = mapped_column(String(40), nullable=False)
     owner_ref: Mapped[str | None] = mapped_column(String(240), nullable=True)
     custody_ref: Mapped[str | None] = mapped_column(String(240), nullable=True)
