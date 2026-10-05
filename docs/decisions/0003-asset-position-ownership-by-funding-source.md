@@ -1,6 +1,6 @@
 # Decision 0003 — Asset Position Ownership by Funding Source
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Product / Financial Rights
 - **Dependencies:** Decision 0001 — Configurable Asset Input; Decision 0002 — Unified Asset and Credit Operator
@@ -16,7 +16,7 @@ The evolving product also allows a participant to purchase or contribute an appr
 
 A single ownership rule cannot safely represent both cases.
 
-## Proposed Decision
+## Decision
 
 Badban should separate **Asset Type** from **Asset Position Ownership / Funding Source**.
 
@@ -26,7 +26,7 @@ Ownership and exit rights must be determined by the source and legal character o
 
 Used when the participant purchases or contributes the asset with their own funds or transfers an asset they own into the Badban flow.
 
-Proposed rules:
+Rules:
 
 - the participant retains the economic ownership rights defined by contract;
 - Badban or an approved custodian controls custody/encumbrance while the asset backs obligations;
@@ -38,7 +38,7 @@ Proposed rules:
 
 Used when a supporting institution or social-capital vehicle funds the backing for the participant.
 
-Proposed rules:
+Rules:
 
 - the position is attributed to a participant for defined benefits and credit capacity during eligibility;
 - principal is not automatically withdrawable by the participant;
