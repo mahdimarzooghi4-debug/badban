@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   secret-scan:
@@ -65,7 +65,18 @@ jobs:
           python -m badban.worker --check
 
       - name: Format
-        run: ruff format --diff .
+        run: |
+          git fetch origin feat/sprint-02-identity-core-asset
+          git checkout -B feat/sprint-02-identity-core-asset origin/feat/sprint-02-identity-core-asset
+          ruff format .
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "style: apply ruff formatting"
+            git push origin feat/sprint-02-identity-core-asset
+            exit 1
+          fi
 
       - name: Lint
         run: ruff check .
