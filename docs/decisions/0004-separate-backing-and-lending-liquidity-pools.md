@@ -116,3 +116,12 @@ Principal repayment replenishes the pool subject to accounting, reserve, loss, a
 ## Approval Gate
 
 If Accepted, the next Business decision should define the **Credit Provider and Product Model**, including how external bank/fund products and Badban direct-credit products share one generic product framework while retaining provider-specific rules.
+
+
+## Pilot Scope Note
+
+Decision 0016 places Badban Direct Lending outside the initial pilot scope.
+
+Therefore this decision remains **Proposed** for future direct-lending activation and does not block Technical architecture for the bounded external-lender pilot.
+
+No production direct-lending capability may be activated until this decision and the legal/regulatory gate in Decision 0014 are separately resolved.
