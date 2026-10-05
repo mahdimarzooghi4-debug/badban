@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from badban.api.errors import ApiError, api_error_handler
 from badban.api.health import router as health_router
 from badban.api.middleware import CorrelationIdMiddleware
+from badban.api.sprint03 import router as sprint03_router
 from badban.api.v1 import router as v1_router
 from badban.config import Settings, get_settings
 from badban.infrastructure.persistence.database import Database
@@ -36,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(CorrelationIdMiddleware)
     app.include_router(health_router)
     app.include_router(v1_router)
+    app.include_router(sprint03_router)
     configure_tracing(app, resolved)
     return app
 
