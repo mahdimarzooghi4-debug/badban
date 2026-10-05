@@ -35,4 +35,4 @@ Each decision should include:
 - [0008 — Policy-Driven Asset-to-Guarantee Capacity Formula](./0008-policy-driven-asset-to-guarantee-capacity-formula.md)
 - [0009 — One-to-One External Loan and Badban Guarantee](./0009-one-to-one-external-loan-and-guarantee.md)
 - [0010 — Risk Appetite and Guarantee Reserve Framework](./0010-risk-appetite-and-guarantee-reserve-framework.md)
-- [0011 — Configurable Credit Product Rules](./0011-configurable-credit-product-rules.md) — **Proposed**
+- [0011 — Configurable Credit Product Rules](./0011-configurable-credit-product-rules.md)
