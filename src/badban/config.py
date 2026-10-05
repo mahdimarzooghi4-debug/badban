@@ -20,12 +20,28 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str | None = None
     secret_provider: Literal["environment", "vault"] = "environment"
     vault_address: str | None = None
+    oidc_issuer: str
+    oidc_audience: str
+    oidc_discovery_url: str | None = None
+    oidc_jwks_cache_seconds: int = 300
 
     @model_validator(mode="after")
-    def validate_secret_provider(self) -> Settings:
+    def validate_runtime_security(self) -> Settings:
         if self.secret_provider == "vault" and not self.vault_address:
             raise ValueError("BADBAN_VAULT_ADDRESS is required when secret_provider=vault")
+        if self.app_env in {"stage", "production"} and self.secret_provider != "vault":
+            raise ValueError("Stage/production requires BADBAN_SECRET_PROVIDER=vault")
+        if not self.oidc_issuer.startswith(("https://", "http://")):
+            raise ValueError("BADBAN_OIDC_ISSUER must be an absolute HTTP(S) URL")
+        if not self.oidc_audience.strip():
+            raise ValueError("BADBAN_OIDC_AUDIENCE must not be empty")
         return self
+
+    @property
+    def resolved_oidc_discovery_url(self) -> str:
+        if self.oidc_discovery_url:
+            return self.oidc_discovery_url
+        return f"{self.oidc_issuer.rstrip('/')}/.well-known/openid-configuration"
 
 
 @lru_cache(maxsize=1)
@@ -62,7 +78,11 @@ class EnvironmentSecretProvider:
 
 def build_secret_provider(settings: Settings) -> SecretProvider:
     if settings.secret_provider == "environment":
+        if settings.app_env in {"stage", "production"}:
+            raise SecretUnavailableError(
+                "Environment secrets are forbidden in Stage/Production."
+            )
         return EnvironmentSecretProvider()
     raise SecretUnavailableError(
-        "Vault is the Stage/Production target, but the Vault client is not part of Sprint 01."
+        "Vault is the Stage/Production target, but the Vault client is not part of Sprint 02."
     )
