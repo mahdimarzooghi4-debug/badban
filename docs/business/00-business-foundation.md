@@ -4,7 +4,7 @@
 - **Date:** 2026-10-05
 - **Stage:** Business
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, Decision 0010, Decision 0011, and Decision 0012
+- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, Decision 0010, Decision 0011, Decision 0012, and Decision 0013
 
 ## 1. Product thesis
 
@@ -249,13 +249,10 @@ All other source assumptions remain either working inputs or open questions unti
 
 Before Technical architecture begins, the following questions must be resolved and recorded:
 
-1. **Asset ownership model:** who legally owns each asset position, and under what conditions?
-2. **Exit rights:** what happens to principal/backing when support ends?
-3. **Direct-lending funding model:** if Badban direct lending is enabled, where does its lending liquidity come from?
-4. **Participant exit and entitlement:** release, recycling, transition support, and open-obligation handling.
-5. **Legal/regulated operating structure:** which licensed or delegated functions are required in the intended jurisdiction.
-6. **Accounting model:** recognition of assets, liabilities, receivables, reserves, income, and participant sub-ledgers.
-7. **Pilot boundary:** target cohort, initial Asset Type(s), capital size, loan limits, duration, and success metrics.
+1. **Direct-lending funding model:** if Badban direct lending is enabled, where does its lending liquidity come from?
+2. **Legal/regulated operating structure:** which licensed or delegated functions are required in the intended jurisdiction.
+3. **Accounting model:** recognition of assets, liabilities, receivables, reserves, income, and participant sub-ledgers.
+4. **Pilot boundary:** target cohort, initial Asset Type(s), capital size, loan limits, duration, and success metrics.
 
 Until these are resolved, they are not implementation assumptions.
 
