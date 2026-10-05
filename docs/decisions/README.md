@@ -47,4 +47,6 @@ Each decision should include:
 
 - [0019 — Product Backlog Complete for Bounded Pilot; Sprint Planning Authorized](./0019-product-backlog-complete-sprint-planning-authorized.md)
 
-- [0020 — Initial Implementation Stack for Bounded Pilot](./0020-initial-implementation-stack-for-bounded-pilot.md) — **Proposed**
+- [0020 — Initial Implementation Stack for Bounded Pilot](./0020-initial-implementation-stack-for-bounded-pilot.md) — **Accepted**
+
+- [0021 — Sprint 01 Accepted; Code Authorized for Foundation Scope](./0021-sprint-01-accepted-code-authorized.md) — **Accepted**
