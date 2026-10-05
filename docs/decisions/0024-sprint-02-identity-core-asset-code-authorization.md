@@ -1,11 +1,11 @@
 # Decision 0024 — Sprint 02 Identity and Core Participant / Asset State; Code Authorization
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Sprint 02 / Code Authorization / Bounded External-Lender Pilot
 - **Depends on:** Decision 0023; Sprint 02 — Identity and Core Participant / Asset State
 
-## Proposed Decision
+## Decision
 
 Accept Sprint 02 and authorize Code only for the selected Slice 1 backlog items:
 
@@ -76,6 +76,4 @@ Sprint 02 Code must satisfy the Accepted Definition of Done and the Sprint 02 pl
 
 ## Approval Effect
 
-This decision is **Proposed**.
-
-It grants no Code authorization until explicitly Accepted.
+This decision is **Accepted** and authorizes Code only for the Sprint 02 scope defined above.
