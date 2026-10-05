@@ -1,17 +1,18 @@
 # Badban Scrum / Product Backlog
 
-- **Stage:** Scrum/Product Backlog
-- **Status:** Active — Backlog Definition in Progress
+- **Stage:** Scrum/Product Backlog Complete for Bounded Pilot — Sprint Planning Authorized
+- **Status:** Complete
 - **Entry Gate:** Decision 0018
+- **Exit Gate:** Decision 0019
 - **Scope:** bounded external-lender pilot defined by Decision 0016
-- **Sprint / Code Authorization:** NOT YET GRANTED
+- **Sprint Execution / Code Authorization:** NOT YET GRANTED
 - **Real-Money / Production Authorization:** NOT GRANTED
 
 ## Parent delivery process
 
-**Business ✓ → Technical ✓ → Scrum/Product Backlog → Sprint → Code → Code Review → Stage → QA/Testing → Release Approval → Production → Monitoring → Improvement**
+**Business ✓ → Technical ✓ → Scrum/Product Backlog ✓ → Sprint Planning → Sprint → Code → Code Review → Stage → QA/Testing → Release Approval → Production → Monitoring → Improvement**
 
-This stage translates the accepted Business and Technical contracts into an ordered, testable, implementation-ready backlog.
+This stage has translated the accepted Business and Technical contracts into an ordered, testable, dependency-aware backlog suitable for Sprint planning.
 
 ## Product Goal
 
@@ -31,15 +32,15 @@ Deliver the bounded external-lender Badban pilot as a controlled asset-backed gu
 
 ## Backlog Rules
 
-1. Every backlog item must trace to one or more Accepted Business/Technical contracts.
+1. Every backlog item traces to Accepted Business/Technical contracts.
 2. No backlog item may invent unresolved Business values, legal authority, accounting mappings, provider facts, or production thresholds.
 3. Direct Lending remains outside the bounded pilot.
 4. Financial correctness and recoverability have priority over convenience or premature scale.
 5. Provider-specific behavior remains behind adapters.
-6. High-impact workflows must include authorization, idempotency, policy/version snapshotting, audit, reconciliation, and tests where applicable.
+6. High-impact workflows require authorization, idempotency, policy/version snapshotting, audit, reconciliation, and tests where applicable.
 7. Sprint selection must respect dependency order.
-8. No Code begins until the selected Sprint slice satisfies the Definition of Ready.
-9. Product Backlog acceptance does not grant real-money activation.
+8. No Code begins until the selected Sprint scope satisfies Definition of Ready and the Sprint plan is explicitly accepted.
+9. Product Backlog completion does not grant real-money activation.
 
 ## Backlog Statuses
 
@@ -64,26 +65,26 @@ Binding sources:
 
 - `docs/business/00-business-foundation.md`
 - `docs/business/02-business-stage-completion-review.md`
-- `docs/decisions/0001-0018`
+- `docs/decisions/0001-0019`
 - `docs/technical/00-15`
 
-The backlog is subordinate to Accepted decisions and Technical contracts.
+The backlog remains subordinate to Accepted decisions and Technical contracts.
 
-## Current Backlog Documents
+## Accepted Backlog Documents
 
-- [01 — Ordered Product Backlog](./01-ordered-product-backlog.md) — **Proposed**
-- [02 — Definition of Ready and Definition of Done](./02-definition-of-ready-and-done.md) — **Proposed**
-- [03 — Dependency Order and Sprint-Ready Delivery Slices](./03-dependency-order-and-delivery-slices.md) — **Proposed**
+- [01 — Ordered Product Backlog](./01-ordered-product-backlog.md) — **Accepted**
+- [02 — Definition of Ready and Definition of Done](./02-definition-of-ready-and-done.md) — **Accepted**
+- [03 — Dependency Order and Sprint-Ready Delivery Slices](./03-dependency-order-and-delivery-slices.md) — **Accepted**
+- [04 — Product-Backlog Stage Completion Review](./04-product-backlog-stage-completion-review.md) — **PASS / Accepted**
 
-## Stage Exit
+## Stage Exit Result
 
-This stage may complete only when:
+Product Backlog stage completion review: **PASS**
 
-- backlog scope is accepted;
-- P0/P1 items are ordered;
-- technical enablers and dependencies are explicit;
-- each Sprint candidate has acceptance criteria;
-- Definition of Ready / Done is accepted;
-- the first Sprint can be selected without inventing Business or Technical rules.
+Sprint Planning is authorized by Decision 0019.
 
-Stage completion may authorize **Sprint planning**, not Production.
+Sprint execution and Code remain blocked until an explicit Sprint Goal, Sprint Backlog, implementation choices, acceptance tests, dependencies, non-goals, and Definition-of-Ready evidence are accepted for the selected slice.
+
+## Next Stage
+
+The next repository work is **Sprint Planning**, normally beginning with Slice 0 — Implementation Foundation and BL-001 through BL-005 unless a dependency-supported alternative is explicitly approved.
