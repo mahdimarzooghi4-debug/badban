@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str | None = None
     secret_provider: Literal["environment", "vault"] = "environment"
     vault_address: str | None = None
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
 
     @model_validator(mode="after")
     def validate_secret_provider(self) -> Settings:
