@@ -40,3 +40,4 @@ Each decision should include:
 - [0013 — Participant Exit and Entitlement Rules](./0013-participant-exit-and-entitlement-rules.md)
 - [0014 — Regulated Operating Structure and Legal-Role Separation](./0014-regulated-operating-structure-and-legal-role-separation.md)
 - [0015 — Accounting and Financial Sub-Ledger Model](./0015-accounting-and-financial-sub-ledger-model.md)
+- [0016 — Pilot Boundary and Initial Policy-Pack Governance](./0016-pilot-boundary-and-initial-policy-pack-governance.md) — **Proposed**
