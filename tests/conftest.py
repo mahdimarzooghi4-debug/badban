@@ -38,3 +38,15 @@ async def clean_foundation_tables(database: Database):
             text("TRUNCATE outbox_messages, inbox_messages, idempotency_records")
         )
     yield
+
+
+@pytest.fixture
+async def clean_sprint02_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE audit_events, asset_positions, asset_types, participation_episodes, "
+                "programs, role_grants, identities, idempotency_records CASCADE"
+            )
+        )
+    yield
