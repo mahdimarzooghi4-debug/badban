@@ -317,12 +317,12 @@ async def create_program(
     if existing is not None:
         return ProgramView.model_validate(existing)
     program = Program(code=payload.code, name=payload.name, created_by=actor.identity_id)
-    async with session.begin():
-        session.add(program)
-        await session.flush()
-        result = ProgramView.model_validate(program)
-        _audit(session, request, actor, "program:create", "Program", str(program.id), "SUCCEEDED", "SYSTEM", "badban")
-        _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    session.add(program)
+    await session.flush()
+    result = ProgramView.model_validate(program)
+    _audit(session, request, actor, "program:create", "Program", str(program.id), "SUCCEEDED", "SYSTEM", "badban")
+    _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    await session.commit()
     return result
 
 
@@ -357,12 +357,12 @@ async def create_participation(
         participant_ref=payload.participant_ref,
         created_by=actor.identity_id,
     )
-    async with session.begin():
-        session.add(episode)
-        await session.flush()
-        result = ParticipationView.model_validate(episode)
-        _audit(session, request, actor, "participation:create", "ParticipationEpisode", str(episode.id), "SUCCEEDED", "PROGRAM", str(program_id))
-        _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    session.add(episode)
+    await session.flush()
+    result = ParticipationView.model_validate(episode)
+    _audit(session, request, actor, "participation:create", "ParticipationEpisode", str(episode.id), "SUCCEEDED", "PROGRAM", str(program_id))
+    _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    await session.commit()
     return result
 
 
@@ -390,12 +390,12 @@ async def create_asset_type(
     if existing is not None:
         return AssetTypeView.model_validate(existing)
     asset_type = AssetType(**payload.model_dump(), created_by=actor.identity_id)
-    async with session.begin():
-        session.add(asset_type)
-        await session.flush()
-        result = AssetTypeView.model_validate(asset_type)
-        _audit(session, request, actor, "asset-type:create", "AssetType", str(asset_type.id), "SUCCEEDED", "SYSTEM", "badban")
-        _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    session.add(asset_type)
+    await session.flush()
+    result = AssetTypeView.model_validate(asset_type)
+    _audit(session, request, actor, "asset-type:create", "AssetType", str(asset_type.id), "SUCCEEDED", "SYSTEM", "badban")
+    _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    await session.commit()
     return result
 
 
@@ -438,12 +438,12 @@ async def create_asset_position(
     if existing is not None:
         return AssetPositionView.model_validate(existing)
     position = AssetPosition(**payload.model_dump(), created_by=actor.identity_id)
-    async with session.begin():
-        session.add(position)
-        await session.flush()
-        result = AssetPositionView.model_validate(position)
-        _audit(session, request, actor, "asset-position:create", "AssetPosition", str(position.id), "SUCCEEDED", "PROGRAM", str(payload.program_id))
-        _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    session.add(position)
+    await session.flush()
+    result = AssetPositionView.model_validate(position)
+    _audit(session, request, actor, "asset-position:create", "AssetPosition", str(position.id), "SUCCEEDED", "PROGRAM", str(payload.program_id))
+    _save_idempotent(session, scope, idempotency_key, digest, result.model_dump(mode="json"))
+    await session.commit()
     return result
 
 
