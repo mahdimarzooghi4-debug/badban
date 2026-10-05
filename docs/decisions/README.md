@@ -26,7 +26,8 @@ Each decision should include:
 ## Current decisions
 
 - [0001 — Configurable Asset Input](./0001-configurable-asset-input.md)
-- [0002 — Unified Asset and Credit Operator](./0002-unified-asset-and-credit-operator.md)
+- [0002 — Unified Asset and Credit Operator](./0002-unified-asset-and-credit-operator.md) — **Superseded by 0005**
 - [0003 — Asset Position Ownership by Funding Source](./0003-asset-position-ownership-by-funding-source.md)
 
-- [0004 — Separate Backing and Lending Liquidity Pools](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed**
+- [0004 — Direct Lending Liquidity Separation](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed**
+- [0005 — Hybrid Credit Delivery Model](./0005-hybrid-credit-delivery-model.md)
