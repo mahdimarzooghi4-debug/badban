@@ -41,3 +41,4 @@ Each decision should include:
 - [0014 — Regulated Operating Structure and Legal-Role Separation](./0014-regulated-operating-structure-and-legal-role-separation.md)
 - [0015 — Accounting and Financial Sub-Ledger Model](./0015-accounting-and-financial-sub-ledger-model.md)
 - [0016 — Pilot Boundary and Initial Policy-Pack Governance](./0016-pilot-boundary-and-initial-policy-pack-governance.md)
+- [0017 — Business Stage Complete for Bounded Pilot; Technical Stage Authorized](./0017-business-stage-complete-technical-authorized.md)
