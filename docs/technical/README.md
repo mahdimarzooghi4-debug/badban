@@ -18,7 +18,8 @@ Real-money activation remains separately gated.
 - [01 — System Context and Trust Boundaries](./01-system-context-and-trust-boundaries.md) — **Accepted**
 - [02 — Domain Aggregate Boundaries](./02-domain-aggregate-boundaries.md) — **Accepted**
 - [03 — State Machines and Transition Contracts](./03-state-machines-and-transition-contracts.md) — **Accepted**
-- [04 — Relational Data Model and Persistence Constraints](./04-relational-data-model-and-persistence-constraints.md) — **Proposed**
+- [04 — Relational Data Model and Persistence Constraints](./04-relational-data-model-and-persistence-constraints.md) — **Accepted**
+- [05 — Ledger Account Taxonomy and Posting Templates](./05-ledger-account-taxonomy-and-posting-templates.md) — **Proposed**
 
 ## Binding inputs
 
