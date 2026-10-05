@@ -34,4 +34,4 @@ Each decision should include:
 - [0007 — Default, Claim, Recovery, and Loss Waterfall](./0007-default-claim-recovery-loss-waterfall.md)
 - [0008 — Policy-Driven Asset-to-Guarantee Capacity Formula](./0008-policy-driven-asset-to-guarantee-capacity-formula.md)
 - [0009 — One-to-One External Loan and Badban Guarantee](./0009-one-to-one-external-loan-and-guarantee.md)
-- [0010 — Risk Appetite and Guarantee Reserve Framework](./0010-risk-appetite-and-guarantee-reserve-framework.md) — **Proposed**
+- [0010 — Risk Appetite and Guarantee Reserve Framework](./0010-risk-appetite-and-guarantee-reserve-framework.md)
