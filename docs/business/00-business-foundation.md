@@ -4,7 +4,7 @@
 - **Date:** 2026-10-05
 - **Stage:** Business
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, and Decision 0010
+- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, Decision 0010, and Decision 0011
 
 ## 1. Product thesis
 
@@ -252,8 +252,7 @@ Before Technical architecture begins, the following questions must be resolved a
 1. **Asset ownership model:** who legally owns each asset position, and under what conditions?
 2. **Exit rights:** what happens to principal/backing when support ends?
 3. **Direct-lending funding model:** if Badban direct lending is enabled, where does its lending liquidity come from?
-4. **Credit product rules:** principal limits, tenor, repayment structure, pricing/fees, grace periods.
-5. **Return-allocation policy:** livelihood, future, reserve, capital growth, and social reinvestment.
+4. **Return-allocation policy:** livelihood, future, reserve, capital growth, and social reinvestment.
 6. **Participant entitlement:** what is owned, withdrawable, transferable, restricted, or only beneficially attributed?
 7. **Legal/regulated operating structure:** which licensed or delegated functions are required in the intended jurisdiction.
 8. **Accounting model:** recognition of assets, liabilities, receivables, reserves, income, and participant sub-ledgers.
