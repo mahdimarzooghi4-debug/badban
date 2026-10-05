@@ -37,6 +37,7 @@ from badban.security.authorization import (
     ROLE_OPERATIONS,
     ROLE_RISK,
     SCOPE_GLOBAL,
+    SCOPE_PROGRAM,
     AuthorizationDenied,
     Principal,
     authorize,
@@ -564,7 +565,7 @@ async def create_valuation_observation(
         session,
         principal=principal,
         roles={ROLE_RISK},
-        scope_type="PROGRAM",
+        scope_type=SCOPE_PROGRAM,
         scope_id=position.program_id,
         allow_global=True,
         action="VALUATION_OBSERVATION_CREATE",
@@ -620,7 +621,7 @@ async def create_valuation_observation(
         outcome="SUCCESS",
         new_state=view.model_dump(mode="json"),
         evidence_reference=body.evidence_reference,
-        scope={"scope_type": "PROGRAM", "scope_id": str(position.program_id)},
+        scope={"scope_type": SCOPE_PROGRAM, "scope_id": str(position.program_id)},
     )
     complete_idempotency(record, status_code=201, response_payload=view.model_dump(mode="json"))
     await session.commit()
@@ -644,7 +645,7 @@ async def list_valuation_observations(
         session,
         principal=principal,
         roles={ROLE_RISK, ROLE_OPERATIONS, ROLE_AUDITOR},
-        scope_type="PROGRAM",
+        scope_type=SCOPE_PROGRAM,
         scope_id=position.program_id,
         allow_global=True,
         action="VALUATION_OBSERVATION_LIST",
@@ -679,7 +680,7 @@ async def latest_valuation_observation(
         session,
         principal=principal,
         roles={ROLE_RISK, ROLE_OPERATIONS, ROLE_AUDITOR},
-        scope_type="PROGRAM",
+        scope_type=SCOPE_PROGRAM,
         scope_id=position.program_id,
         allow_global=True,
         action="VALUATION_OBSERVATION_READ_LATEST",
