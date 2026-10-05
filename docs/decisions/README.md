@@ -28,3 +28,5 @@ Each decision should include:
 - [0001 — Configurable Asset Input](./0001-configurable-asset-input.md)
 - [0002 — Unified Asset and Credit Operator](./0002-unified-asset-and-credit-operator.md)
 - [0003 — Asset Position Ownership by Funding Source](./0003-asset-position-ownership-by-funding-source.md)
+
+- [0004 — Separate Backing and Lending Liquidity Pools](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed**
