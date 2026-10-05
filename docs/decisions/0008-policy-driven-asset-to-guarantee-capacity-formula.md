@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-10-05
 - **Scope:** Business / Risk / Asset Valuation / Guarantee Capacity
-- **Dependencies:** Decision 0001; Decision 0003; Decision 0005; Decision 0006; Decision 0007
+- **Dependencies:** Decision 0001; Decision 0003; Decision 0005; Decision 0006; Decision 0007; Decision 0009
 
 ## Problem
 
@@ -93,23 +93,20 @@ Available Guarantee Capacity
 
 Reservation and encumbrance must prevent double use of the same backing.
 
-### 7. Loan principal versus guarantee exposure
+### 7. External loan principal equals issued guarantee
 
-Badban must distinguish:
-
-- **Loan Principal** — amount lent by the lender;
-- **Guarantee Coverage Ratio** — portion covered by Badban;
-- **Required Guarantee Exposure** — Badban capacity consumed.
+Under Decision 0009, the standard external-lender product uses one-to-one principal matching:
 
 ```
-Required Guarantee Exposure
-= Eligible Covered Loan Exposure
-× Guarantee Coverage Ratio
+External Loan Principal
+= Issued Badban Guarantee Amount
 ```
 
-A request may proceed only when required guarantee exposure is within available Badban capacity and all provider/product/program limits.
+Therefore the external-lender channel does not use a separate guarantee-coverage percentage for principal.
 
-Example only: a loan of 100 with 70% approved guarantee coverage consumes 70 units of guarantee capacity. This example does not establish a production percentage.
+A request may proceed only when the intended loan principal can be fully matched by available Badban guarantee capacity and all provider/product/program limits.
+
+Example only: if Badban has 70 units of approved available guarantee capacity and issues a guarantee of 70, the external lender lends 70 units of principal.
 
 ### 8. External lender and direct lending
 
@@ -196,7 +193,6 @@ Every reservation and guarantee issuance must preserve effective versions of:
 This decision does not approve production numbers for:
 
 - advance rates / haircuts;
-- guarantee coverage percentages;
 - concentration caps;
 - valuation frequency;
 - stale-price windows;
@@ -209,7 +205,7 @@ Those values must be versioned policy approved through Badban governance.
 
 - Gold becomes one configuration, not a special-case formula.
 - New Asset Types can be added without redesigning the engine.
-- Partial and full guarantees use the same model.
+- Standard external-lender loans use one-to-one principal-to-guarantee matching.
 - Multiple assets can support one participant subject to policy.
 - Falling values reduce unused capacity and may create deficiency without rewriting existing contractual guarantees.
 - Capacity remains deterministic, auditable, and explainable.
