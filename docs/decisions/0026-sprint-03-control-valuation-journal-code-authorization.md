@@ -1,11 +1,11 @@
 # Decision 0026 — Sprint 03 Control, Valuation, and Journal Foundations; Code Authorization
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Sprint 03 / Code Authorization / Bounded External-Lender Pilot
 - **Depends on:** Decision 0023; Decision 0025; Sprint 03 Plan
 
-## Proposed Decision
+## Decision
 
 Accept Sprint 03 and authorize Code only for:
 
@@ -23,7 +23,7 @@ These items are currently Ready and close prerequisite gaps that block later Pol
 
 The original candidate Slice 2 must not be implemented before these dependencies are satisfied.
 
-## Authorized Scope If Accepted
+## Authorized Scope
 
 Implementation may include:
 
@@ -65,7 +65,7 @@ Acceptance would not authorize:
 
 ## Hard Invariants
 
-If accepted, Sprint 03 Code must preserve:
+Sprint 03 Code must preserve:
 
 1. maker identity != checker identity;
 2. approval binds exact payload hash and target version where applicable;
@@ -103,6 +103,6 @@ Sprint 03 may be implemented and reviewed while Stage is unavailable, but Stage 
 
 ## Approval Effect
 
-This decision is **Proposed**.
+This decision is **Accepted**.
 
-It grants no Code authorization until explicitly Accepted.
+Sprint 03 Code is authorized only for BL-008, BL-012, and BL-030 under the scope and invariants above.
