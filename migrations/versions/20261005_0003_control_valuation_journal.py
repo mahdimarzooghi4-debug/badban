@@ -277,17 +277,28 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE OR REPLACE FUNCTION badban_reject_journal_posting_mutation()
-        RETURNS trigger AS $$
+        RETURNS trigger AS $
+        DECLARE
+            parent_state text;
         BEGIN
+            IF TG_OP = 'INSERT' THEN
+                SELECT state INTO parent_state
+                FROM journal_entries
+                WHERE id = NEW.journal_entry_id;
+                IF parent_state = 'POSTED' THEN
+                    RAISE EXCEPTION 'cannot add posting to a POSTED journal';
+                END IF;
+                RETURN NEW;
+            END IF;
             RAISE EXCEPTION 'journal_postings are append-only';
         END;
-        $$ LANGUAGE plpgsql
+        $ LANGUAGE plpgsql
         """
     )
     op.execute(
         """
         CREATE TRIGGER trg_journal_postings_append_only
-        BEFORE UPDATE OR DELETE ON journal_postings
+        BEFORE INSERT OR UPDATE OR DELETE ON journal_postings
         FOR EACH ROW EXECUTE FUNCTION badban_reject_journal_posting_mutation()
         """
     )
