@@ -84,7 +84,7 @@ def upgrade() -> None:
         sa.Column("unit_price", sa.Numeric(precision=38, scale=18), nullable=False),
         sa.Column("valuation_currency", sa.String(length=16), nullable=False),
         sa.Column("fx_rate", sa.Numeric(precision=38, scale=18), nullable=True),
-        sa.Column("gross_market_value", sa.Numeric(precision=38, scale=18), nullable=False),
+        sa.Column("gross_market_value", sa.Numeric(precision=114, scale=54), nullable=False),
         sa.Column("source_name", sa.String(length=160), nullable=False),
         sa.Column("source_reference", sa.String(length=255), nullable=False),
         sa.Column("source_version_reference", sa.String(length=255), nullable=True),
