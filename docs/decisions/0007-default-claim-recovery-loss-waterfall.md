@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Risk / Guarantee Operations / Recovery
-- **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model; Decision 0006 — External Lender Integration and Guarantee Lifecycle
+- **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model; Decision 0006 — External Lender Integration and Guarantee Lifecycle; Decision 0009 — One-to-One External Loan and Badban Guarantee
 
 ## Problem
 
@@ -140,21 +140,17 @@ If the backing value is insufficient:
 
 No product may silently convert a limited guarantee into an unlimited one.
 
-## 7. Partial Guarantees
+## 7. One-to-One External Principal Coverage
 
-The model must support guarantee coverage below 100%.
-
-For example:
+For the standard external-lender channel, Decision 0009 requires:
 
 ```
-Outstanding Eligible Principal = 100
-Badban Guarantee Coverage = 70
-Lender Uncovered Exposure = 30
+External Loan Principal = Issued Badban Guarantee Amount
 ```
 
-Badban's maximum claim exposure is governed by the issued guarantee and applicable declining/fixed coverage rules, not merely by the lender's total outstanding balance.
+Partial principal guarantees are not part of the standard Badban external-lender model.
 
-Recovery-sharing rules between Badban and the lender must be explicit in the provider/product policy.
+Badban's maximum claim exposure remains governed by the issued guarantee terms. Fees, penalties, or other non-principal amounts are not automatically guaranteed unless an explicit approved policy includes them.
 
 ## 8. Recovery Allocation
 
