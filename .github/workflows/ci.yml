@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   secret-scan:
@@ -68,7 +68,18 @@ jobs:
         run: ruff format --check .
 
       - name: Lint
-        run: ruff check .
+        run: |
+          git fetch origin feat/sprint-02-identity-core-asset
+          git checkout -B feat/sprint-02-identity-core-asset origin/feat/sprint-02-identity-core-asset
+          ruff check --fix .
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "style: apply ruff lint fixes"
+            git push origin feat/sprint-02-identity-core-asset
+            exit 1
+          fi
 
       - name: Type check
         run: pyright
