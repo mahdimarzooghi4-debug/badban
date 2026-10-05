@@ -58,8 +58,6 @@ jobs:
         run: |
           docker run -d --name badban-nats -p 4222:4222 nats:2.10-alpine -js
           sleep 2
-          python -c 'import asyncio, nats; asyncio.run((lambda: None)())' || true
-          python -c 'import asyncio, nats; async def c(): pass' || true
           python -m badban.worker --check
 
       - name: Format
