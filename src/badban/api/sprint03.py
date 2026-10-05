@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, Request, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,6 @@ from badban.application.journal import account_totals
 from badban.infrastructure.persistence.models import (
     ApprovalRequest,
     AssetPosition,
-    AuditEvent,
     JournalEntry,
     JournalPosting,
     ValuationObservation,
