@@ -59,12 +59,8 @@ def upgrade() -> None:
             "status IN ('PENDING','APPROVED','REJECTED','CANCELLED','EXPIRED')",
             name="ck_approval_request_status",
         ),
-        sa.ForeignKeyConstraint(
-            ["maker_identity_id"], ["identities.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["checker_identity_id"], ["identities.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["maker_identity_id"], ["identities.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["checker_identity_id"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -120,12 +116,8 @@ def upgrade() -> None:
             "gross_market_value >= 0",
             name="ck_valuation_gross_nonnegative",
         ),
-        sa.ForeignKeyConstraint(
-            ["asset_position_id"], ["asset_positions.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["created_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["asset_position_id"], ["asset_positions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -221,22 +213,13 @@ def upgrade() -> None:
             name="ck_journal_posting_credit_nonnegative",
         ),
         sa.CheckConstraint(
-            "(debit_amount > 0 AND credit_amount = 0) OR "
-            "(credit_amount > 0 AND debit_amount = 0)",
+            "(debit_amount > 0 AND credit_amount = 0) OR (credit_amount > 0 AND debit_amount = 0)",
             name="ck_journal_posting_one_sided_positive",
         ),
-        sa.ForeignKeyConstraint(
-            ["asset_position_id"], ["asset_positions.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["journal_entry_id"], ["journal_entries.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["participant_id"], ["participants.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["program_id"], ["programs.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["asset_position_id"], ["asset_positions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["journal_entry_id"], ["journal_entries.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["participant_id"], ["participants.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["program_id"], ["programs.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -313,13 +296,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_journal_postings_append_only ON journal_postings")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_journal_posting_mutation")
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_journal_entries_posted_append_only ON journal_entries"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_journal_entries_posted_append_only ON journal_entries")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_posted_journal_mutation")
     op.execute(
-        "DROP TRIGGER IF EXISTS trg_valuation_observations_append_only "
-        "ON valuation_observations"
+        "DROP TRIGGER IF EXISTS trg_valuation_observations_append_only ON valuation_observations"
     )
     op.execute("DROP FUNCTION IF EXISTS badban_reject_valuation_mutation")
     op.drop_index(

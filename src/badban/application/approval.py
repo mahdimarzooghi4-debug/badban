@@ -21,9 +21,7 @@ async def get_approval_for_update(
     approval_id: UUID,
 ) -> ApprovalRequest:
     request = await session.scalar(
-        select(ApprovalRequest)
-        .where(ApprovalRequest.id == approval_id)
-        .with_for_update()
+        select(ApprovalRequest).where(ApprovalRequest.id == approval_id).with_for_update()
     )
     if request is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "Approval Request was not found")

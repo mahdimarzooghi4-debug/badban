@@ -340,7 +340,6 @@ class EvidenceReference(Base):
     )
 
 
-
 class ApprovalRequest(VersionedMixin, Base):
     __tablename__ = "approval_requests"
     __table_args__ = (
@@ -463,8 +462,7 @@ class JournalPosting(Base):
         CheckConstraint("debit_amount >= 0", name="ck_journal_posting_debit_nonnegative"),
         CheckConstraint("credit_amount >= 0", name="ck_journal_posting_credit_nonnegative"),
         CheckConstraint(
-            "(debit_amount > 0 AND credit_amount = 0) OR "
-            "(credit_amount > 0 AND debit_amount = 0)",
+            "(debit_amount > 0 AND credit_amount = 0) OR (credit_amount > 0 AND debit_amount = 0)",
             name="ck_journal_posting_one_sided_positive",
         ),
         Index("ix_journal_postings_entry", "journal_entry_id"),

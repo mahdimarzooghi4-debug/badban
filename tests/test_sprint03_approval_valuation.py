@@ -186,10 +186,7 @@ async def test_maker_checker_binds_payload_version_and_separation(
             json={},
         )
         assert self_approval.status_code == 403
-        assert (
-            self_approval.json()["error"]["code"]
-            == "APPROVAL_SELF_APPROVAL_FORBIDDEN"
-        )
+        assert self_approval.json()["error"]["code"] == "APPROVAL_SELF_APPROVAL_FORBIDDEN"
 
         wrong_role = await client.post(
             f"/api/v1/approval-requests/{approval_id}/approve",
@@ -225,10 +222,7 @@ async def test_maker_checker_binds_payload_version_and_separation(
             json={"payload": payload, "current_target_version": 4},
         )
         assert version_changed.status_code == 409
-        assert (
-            version_changed.json()["error"]["code"]
-            == "APPROVAL_TARGET_VERSION_CONFLICT"
-        )
+        assert version_changed.json()["error"]["code"] == "APPROVAL_TARGET_VERSION_CONFLICT"
 
         valid = await client.post(
             f"/api/v1/approval-requests/{approval_id}/validate",

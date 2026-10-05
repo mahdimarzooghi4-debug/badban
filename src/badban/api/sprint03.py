@@ -340,7 +340,10 @@ async def create_approval_request(
         correlation_id=correlation_id,
         outcome="SUCCESS",
         new_state=view.model_dump(mode="json"),
-        scope={"scope_type": request.scope_type, "scope_id": str(request.scope_id) if request.scope_id else None},
+        scope={
+            "scope_type": request.scope_type,
+            "scope_id": str(request.scope_id) if request.scope_id else None,
+        },
     )
     complete_idempotency(record, status_code=201, response_payload=view.model_dump(mode="json"))
     await session.commit()
@@ -394,7 +397,10 @@ async def approve_request(
             correlation_id=correlation_id,
             outcome="DENIED",
             reason_code="APPROVAL_SELF_APPROVAL_FORBIDDEN",
-            scope={"scope_type": request.scope_type, "scope_id": str(request.scope_id) if request.scope_id else None},
+            scope={
+                "scope_type": request.scope_type,
+                "scope_id": str(request.scope_id) if request.scope_id else None,
+            },
         )
         await session.commit()
         raise ApiError(403, "APPROVAL_SELF_APPROVAL_FORBIDDEN", "Maker cannot approve own request")
@@ -426,7 +432,10 @@ async def approve_request(
         actor_id=principal.identity_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
-        scope={"scope_type": request.scope_type, "scope_id": str(request.scope_id) if request.scope_id else None},
+        scope={
+            "scope_type": request.scope_type,
+            "scope_id": str(request.scope_id) if request.scope_id else None,
+        },
     )
     await session.commit()
     return ApprovalView.model_validate(request)
@@ -476,7 +485,10 @@ async def reject_request(
         actor_id=principal.identity_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
-        scope={"scope_type": request.scope_type, "scope_id": str(request.scope_id) if request.scope_id else None},
+        scope={
+            "scope_type": request.scope_type,
+            "scope_id": str(request.scope_id) if request.scope_id else None,
+        },
     )
     await session.commit()
     return ApprovalView.model_validate(request)
@@ -507,7 +519,10 @@ async def cancel_request(
         actor_id=principal.identity_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
-        scope={"scope_type": request.scope_type, "scope_id": str(request.scope_id) if request.scope_id else None},
+        scope={
+            "scope_type": request.scope_type,
+            "scope_id": str(request.scope_id) if request.scope_id else None,
+        },
     )
     await session.commit()
     return ApprovalView.model_validate(request)
@@ -657,7 +672,9 @@ async def list_valuation_observations(
         await session.scalars(
             select(ValuationObservation)
             .where(ValuationObservation.asset_position_id == position.id)
-            .order_by(ValuationObservation.observed_at.desc(), ValuationObservation.created_at.desc())
+            .order_by(
+                ValuationObservation.observed_at.desc(), ValuationObservation.created_at.desc()
+            )
         )
     ).all()
     return [_valuation_view(row) for row in rows]

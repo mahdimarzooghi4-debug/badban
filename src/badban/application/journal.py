@@ -137,9 +137,7 @@ async def post_journal(
 
     if reversal_of_entry_id is not None:
         prior_reversal = await session.scalar(
-            select(JournalEntry).where(
-                JournalEntry.reversal_of_entry_id == reversal_of_entry_id
-            )
+            select(JournalEntry).where(JournalEntry.reversal_of_entry_id == reversal_of_entry_id)
         )
         if prior_reversal is not None:
             raise JournalError(
@@ -203,9 +201,7 @@ async def reverse_journal(
     reason: str,
 ) -> JournalEntry:
     original = await session.scalar(
-        select(JournalEntry)
-        .where(JournalEntry.id == original_entry_id)
-        .with_for_update()
+        select(JournalEntry).where(JournalEntry.id == original_entry_id).with_for_update()
     )
     if original is None:
         raise JournalError("JOURNAL_NOT_FOUND", "Original journal entry was not found")
