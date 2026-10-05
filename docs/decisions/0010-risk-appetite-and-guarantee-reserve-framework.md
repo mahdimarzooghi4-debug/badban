@@ -1,6 +1,6 @@
 # Decision 0010 — Risk Appetite and Guarantee Reserve Framework
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Risk / Portfolio Governance / Guarantee Reserve
 - **Dependencies:** Decision 0007 — Default, Claim, Recovery, and Loss Waterfall; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0009 — One-to-One External Loan and Badban Guarantee
@@ -27,7 +27,7 @@ Asset backing reduces loss risk, but it does not eliminate:
 
 Badban therefore needs an explicit portfolio-level risk appetite.
 
-## Proposed Decision
+## Decision
 
 Badban shall operate a versioned **Risk Appetite Policy** that governs the entire guarantee portfolio.
 
