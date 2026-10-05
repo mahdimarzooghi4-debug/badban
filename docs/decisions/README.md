@@ -28,7 +28,7 @@ Each decision should include:
 - [0001 — Configurable Asset Input](./0001-configurable-asset-input.md)
 - [0002 — Unified Asset and Credit Operator](./0002-unified-asset-and-credit-operator.md) — **Superseded by 0005**
 - [0003 — Asset Position Ownership by Funding Source](./0003-asset-position-ownership-by-funding-source.md)
-- [0004 — Direct Lending Liquidity Separation](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed**
+- [0004 — Direct Lending Liquidity Separation](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed; future direct-lending scope, not a pilot blocker**
 - [0005 — Hybrid Credit Delivery Model](./0005-hybrid-credit-delivery-model.md)
 - [0006 — External Lender Integration and Guarantee Lifecycle](./0006-external-lender-integration-and-guarantee-lifecycle.md)
 - [0007 — Default, Claim, Recovery, and Loss Waterfall](./0007-default-claim-recovery-loss-waterfall.md)
@@ -40,4 +40,4 @@ Each decision should include:
 - [0013 — Participant Exit and Entitlement Rules](./0013-participant-exit-and-entitlement-rules.md)
 - [0014 — Regulated Operating Structure and Legal-Role Separation](./0014-regulated-operating-structure-and-legal-role-separation.md)
 - [0015 — Accounting and Financial Sub-Ledger Model](./0015-accounting-and-financial-sub-ledger-model.md)
-- [0016 — Pilot Boundary and Initial Policy-Pack Governance](./0016-pilot-boundary-and-initial-policy-pack-governance.md) — **Proposed**
+- [0016 — Pilot Boundary and Initial Policy-Pack Governance](./0016-pilot-boundary-and-initial-policy-pack-governance.md)
