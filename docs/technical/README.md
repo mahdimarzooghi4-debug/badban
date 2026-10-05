@@ -26,6 +26,8 @@ Real-money activation remains separately gated.
 - [09 — Provider Adapter Contracts](./09-provider-adapter-contracts.md) — **Accepted**
 - [10 — Reconciliation Engine Contract](./10-reconciliation-engine-contract.md) — **Accepted**
 - [11 — Identity, RBAC, and Maker-Checker Contract](./11-identity-rbac-and-maker-checker-contract.md) — **Accepted**
+- [12 — Security and Secrets Contract](./12-security-and-secrets-contract.md) — **Accepted**
+- [13 — Observability and Operational Readiness Contract](./13-observability-and-operational-readiness-contract.md) — **Proposed**
 
 ## Binding inputs
 
