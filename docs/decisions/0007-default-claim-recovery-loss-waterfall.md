@@ -1,6 +1,6 @@
 # Decision 0007 — Default, Claim, Recovery, and Loss Waterfall
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Risk / Guarantee Operations / Recovery
 - **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model; Decision 0006 — External Lender Integration and Guarantee Lifecycle
@@ -21,7 +21,7 @@ Badban therefore needs one generic default and recovery model that is:
 - configurable by product and contract;
 - explicit about who bears losses and who receives any recovery surplus.
 
-## Proposed Decision
+## Decision
 
 Badban shall separate two concepts:
 
