@@ -44,3 +44,5 @@ Each decision should include:
 - [0017 — Business Stage Complete for Bounded Pilot; Technical Stage Authorized](./0017-business-stage-complete-technical-authorized.md)
 
 - [0018 — Technical Stage Complete for Bounded Pilot; Scrum/Product Backlog Authorized](./0018-technical-stage-complete-product-backlog-authorized.md)
+
+- [0019 — Product Backlog Complete for Bounded Pilot; Sprint Planning Authorized](./0019-product-backlog-complete-sprint-planning-authorized.md)
