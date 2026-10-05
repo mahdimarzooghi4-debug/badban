@@ -1,6 +1,6 @@
 # Badban Deployment, Runtime Topology, and Non-Functional Requirements
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Technical
 - **Scope:** bounded external-lender pilot
