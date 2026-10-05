@@ -1,6 +1,6 @@
 # Badban Dependency Order and Sprint-Ready Delivery Slices
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Scrum/Product Backlog
 - **Scope:** bounded external-lender pilot
