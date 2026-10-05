@@ -21,7 +21,10 @@ class ApiError(RuntimeError):
         self.details = details or {}
 
 
-async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
+async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    if not isinstance(exc, ApiError):
+        raise exc
+
     correlation_id = getattr(request.state, "correlation_id", None)
     return JSONResponse(
         status_code=exc.status_code,
