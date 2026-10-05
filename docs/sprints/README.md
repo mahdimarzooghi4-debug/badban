@@ -1,52 +1,54 @@
 # Badban Sprints
 
-- **Stage:** Sprint 01 Accepted — Code Authorized for Foundation Scope
-- **Status:** Sprint 01 Active
-- **Entry Gate:** Decision 0019
-- **Stack Decision:** Decision 0020 — Accepted
-- **Sprint Code Gate:** Decision 0021
+- **Delivery State:** Sprint 01 Code Review Complete; Stage Deferred; Sprint 02 Proposed
 - **Scope:** bounded external-lender pilot defined by Decision 0016
-- **Code Authorization:** GRANTED FOR SPRINT 01 BL-001 THROUGH BL-005 ONLY
+- **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
 
 ## Parent delivery process
 
-**Business ✓ → Technical ✓ → Scrum/Product Backlog ✓ → Sprint Planning ✓ → Sprint 01 ✓ → Code → Code Review → Stage → QA/Testing → Release Approval → Production → Monitoring → Improvement**
+**Business ✓ → Technical ✓ → Scrum/Product Backlog ✓ → Sprint → Code → Code Review → Stage → QA/Testing → Release Approval → Production → Monitoring → Improvement**
 
-## Sprint Planning Rule
+Decision 0023 defers execution of the Stage gate while the environment is unavailable. It does not remove the Stage requirement.
 
-A Sprint plan must define:
+Reviewed Sprint outputs merged to `main` accumulate into the future Stage candidate.
 
-- Sprint Goal;
-- selected Ready backlog items;
-- dependency order inside the Sprint;
-- implementation choices required by those items;
-- acceptance tests;
-- explicit non-goals;
-- risks/blockers;
-- Definition-of-Ready evidence;
-- Definition-of-Done expectations.
+## Completed Sprint
 
-## Current Sprint Plans
+- [Sprint 01 — Implementation Foundation](./01-sprint-01-implementation-foundation-plan.md) — **Accepted / Code + Code Review Complete**
 
-- [Sprint 01 — Implementation Foundation](./01-sprint-01-implementation-foundation-plan.md) — **Accepted / Active**
+Sprint 01 scope:
 
-## Current Decisions
+- BL-001 Implementation Stack Decision Pack
+- BL-002 Repository and CI Quality-Gate Blueprint
+- BL-003 Environment, Configuration, and Secret Boundary
+- BL-004 Transactional Persistence and Migration Foundation
+- BL-005 Observability and Correlation Foundation
 
-- Decision 0020 — Initial Implementation Stack for Bounded Pilot — **Accepted**
-- Decision 0021 — Sprint 01 Accepted; Code Authorized for Foundation Scope — **Accepted**
+Relevant gates:
 
-## Sprint 01 Authorized Scope
+- Decision 0020 — Initial Implementation Stack — **Accepted**
+- Decision 0021 — Sprint 01 Code Authorized — **Accepted**
+- Decision 0022 — Sprint 01 Code Review Complete; Stage Not Yet Authorized — **Accepted**
 
-Only:
+## Current Sprint Planning
 
-- BL-001 Implementation Stack Decision Pack;
-- BL-002 Repository and CI Quality-Gate Blueprint;
-- BL-003 Environment, Configuration, and Secret Boundary;
-- BL-004 Transactional Persistence and Migration Foundation;
-- BL-005 Observability and Correlation Foundation.
+- [Sprint 02 — Identity and Core Participant / Asset State](./02-sprint-02-identity-core-participant-asset-state.md) — **Proposed**
 
-Later Business capabilities remain outside the current Code authorization.
+Proposed Sprint 02 scope:
+
+- BL-006 Central Identity Integration
+- BL-007 RBAC and Scoped Authorization Engine
+- BL-009 Program and Participation Episode
+- BL-010 Asset Type Registry
+- BL-011 Asset Position and Ownership/Funding Classification
+- BL-044 Audit and Evidence Trace baseline
+
+## Sprint 02 Gate
+
+Sprint 02 is not yet authorized for Code.
+
+The plan must be explicitly accepted and a Sprint 02 Code authorization decision must be recorded before implementation begins.
 
 ## Scope Guard
 
@@ -54,8 +56,4 @@ Sprint work must remain inside the bounded external-lender pilot.
 
 Direct Lending remains outside scope.
 
-Real-money activation remains separately gated.
-
-## Next Stage
-
-The next repository work is **Code for Sprint 01 foundation scope only**, followed by Code Review.
+Sprint development while Stage is deferred does not grant QA/Testing, Release Approval, Production, provider-production certification, or real-money activation.
