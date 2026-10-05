@@ -4,7 +4,7 @@
 - **Date:** 2026-10-05
 - **Stage:** Business
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001, Decision 0003, and Decision 0005
+- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, and Decision 0006
 
 ## 1. Product thesis
 
