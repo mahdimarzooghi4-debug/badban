@@ -1,12 +1,13 @@
 # Sprint 02 — Identity and Core Participant / Asset State
 
-- **Status:** Accepted
+- **Status:** Completed
 - **Date:** 2026-10-05
-- **Stage:** Sprint Planning
+- **Stage:** Code + Code Review Complete
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0019; Decision 0023
 - **Depends on:** Sprint 01 foundation merged and reviewed
 - **Code Authorization:** GRANTED BY DECISION 0024
+- **Code Review:** COMPLETE BY DECISION 0025
 
 ## 1. Sprint Goal
 
@@ -16,7 +17,7 @@ Sprint 02 does not create guarantee capacity, legal guarantee issuance, external
 
 ## 2. Selected Backlog Items
 
-Sprint 02 proposes:
+Sprint 02 delivered:
 
 - **BL-006 — Central Identity Integration**
 - **BL-007 — RBAC and Scoped Authorization Engine**
@@ -373,10 +374,10 @@ Decision 0023 permits iterative Sprint development while Stage is unavailable.
 
 Sprint 02 completion therefore adds to the accumulated Stage candidate; it does not satisfy or bypass the future Stage gate.
 
-## 13. Approval Effect
+## 13. Completion Effect
 
-This document is **Proposed**.
+Sprint 02 was Accepted and implemented under Decision 0024.
 
-Acceptance of this Sprint plan must be accompanied by an explicit Sprint 02 Code authorization decision before implementation begins.
+Code Review completed under Decision 0025 and PR #2 was merged to `main`.
 
-Until then, repository changes are limited to planning/governance documentation for Sprint 02.
+Stage remains deferred under Decision 0023; Sprint 02 is part of the accumulated future Stage candidate.
