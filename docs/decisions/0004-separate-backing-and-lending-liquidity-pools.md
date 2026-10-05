@@ -1,26 +1,24 @@
-# Decision 0004 — Separate Backing and Lending Liquidity Pools
+# Decision 0004 — Direct Lending Liquidity Separation
 
 - **Status:** Proposed
 - **Date:** 2026-10-05
-- **Scope:** Business / Financial Architecture / Funding
-- **Dependencies:** Decision 0001 — Configurable Asset Input; Decision 0002 — Unified Asset and Credit Operator; Decision 0003 — Asset Position Ownership by Funding Source
+- **Scope:** Business / Financial Architecture / Direct Lending Funding
+- **Dependencies:** Decision 0001 — Configurable Asset Input; Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model
 
 ## Problem
 
-Decision 0002 establishes one integrated operating entity for the asset and credit journey.
+Decision 0005 establishes two credit-delivery channels:
 
-That does **not** answer a separate question: where does the cash used to disburse loans come from?
+1. the preferred external-lender / guarantee channel; and
+2. optional direct lending by Badban.
 
-If the same asset position is simultaneously treated as intact collateral and consumed as the cash source for the loan, Badban risks double-counting one economic resource for two incompatible purposes.
+The external-lender channel does not require Badban to fund the loan principal. The lender provides the lending liquidity.
 
-The model therefore needs to separate:
-
-1. the asset that creates backing / credit capacity; and
-2. the liquidity that is actually disbursed as credit.
+If Badban itself lends, however, the cash used for disbursement must be distinct from the asset position that creates backing capacity. Otherwise the same economic resource could be double-counted as both intact backing and loan funding.
 
 ## Proposed Decision
 
-Badban should operate two distinct economic pools under the unified operating model:
+For the **Badban Direct Lending** channel, Badban should maintain two distinct economic pools:
 
 ### A. Backing Asset Pool
 
@@ -31,12 +29,12 @@ Core rules:
 - the asset remains tracked as an asset position;
 - it is valued and revalued under its Asset Type policy;
 - it can be encumbered against outstanding obligations;
-- it is not automatically consumed when a loan is disbursed;
+- it is not automatically consumed when a direct loan is disbursed;
 - it may be released, rebalanced, substituted, or enforced only under approved rules.
 
-### B. Lending Liquidity Pool
+### B. Direct Lending Liquidity Pool
 
-Contains the cash or cash-equivalent funding available to originate and disburse credit.
+Contains the cash or cash-equivalent funding available for Badban-originated credit.
 
 Potential approved funding sources may include:
 
@@ -49,43 +47,37 @@ Potential approved funding sources may include:
 - retained cash allocated by policy;
 - other explicitly approved funding sources.
 
-No funding source is admissible merely because it appears in this list. Each source must be approved under Badban governance and applicable legal/regulatory rules.
+No source is admissible merely because it appears in this list. Each source requires governance and applicable legal/regulatory approval.
 
 ## Core Rule
 
 ```
-Backing Capacity ≠ Lending Liquidity
+Backing Capacity ≠ Direct Lending Liquidity
 ```
 
-The same operating entity may control both, but they must be separately accounted for and separately risk-managed.
+This rule applies when Badban is the lender of record.
 
-## Credit Availability
-
-A participant's actual available credit must be constrained by both collateral/backing capacity and available lending liquidity.
-
-Conceptually:
+For an external lender, the equivalent separation exists across entities:
 
 ```
-Backing-Based Capacity
+Badban Backing / Guarantee Capacity
+        +
+External Lender Funding Liquidity
         ↓
-Policy / Product Limits
-        ↓
-Portfolio / Risk Limits
-        ↓
-Available Lending Liquidity
-        ↓
-Actual Available Credit
+External Lender Credit
 ```
 
-A simplified conceptual rule is:
+## Direct Credit Availability
+
+For Badban-originated loans:
 
 ```
-Actual Available Credit
+Actual Available Direct Credit
 = min(
     Backing-Based Capacity,
     Product / Participant Limit,
     Portfolio Risk Limit,
-    Available Lending Liquidity
+    Available Direct Lending Liquidity
   )
 ```
 
@@ -94,66 +86,33 @@ The exact formula is not approved by this decision.
 ## Disbursement and Repayment Flow
 
 ```
-Lending Liquidity Pool
+Direct Lending Liquidity Pool
         ↓
-Loan Disbursement
+Badban Loan Disbursement
         ↓
 Outstanding Receivable
         ↓
 Repayment
         ↓
-Lending Liquidity Pool
+Direct Lending Liquidity Pool
 ```
 
-Repayment of principal replenishes the lending liquidity pool, subject to accounting, reserve, loss, and allocation rules.
-
-## Default Relationship
-
-On default, Badban must follow an explicit waterfall before or during enforcement of backing.
-
-The exact waterfall is not approved here, but the architecture must support:
-
-- cure / collection period;
-- available repayment cash;
-- applicable reserves or loss buffers;
-- enforcement or liquidation of backing where contractually permitted;
-- repayment of outstanding principal and permitted charges;
-- treatment of any surplus or shortfall according to ownership policy.
+Principal repayment replenishes the pool subject to accounting, reserve, loss, and allocation rules.
 
 ## Consequences
 
-1. A participant's backing asset is not simply “lent back” to the participant.
-2. Badban can preserve backing while still creating a revolving credit pool.
-3. Asset risk and funding-liquidity risk become separate measurable risks.
-4. The unified operator still provides one customer experience even though internal ledgers and control functions are separated.
-5. Financial reporting must separately show:
-   - backing assets;
-   - encumbered backing value;
-   - lending cash/liquidity;
-   - loans receivable;
-   - repayments;
-   - reserves;
-   - losses;
-   - available lending capacity.
-6. A credit approval does not guarantee disbursement if approved lending liquidity is unavailable.
-7. Backing assets may only be sold or converted to fund credit if a future explicit product/policy decision permits that use; it is not the default.
-
-## Rationale
-
-Separating backing from lending liquidity prevents double use of the same economic resource and makes the model auditable.
-
-It also preserves the product principle that one entity can manage both the asset and the loan without requiring the collateral asset itself to be consumed at origination.
+1. External-lender loans do not consume Badban's direct-lending liquidity.
+2. Badban can offer a guarantee-only model without maintaining a lending pool.
+3. If direct lending is activated, funding-liquidity risk becomes an explicit Badban risk.
+4. Backing assets are not automatically converted into cash to fund direct loans.
+5. Badban reporting must distinguish:
+   - external guaranteed exposure;
+   - direct loans receivable;
+   - direct lending liquidity;
+   - backing assets and encumbered value;
+   - reserves and losses.
+6. A future policy may explicitly allow sale or conversion of some assets into lending liquidity, but that is not the default.
 
 ## Approval Gate
 
-If Accepted, the next Business decision should define the **Credit Product Rules**:
-
-- how credit limits are calculated;
-- tenor;
-- repayment structure;
-- pricing / fees, if any;
-- grace periods;
-- renewal / top-up rules;
-- delinquency states;
-- early repayment;
-- and product-level eligibility.
+If Accepted, the next Business decision should define the **Credit Provider and Product Model**, including how external bank/fund products and Badban direct-credit products share one generic product framework while retaining provider-specific rules.
