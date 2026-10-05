@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     vault_address: str | None = None
 
     @model_validator(mode="after")
-    def validate_secret_provider(self) -> "Settings":
+    def validate_secret_provider(self) -> Settings:
         if self.secret_provider == "vault" and not self.vault_address:
             raise ValueError("BADBAN_VAULT_ADDRESS is required when secret_provider=vault")
         return self
