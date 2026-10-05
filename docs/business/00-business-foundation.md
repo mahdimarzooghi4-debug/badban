@@ -4,7 +4,7 @@
 - **Date:** 2026-10-05
 - **Stage:** Business
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, and Decision 0009
+- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, and Decision 0010
 
 ## 1. Product thesis
 
@@ -255,10 +255,9 @@ Before Technical architecture begins, the following questions must be resolved a
 4. **Credit product rules:** principal limits, tenor, repayment structure, pricing/fees, grace periods.
 5. **Return-allocation policy:** livelihood, future, reserve, capital growth, and social reinvestment.
 6. **Participant entitlement:** what is owned, withdrawable, transferable, restricted, or only beneficially attributed?
-7. **Risk appetite:** portfolio loss limits, liquidity reserve, concentration limits, stress scenarios.
-8. **Legal/regulated operating structure:** which licensed or delegated functions are required in the intended jurisdiction.
-9. **Accounting model:** recognition of assets, liabilities, receivables, reserves, income, and participant sub-ledgers.
-10. **Pilot boundary:** target cohort, initial Asset Type(s), capital size, loan limits, duration, and success metrics.
+7. **Legal/regulated operating structure:** which licensed or delegated functions are required in the intended jurisdiction.
+8. **Accounting model:** recognition of assets, liabilities, receivables, reserves, income, and participant sub-ledgers.
+9. **Pilot boundary:** target cohort, initial Asset Type(s), capital size, loan limits, duration, and success metrics.
 
 Until these are resolved, they are not implementation assumptions.
 
