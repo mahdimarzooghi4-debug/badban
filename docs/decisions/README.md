@@ -58,3 +58,5 @@ Each decision should include:
 - [0024 — Sprint 02 Identity and Core Participant / Asset State; Code Authorization](./0024-sprint-02-identity-core-asset-code-authorization.md) — **Accepted**
 
 - [0025 — Sprint 02 Code Review Complete; Stage Still Deferred](./0025-sprint-02-code-review-complete-stage-still-deferred.md) — **Accepted**
+
+- [0026 — Sprint 03 Control, Valuation, and Journal Foundations; Code Authorization](./0026-sprint-03-control-valuation-journal-code-authorization.md) — **Proposed**
