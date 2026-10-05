@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     def validate_secret_provider(self) -> Settings:
         if self.secret_provider == "vault" and not self.vault_address:
             raise ValueError("BADBAN_VAULT_ADDRESS is required when secret_provider=vault")
+        if bool(self.oidc_issuer) != bool(self.oidc_audience):
+            raise ValueError("BADBAN_OIDC_ISSUER and BADBAN_OIDC_AUDIENCE must be configured together")
+        if self.app_env in {"stage", "production"} and not self.oidc_issuer:
+            raise ValueError("OIDC settings are required in stage/production")
         return self
 
 
