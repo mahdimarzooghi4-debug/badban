@@ -277,7 +277,7 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE OR REPLACE FUNCTION badban_reject_journal_posting_mutation()
-        RETURNS trigger AS $
+        RETURNS trigger AS $$
         DECLARE
             parent_state text;
         BEGIN
@@ -292,7 +292,7 @@ def upgrade() -> None:
             END IF;
             RAISE EXCEPTION 'journal_postings are append-only';
         END;
-        $ LANGUAGE plpgsql
+        $$ LANGUAGE plpgsql
         """
     )
     op.execute(
