@@ -407,7 +407,7 @@ class ValuationObservation(Base):
     unit_price: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
     valuation_currency: Mapped[str] = mapped_column(String(16), nullable=False)
     fx_rate: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
-    gross_market_value: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    gross_market_value: Mapped[Decimal] = mapped_column(Numeric(114, 54), nullable=False)
     source_name: Mapped[str] = mapped_column(String(160), nullable=False)
     source_reference: Mapped[str] = mapped_column(String(255), nullable=False)
     source_version_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
