@@ -227,6 +227,22 @@ async def test_posted_journal_is_immutable_and_reversal_is_linked(
                 )
 
     async with database.session_factory() as session:
+        with pytest.raises(DBAPIError):
+            async with session.begin():
+                session.add(
+                    JournalPosting(
+                        journal_entry_id=original_id,
+                        account_code="late-posting",
+                        legal_entity_id=legal_entity_id,
+                        economic_owner_type="PROGRAM",
+                        debit_amount=Decimal("1"),
+                        credit_amount=Decimal("0"),
+                        currency="IRR",
+                    )
+                )
+                await session.flush()
+
+    async with database.session_factory() as session:
         async with session.begin():
             reversal = await reverse_journal(
                 session,
