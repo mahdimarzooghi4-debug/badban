@@ -1,12 +1,12 @@
 # Sprint 01 — Implementation Foundation Plan
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Sprint Planning
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0019
-- **Blocking Decision:** Decision 0020 — Initial Implementation Stack for Bounded Pilot
-- **Code Authorization:** NOT YET GRANTED
+- **Stack Decision:** Decision 0020 — Accepted
+- **Code Authorization:** GRANTED FOR SPRINT 01 ONLY BY DECISION 0021
 
 ## 1. Sprint Goal
 
@@ -30,7 +30,7 @@ No later business capability is selected into Sprint 01.
 
 ## 3. Proposed Implementation Stack
 
-Sprint 01 proposes Decision 0020 as the blocking implementation choice.
+Sprint 01 uses Accepted Decision 0020 as its implementation stack.
 
 Core choices:
 
