@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Product / Guarantee Operations / External Lender Integration
-- **Dependencies:** Decision 0001 — Configurable Asset Input; Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model
+- **Dependencies:** Decision 0001 — Configurable Asset Input; Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model; Decision 0009 — One-to-One External Loan and Badban Guarantee
 
 ## Problem
 
@@ -61,7 +61,7 @@ Each product must explicitly define:
 - repayment structure;
 - permitted pricing / fee structure;
 - borrower eligibility;
-- required guarantee coverage;
+- one-to-one principal/guarantee matching under Decision 0009;
 - whether guarantee exposure is fixed or declining;
 - delinquency thresholds;
 - claim eligibility;
@@ -144,7 +144,7 @@ The snapshot must preserve:
 - lender;
 - product;
 - approved credit amount;
-- guarantee amount / coverage;
+- guarantee amount, which must match external loan principal;
 - asset positions or backing pool used;
 - valuation reference;
 - policy versions;
