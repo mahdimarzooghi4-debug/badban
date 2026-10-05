@@ -14,6 +14,7 @@ Technical architecture and implementation must not outrun unresolved business de
 
 - [00 — Business Foundation](./00-business-foundation.md)
 - [01 — Iran Regulatory Research Basis](./01-iran-regulatory-research-basis.md)
+- [02 — Business-Stage Completion Review](./02-business-stage-completion-review.md)
 
 ## Decision authority
 
