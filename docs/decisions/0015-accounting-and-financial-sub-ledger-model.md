@@ -1,6 +1,6 @@
 # Decision 0015 — Accounting and Financial Sub-Ledger Model
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Accounting Architecture / Financial Control / Reconciliation
 - **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0006 — External Lender Integration and Guarantee Lifecycle; Decision 0007 — Default, Claim, Recovery, and Loss Waterfall; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0010 — Risk Appetite and Guarantee Reserve Framework; Decision 0012 — Policy-Driven Return Allocation; Decision 0013 — Participant Exit and Entitlement Rules; Decision 0014 — Regulated Operating Structure and Legal-Role Separation
@@ -34,7 +34,7 @@ The product now needs one accounting architecture that preserves economic owners
 
 The accounting model must also work when different regulated legal entities perform different roles.
 
-## Proposed Decision
+## Decision
 
 Badban shall maintain an **append-only financial sub-ledger architecture** using double-entry postings for Badban-controlled economic balances and explicit mirror/reference ledgers for externally owned obligations.
 
