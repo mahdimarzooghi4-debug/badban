@@ -73,7 +73,7 @@ def _request_payload(
     business_event_id: str,
     legal_entity_id: UUID,
     currency: str,
-    effective_at: datetime,
+    effective_at: datetime | None,
     reversal_of_entry_id: UUID | None,
     reason: str | None,
     lines: list[JournalLine],
@@ -83,7 +83,7 @@ def _request_payload(
         "business_event_id": business_event_id,
         "legal_entity_id": str(legal_entity_id),
         "currency": currency,
-        "effective_at": effective_at.isoformat(),
+        "effective_at": effective_at.isoformat() if effective_at is not None else None,
         "reversal_of_entry_id": str(reversal_of_entry_id) if reversal_of_entry_id else None,
         "reason": reason,
         "lines": [asdict(line) for line in lines],
@@ -110,13 +110,12 @@ async def post_journal(
     if not currency.strip():
         raise JournalError("JOURNAL_CURRENCY_INVALID", "Journal currency is required")
 
-    effective = effective_at or datetime.now(UTC)
     payload = _request_payload(
         business_event_type=business_event_type,
         business_event_id=business_event_id,
         legal_entity_id=legal_entity_id,
         currency=currency,
-        effective_at=effective,
+        effective_at=effective_at,
         reversal_of_entry_id=reversal_of_entry_id,
         reason=reason,
         lines=lines,
@@ -146,6 +145,7 @@ async def post_journal(
             )
 
     now = datetime.now(UTC)
+    effective = effective_at or now
     entry = JournalEntry(
         business_event_type=business_event_type,
         business_event_id=business_event_id,
@@ -242,7 +242,7 @@ async def reverse_journal(
         actor_reference=actor_reference,
         correlation_id=correlation_id,
         lines=lines,
-        effective_at=datetime.now(UTC),
+        effective_at=None,
         causation_id=original.correlation_id,
         reversal_of_entry_id=original.id,
         reason=reason,
