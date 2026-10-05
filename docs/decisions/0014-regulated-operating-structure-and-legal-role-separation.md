@@ -1,6 +1,6 @@
 # Decision 0014 — Regulated Operating Structure and Legal-Role Separation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Legal Structure / Regulatory Architecture / Operating Model
 - **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0005 — Hybrid Credit Delivery Model; Decision 0006 — External Lender Integration and Guarantee Lifecycle; Decision 0007 — Default, Claim, Recovery, and Loss Waterfall; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0010 — Risk Appetite and Guarantee Reserve Framework; Decision 0011 — Configurable Credit Product Rules; Decision 0013 — Participant Exit and Entitlement Rules
@@ -25,7 +25,7 @@ The current legal framework supports several distinct regulated roles that are r
 
 These rules create a strong basis for **role separation**, but they do not by themselves prove that every Badban participant, loan purpose, guarantee type, or Asset Type fits every referenced license category.
 
-## Proposed Decision
+## Decision
 
 Badban shall be designed as **one product and one customer journey, but not necessarily one legal entity performing every regulated function**.
 
