@@ -1,6 +1,6 @@
 # Badban Technical Foundation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Technical
 - **Scope:** bounded external-lender pilot
@@ -23,7 +23,7 @@ The architecture must optimize first for:
 
 Scale and distributed decomposition are secondary to correctness at this stage.
 
-## 2. Proposed Architecture Style
+## 2. Architecture Style
 
 For the initial pilot, Badban should begin as a **modular transactional core** with clearly separated domain modules, one authoritative transactional data store for Badban-owned operational state, and asynchronous integration at external boundaries.
 
