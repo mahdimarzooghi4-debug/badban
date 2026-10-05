@@ -14,13 +14,13 @@ Business ✓
 → Sprint 02 ✓
 → Code + Code Review ✓
 → Stage (deferred; environment unavailable)
-→ Sprint 03 Planning
+→ Sprint 03 Proposed
 → QA/Testing
 → Release Approval
 → Production
 ```
 
-Decision 0021 authorized Sprint 01 foundation code and Decision 0022 closed its Code Review. Decision 0023 defers Stage while the environment is unavailable. Decision 0024 authorized Sprint 02 and Decision 0025 records Sprint 02 Code Review completion. Sprint 03 planning is next.
+Decision 0021 authorized Sprint 01 foundation code and Decision 0022 closed its Code Review. Decision 0023 defers Stage while the environment is unavailable. Decision 0024 authorized Sprint 02 and Decision 0025 records Sprint 02 Code Review completion. Sprint 03 is Proposed under Decision 0026; Code is not yet authorized.
 
 ## Sprint 01 stack
 
