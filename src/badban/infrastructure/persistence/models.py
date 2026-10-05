@@ -106,7 +106,7 @@ class Identity(Base):
     )
 
 
-class RoleGrant(Base, VersionedMixin):
+class RoleGrant(VersionedMixin, Base):
     __tablename__ = "role_grants"
     __table_args__ = (
         Index("ix_role_grants_identity_status", "identity_id", "status"),
@@ -147,7 +147,7 @@ class Participant(Base):
     )
 
 
-class Program(Base, VersionedMixin):
+class Program(VersionedMixin, Base):
     __tablename__ = "programs"
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -164,7 +164,7 @@ class Program(Base, VersionedMixin):
     )
 
 
-class ParticipationEpisode(Base, VersionedMixin):
+class ParticipationEpisode(VersionedMixin, Base):
     __tablename__ = "participation_episodes"
     __table_args__ = (
         CheckConstraint(
@@ -202,7 +202,7 @@ class ParticipationEpisode(Base, VersionedMixin):
     )
 
 
-class AssetType(Base, VersionedMixin):
+class AssetType(VersionedMixin, Base):
     __tablename__ = "asset_types"
     __table_args__ = (
         CheckConstraint("quantity_scale >= 0 AND quantity_scale <= 18", name="ck_asset_type_scale"),
@@ -229,7 +229,7 @@ class AssetType(Base, VersionedMixin):
     )
 
 
-class AssetPosition(Base, VersionedMixin):
+class AssetPosition(VersionedMixin, Base):
     __tablename__ = "asset_positions"
     __table_args__ = (
         CheckConstraint("quantity >= 0", name="ck_asset_position_quantity_nonnegative"),
