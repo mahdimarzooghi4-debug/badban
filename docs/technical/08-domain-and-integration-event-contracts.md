@@ -1,6 +1,6 @@
 # Badban Domain and Integration Event Contracts
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Technical
 - **Scope:** bounded external-lender pilot
