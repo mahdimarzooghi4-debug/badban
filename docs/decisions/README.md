@@ -26,3 +26,4 @@ Each decision should include:
 ## Current decisions
 
 - [0001 — Configurable Asset Input](./0001-configurable-asset-input.md)
+- [0002 — Unified Asset and Credit Operator](./0002-unified-asset-and-credit-operator.md)
