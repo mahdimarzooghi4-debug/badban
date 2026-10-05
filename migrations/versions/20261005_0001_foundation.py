@@ -31,7 +31,10 @@ def upgrade() -> None:
         sa.Column("causation_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("publish_attempts", sa.Integer(), nullable=False),
@@ -53,7 +56,10 @@ def upgrade() -> None:
         sa.Column("payload_hash", sa.String(length=128), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column(
-            "received_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "received_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
@@ -75,7 +81,10 @@ def upgrade() -> None:
         sa.Column("response_code", sa.Integer(), nullable=True),
         sa.Column("response_payload", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("scope", "idempotency_key", name="uq_idempotency_scope_key"),

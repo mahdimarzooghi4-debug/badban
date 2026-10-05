@@ -63,7 +63,9 @@ class InboxMessage(Base):
 
 class IdempotencyRecord(Base):
     __tablename__ = "idempotency_records"
-    __table_args__ = (UniqueConstraint("scope", "idempotency_key", name="uq_idempotency_scope_key"),)
+    __table_args__ = (
+        UniqueConstraint("scope", "idempotency_key", name="uq_idempotency_scope_key"),
+    )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     scope: Mapped[str] = mapped_column(String(160), nullable=False)
