@@ -28,8 +28,8 @@ Each decision should include:
 - [0001 — Configurable Asset Input](./0001-configurable-asset-input.md)
 - [0002 — Unified Asset and Credit Operator](./0002-unified-asset-and-credit-operator.md) — **Superseded by 0005**
 - [0003 — Asset Position Ownership by Funding Source](./0003-asset-position-ownership-by-funding-source.md)
-
 - [0004 — Direct Lending Liquidity Separation](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed**
 - [0005 — Hybrid Credit Delivery Model](./0005-hybrid-credit-delivery-model.md)
 - [0006 — External Lender Integration and Guarantee Lifecycle](./0006-external-lender-integration-and-guarantee-lifecycle.md)
 - [0007 — Default, Claim, Recovery, and Loss Waterfall](./0007-default-claim-recovery-loss-waterfall.md)
+- [0008 — Policy-Driven Asset-to-Guarantee Capacity Formula](./0008-policy-driven-asset-to-guarantee-capacity-formula.md) — **Proposed**
