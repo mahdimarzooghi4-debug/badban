@@ -36,4 +36,4 @@ Each decision should include:
 - [0009 — One-to-One External Loan and Badban Guarantee](./0009-one-to-one-external-loan-and-guarantee.md)
 - [0010 — Risk Appetite and Guarantee Reserve Framework](./0010-risk-appetite-and-guarantee-reserve-framework.md)
 - [0011 — Configurable Credit Product Rules](./0011-configurable-credit-product-rules.md)
-- [0012 — Policy-Driven Return Allocation](./0012-policy-driven-return-allocation.md) — **Proposed**
+- [0012 — Policy-Driven Return Allocation](./0012-policy-driven-return-allocation.md)
