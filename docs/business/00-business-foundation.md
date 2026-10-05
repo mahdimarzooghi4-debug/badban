@@ -136,114 +136,149 @@ Adding a new Asset Type should normally be a policy/configuration action, not a 
 
 ## 7. Credit-capacity principle
 
-Credit capacity is derived from **eligible backing value**, not from the nominal amount originally paid or allocated.
+Decision 0008 defines the accepted guarantee-capacity architecture.
 
-Conceptually:
+For each eligible Asset Position:
 
 ```
-Gross Asset Value
-  × Eligibility
-  × Haircut / Advance Rate
-  × Availability Rules
-  - Existing Encumbrances
-  - Required Risk Buffers
-  = Available Credit Capacity
+Gross Market Value
+= Eligible Quantity × Approved Price × Approved FX Conversion, when applicable
+
+Pledgeable Market Value
+= Gross Market Value × Pledgeable Fraction
+
+Position Backing Capacity
+= Pledgeable Market Value × Advance Rate
 ```
 
-The exact formula, limits, rounding, minimums, and portfolio constraints are not yet approved and must be captured as explicit decisions before implementation.
+Portfolio and concentration rules may cap the sum of position capacities.
+
+Available capacity is:
+
+```
+Available Guarantee Capacity
+= max(
+  0,
+  Capped Gross Backing Capacity
+  - Reserved Guarantee Capacity
+  - Active Guarantee Exposure
+  - Other Approved Capacity Holds
+)
+```
+
+For the bounded external-lender pilot, Decision 0009 adds the hard invariant:
+
+```
+External Loan Principal
+= Issued Badban Guarantee Amount
+<= approved available capacity and applicable product/provider/program/portfolio limits
+```
+
+Stale or missing authoritative valuation creates no new guarantee capacity.
+
+The formula architecture is accepted. Numeric Advance Rates, pledgeability fractions, concentration caps, stale windows, rounding rules, and other operational values remain versioned policy inputs and must be supplied through an approved Pilot Policy Pack rather than hard-coded.
 
 ## 8. Economic flows
 
-The original proposal's economic logic remains a working input:
+Decision 0012 defines the accepted return-allocation chain:
 
 ```
 Managed Asset Base
       ↓
-Economic Return / Value Creation
+Recognized Economic Return
       ↓
-Risk Reserve
+Approved Costs / Adjustments
       ↓
-Policy Allocation
+Eligible Net Return
+      ↓
+Required Risk-Reserve Allocation
+      ↓
+Allocable Return
       ├─ Livelihood
       ├─ Future Financial Support
       ├─ Capital Growth
-      └─ Social Reinvestment / Charity
+      ├─ Social Reinvestment
+      └─ Carry-Forward where policy allows
 ```
 
-However, the percentages, entitlement rules, accounting treatment, timing, and legal ownership of each allocation are **not yet fixed**.
+Principal is not distributable return merely because it is present in the managed asset base.
 
-Credit delivery introduces two possible funding flows.
+Allocation percentages, bounds, reserve rules, and rounding are versioned policy inputs. Decision 0013 governs participant exit and entitlement behavior, Decision 0003 governs participant-owned versus program-attributed principal, and Decision 0015 governs the accounting/sub-ledger representation.
 
-For the preferred external-lender channel:
+For the bounded pilot, credit delivery is external-lender only:
 
 ```
-Badban Backing / Guarantee
+Badban Backing / Legal Guarantee
         +
 External Lender Liquidity
         ↓
 External Loan / Credit
 ```
 
-For optional Badban direct lending:
-
-```
-Badban Direct Lending Liquidity
-        ↓
-Credit Disbursement
-        ↓
-Outstanding Receivable
-        ↓
-Repayment
-        ↓
-Revolving Direct Lending Liquidity
-```
-
-Decision 0004 is currently proposed to formalize the separation between backing assets and Badban's direct-lending liquidity if the direct-lending channel is enabled.
+Direct Lending is outside the initial pilot under Decision 0016. Its future liquidity/accounting model remains separately gated and must not be implemented as an implicit pilot assumption.
 
 ## 9. Actors
 
-Current business actors are:
+Decision 0014 requires legal-role separation. The business actor model for the bounded pilot is:
 
-- **Participant / Beneficiary** — receives an attributed backing position and financial services.
-- **Supporting Institution** — may provide initial capital, eligibility inputs, or program sponsorship.
-- **Badban Operating Entity** — operates the asset, valuation, backing, guarantee, integration, and control layer; it may also be a lender when direct lending is enabled.
-- **Asset/Custody Function** — controls custody, ownership evidence, settlement, and asset operations; may be internal or delegated.
-- **Valuation / Market Data Function** — supplies approved values under policy.
-- **Credit Provider / Lender** — a bank, Qard-al-Hasan fund, other approved lender, or Badban itself when direct lending is enabled.
-- **Credit Integration & Servicing Coordination Function** — maintains provider/product integration, synchronized loan state, repayment status, guarantee exposure, and claims/release coordination.
-- **Risk Function** — defines and enforces credit, asset, concentration, liquidity, and default controls.
-- **Governance Bodies** — approve policy, risk appetite, admissible Asset Types, and material changes.
-- **Control / Audit Function** — independently monitors compliance, accounting integrity, and operational controls.
+- **Participant / Beneficiary** — owns or is attributed approved economic positions and receives permitted financial services.
+- **Supporting Institution / Program Sponsor** — may provide program capital, eligibility inputs, sponsorship, or approved support funding.
+- **Badban Core / Orchestration Function** — coordinates product workflow, policy, valuation inputs, guarantee-capacity logic, provider integration, control, accounting sub-ledgers, reconciliation, and audit. This role does not by itself imply legal authority to lend, guarantee, custody regulated assets, or move regulated funds.
+- **Legal Guarantee Issuer** — the legally authorized entity that issues the external guarantee instrument.
+- **External Lender** — the lender of record for the pilot loan.
+- **Asset Custodian / Asset Manager / Approved Asset Provider** — performs the legally authorized custody/control/asset role applicable to the selected Asset Type.
+- **Valuation / Market Data Function** — supplies approved authoritative valuation inputs.
+- **Collateral Registry / Legal Registration Function** — records legal pledge/encumbrance/release where required.
+- **Banking / Payment / Settlement Function** — provides authoritative cash-settlement evidence where applicable.
+- **Risk Function** — governs participant and portfolio risk controls.
+- **Governance Bodies** — approve admissible Asset Types, policies, risk appetite, providers, and material changes.
+- **Finance / Reconciliation / Audit Functions** — maintain accounting integrity, reconciliation, control, and independent review.
 
-These are business roles. They do not yet imply a final legal-entity or organizational chart.
+One organization may perform more than one role only where legally valid and explicitly authorized. Runtime authority must be based on a Legal Entity / Role / Authorization registry and capability rules, not on the generic label "Badban".
+
+Direct lending remains future scope and requires separate Business, legal, regulatory, accounting, funding, and activation gates before Badban can become lender of record.
 
 ## 10. Non-negotiable business controls
 
-The following controls are part of the business baseline:
+The following controls are part of the accepted business baseline:
 
 1. no Asset Type is accepted without explicit policy approval;
-2. no credit capacity is created from an unvalued, ineligible, unavailable, or already-encumbered asset position;
-3. valuation and credit state must come from authoritative records;
-4. asset ownership, custody, encumbrance, and release status must be auditable;
-5. a unified customer experience does not erase the legal identity of the lender of record or internal separation of duties;
-6. risk limits and reserves must be defined before scale;
-7. product reporting must make asset value, backing usage, outstanding debt, repayment status, and available capacity transparent;
-8. changes to policy that affect financial rights or risk exposure must be versioned and auditable.
+2. no guarantee capacity is created from an unvalued, stale, ineligible, unavailable, or already-encumbered Asset Position;
+3. no guarantee exceeds approved available capacity;
+4. the same backing capacity cannot be reserved or encumbered twice;
+5. for the pilot, external loan principal must exactly equal issued Badban guarantee amount;
+6. no regulated action is performed by a legal entity whose authorization/scope is invalid, expired, suspended, or absent;
+7. the lender of record, Guarantee Issuer, custody/asset role, settlement role, and collateral-registration role remain explicit;
+8. Direct Lending is disabled and outside the pilot;
+9. no financial balance is directly mutated outside the accepted journal/sub-ledger model;
+10. posted financial journals must balance and remain immutable except through reversal/compensating entries;
+11. external-dependent financial/legal states require evidence and reconciliation;
+12. participant-owned collateral is not a general institutional reserve;
+13. no commingling of participant-owned, program-attributed, reserve, corporate, or provider funds is implied;
+14. material financial/risk decisions retain immutable policy/version snapshots;
+15. a real transaction requires an ACTIVE Pilot Policy Pack and the applicable legal/provider activation gates;
+16. product reporting must distinguish Asset Quantity, Market Valuation, Guarantee Capacity, Guarantee Exposure, External Loan State, Entitlements, and Cash/Journal balances.
 
 ## 11. Relationship to the original proposal
 
 The original proposal remains an important source for Badban's social mission, capital-preservation philosophy, wealth-generation engine, risk reserve, governance principles, financial-future concept, and measurement of financial/social impact.
 
-The following source assumptions are now explicitly refined by repository decisions:
+Repository decisions now refine the source into a pilot-operable business contract:
 
 - **Gold is not the product model.** It is one configurable Asset Type.
 - **Asset Type and ownership/funding type are separate dimensions.**
-- **The preferred credit-delivery model reconnects Badban to external banks and Qard-al-Hasan funds as lenders, with Badban providing the backing / guarantee layer.**
-- **Badban direct lending remains an optional supported channel, not the mandatory default.**
+- **Guarantee capacity is policy-driven and derived from eligible, pledgeable, authoritatively valued backing under Decision 0008.**
+- **The bounded pilot uses an external lender of record and a legally validated Guarantee Issuer.**
+- **External Loan Principal = Issued Badban Guarantee Amount** for the standard pilot path.
+- **Credit products remain provider-specific and versioned through the Product Registry.**
+- **Return allocation starts from Eligible Net Return, not principal, and is ownership-aware.**
+- **Program Exit is not Financial Closure; participant-owned and program-attributed rights remain distinct.**
+- **The participant may experience one coherent Badban journey even though multiple authorized legal entities perform the regulated roles.**
+- **Product accounting preserves economic ownership and sub-ledger separation and reconciles to external statutory books.**
+- **The pilot is deliberately bounded to one active lender, one Guarantee Issuer, one production Asset Type, one product, and a closed cohort.**
+- **Direct Lending remains optional future scope and is not enabled by the bounded pilot.**
 
-This preserves the original proposal's external-lender guarantee concept while extending it so the platform can also support direct lending when approved.
-
-All other source assumptions remain either working inputs or open questions until separately accepted.
+Where the original proposal is ambiguous or illustrative, the accepted repository decisions govern implementation.
 
 ## 12. Remaining future-scope / activation items
 
