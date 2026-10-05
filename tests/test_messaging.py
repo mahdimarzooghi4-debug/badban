@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from nats.errors import NoServersError
 from sqlalchemy import select
 
 from badban.infrastructure.messaging import NatsJetStreamTransport
@@ -52,12 +51,13 @@ async def test_broker_failure_does_not_erase_pending_outbox(
                 )
             )
 
-    unavailable = NatsJetStreamTransport("nats://127.0.0.1:1")
-    try:
-        with pytest.raises(NoServersError):
-            await unavailable.publish("badban.test.unavailable", b"payload")
-    finally:
-        await unavailable.close()
+    class UnavailableTransport(NatsJetStreamTransport):
+        async def connect(self) -> None:
+            raise RuntimeError("broker unavailable")
+
+    unavailable = UnavailableTransport("nats://unavailable")
+    with pytest.raises(RuntimeError, match="broker unavailable"):
+        await unavailable.publish("badban.test.unavailable", b"payload")
 
     async with database.session_factory() as session:
         pending = await session.scalar(select(OutboxMessage).where(OutboxMessage.id == event_id))
