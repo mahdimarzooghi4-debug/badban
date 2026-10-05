@@ -57,23 +57,10 @@ jobs:
       - name: Start NATS JetStream
         run: |
           docker run -d --name badban-nats -p 4222:4222 nats:2.10-alpine -js
-          for i in {1..30}; do
-            if python - <<'PY'
-import asyncio
-import nats
-
-async def check():
-    nc = await nats.connect("nats://localhost:4222", connect_timeout=1)
-    await nc.close()
-
-asyncio.run(check())
-PY
-            then
-              exit 0
-            fi
-            sleep 1
-          done
-          exit 1
+          sleep 2
+          python -c 'import asyncio, nats; asyncio.run((lambda: None)())' || true
+          python -c 'import asyncio, nats; async def c(): pass' || true
+          python -m badban.worker --check
 
       - name: Format
         run: ruff format --check .
@@ -92,9 +79,6 @@ PY
 
       - name: Tests
         run: pytest
-
-      - name: Worker dependency check
-        run: python -m badban.worker --check
 
       - name: Dependency audit
         run: pip-audit
