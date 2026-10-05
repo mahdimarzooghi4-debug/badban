@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
+from nats.errors import NoServersError
 from sqlalchemy import select
 
 from badban.infrastructure.messaging import NatsJetStreamTransport
@@ -53,7 +54,7 @@ async def test_broker_failure_does_not_erase_pending_outbox(
 
     unavailable = NatsJetStreamTransport("nats://127.0.0.1:1")
     try:
-        with pytest.raises(Exception):
+        with pytest.raises(NoServersError):
             await unavailable.publish("badban.test.unavailable", b"payload")
     finally:
         await unavailable.close()
