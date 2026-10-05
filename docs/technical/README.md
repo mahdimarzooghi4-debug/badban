@@ -23,7 +23,8 @@ Real-money activation remains separately gated.
 - [06 — Policy and Versioning Runtime Model](./06-policy-and-versioning-runtime-model.md) — **Accepted**
 - [07 — API Command and Query Contracts](./07-api-command-and-query-contracts.md) — **Accepted**
 - [08 — Domain and Integration Event Contracts](./08-domain-and-integration-event-contracts.md) — **Accepted**
-- [09 — Provider Adapter Contracts](./09-provider-adapter-contracts.md) — **Proposed**
+- [09 — Provider Adapter Contracts](./09-provider-adapter-contracts.md) — **Accepted**
+- [10 — Reconciliation Engine Contract](./10-reconciliation-engine-contract.md) — **Proposed**
 
 ## Binding inputs
 
