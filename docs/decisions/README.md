@@ -32,3 +32,4 @@ Each decision should include:
 - [0004 — Direct Lending Liquidity Separation](./0004-separate-backing-and-lending-liquidity-pools.md) — **Proposed**
 - [0005 — Hybrid Credit Delivery Model](./0005-hybrid-credit-delivery-model.md)
 - [0006 — External Lender Integration and Guarantee Lifecycle](./0006-external-lender-integration-and-guarantee-lifecycle.md)
+- [0007 — Default, Claim, Recovery, and Loss Waterfall](./0007-default-claim-recovery-loss-waterfall.md) — **Proposed**
