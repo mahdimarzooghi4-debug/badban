@@ -1,6 +1,6 @@
 # Badban Ordered Product Backlog — Bounded External-Lender Pilot
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Scrum/Product Backlog
 - **Scope:** Decision 0016 bounded external-lender pilot
