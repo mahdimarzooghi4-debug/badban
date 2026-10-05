@@ -1,6 +1,6 @@
 # Badban Sprints
 
-- **Delivery State:** Sprint 01 Code Review Complete; Stage Deferred; Sprint 02 Proposed
+- **Delivery State:** Sprint 02 Accepted — Code Authorized; Stage Deferred
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 - **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
@@ -33,7 +33,7 @@ Relevant gates:
 
 ## Current Sprint Planning
 
-- [Sprint 02 — Identity and Core Participant / Asset State](./02-sprint-02-identity-core-participant-asset-state.md) — **Proposed**
+- [Sprint 02 — Identity and Core Participant / Asset State](./02-sprint-02-identity-core-participant-asset-state.md) — **Accepted / Active**
 
 Proposed Sprint 02 scope:
 
@@ -46,9 +46,7 @@ Proposed Sprint 02 scope:
 
 ## Sprint 02 Gate
 
-Sprint 02 is not yet authorized for Code.
-
-The plan must be explicitly accepted and a Sprint 02 Code authorization decision must be recorded before implementation begins.
+Decision 0024 is **Accepted**. Code is authorized only for the selected Sprint 02 scope.
 
 ## Scope Guard
 
