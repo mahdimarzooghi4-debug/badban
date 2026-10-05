@@ -1,6 +1,6 @@
 # Decision 0012 — Policy-Driven Return Allocation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Financial Model / Participant Economics / Social Capital
 - **Dependencies:** Decision 0003 — Asset Position Ownership by Funding Source; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0010 — Risk Appetite and Guarantee Reserve Framework; Decision 0011 — Configurable Credit Product Rules
@@ -19,7 +19,7 @@ It also states that one fixed allocation percentage is not appropriate for every
 
 The evolving Badban model additionally distinguishes participant-owned and program-attributed Asset Positions. Return allocation must therefore respect ownership/entitlement rights as well as social-program policy.
 
-## Proposed Decision
+## Decision
 
 Badban shall operate a versioned **Return Allocation Policy**.
 
