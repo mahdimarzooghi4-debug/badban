@@ -79,9 +79,7 @@ class EnvironmentSecretProvider:
 def build_secret_provider(settings: Settings) -> SecretProvider:
     if settings.secret_provider == "environment":
         if settings.app_env in {"stage", "production"}:
-            raise SecretUnavailableError(
-                "Environment secrets are forbidden in Stage/Production."
-            )
+            raise SecretUnavailableError("Environment secrets are forbidden in Stage/Production.")
         return EnvironmentSecretProvider()
     raise SecretUnavailableError(
         "Vault is the Stage/Production target, but the Vault client is not part of Sprint 02."

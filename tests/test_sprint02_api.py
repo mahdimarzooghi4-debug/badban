@@ -432,7 +432,5 @@ async def test_audit_events_are_database_append_only(database, clean_sprint02_ta
         with pytest.raises(DBAPIError):
             async with session.begin():
                 await session.execute(
-                    update(AuditEvent)
-                    .where(AuditEvent.id == event.id)
-                    .values(outcome="MUTATED")
+                    update(AuditEvent).where(AuditEvent.id == event.id).values(outcome="MUTATED")
                 )

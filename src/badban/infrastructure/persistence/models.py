@@ -216,7 +216,9 @@ class AssetType(VersionedMixin, Base):
     quantity_scale: Mapped[int] = mapped_column(Integer, nullable=False)
     currency_or_valuation_currency: Mapped[str | None] = mapped_column(String(16), nullable=True)
     valuation_source_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    eligibility_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    eligibility_metadata: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
     custody_restriction_metadata: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict
     )
@@ -271,7 +273,9 @@ class AssetPosition(VersionedMixin, Base):
     legal_owner_participant_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=True
     )
-    custodian_legal_entity_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    custodian_legal_entity_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
     quantity: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
     unit_code: Mapped[str] = mapped_column(String(40), nullable=False)
     lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="ACTIVE")

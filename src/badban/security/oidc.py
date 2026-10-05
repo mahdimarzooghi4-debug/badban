@@ -49,7 +49,9 @@ class OidcTokenVerifier:
                         "OIDC discovery issuer does not match configured issuer",
                     )
                 jwks_uri = document.get("jwks_uri")
-                if not isinstance(jwks_uri, str) or not jwks_uri.startswith(("https://", "http://")):
+                if not isinstance(jwks_uri, str) or not jwks_uri.startswith(
+                    ("https://", "http://")
+                ):
                     raise AuthenticationError(
                         "OIDC_DISCOVERY_INVALID",
                         "OIDC discovery document has no valid jwks_uri",

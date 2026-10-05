@@ -148,13 +148,9 @@ class AssetPositionCreate(BaseModel):
     def validate_owner_pattern(self) -> AssetPositionCreate:
         if self.ownership_funding_type == "PARTICIPANT_OWNED":
             if self.legal_owner_participant_id is None or self.legal_owner_entity_id is not None:
-                raise ValueError(
-                    "PARTICIPANT_OWNED requires participant owner and no entity owner"
-                )
+                raise ValueError("PARTICIPANT_OWNED requires participant owner and no entity owner")
         elif self.legal_owner_entity_id is None or self.legal_owner_participant_id is not None:
-            raise ValueError(
-                "PROGRAM_ATTRIBUTED requires entity owner and no participant owner"
-            )
+            raise ValueError("PROGRAM_ATTRIBUTED requires entity owner and no participant owner")
         return self
 
 
@@ -599,7 +595,9 @@ async def create_asset_position(
         correlation_id=correlation_id,
     )
     if episode.status != "ACTIVE":
-        raise ApiError(422, "PARTICIPATION_EPISODE_NOT_ACTIVE", "Participation Episode is not active")
+        raise ApiError(
+            422, "PARTICIPATION_EPISODE_NOT_ACTIVE", "Participation Episode is not active"
+        )
     if asset_type.status != "ACTIVE":
         raise ApiError(422, "ASSET_TYPE_NOT_ACTIVE", "Asset Type is not active/approved")
     if body.unit_code != asset_type.unit_code:
