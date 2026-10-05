@@ -56,3 +56,5 @@ Each decision should include:
 - [0023 — Stage Deferred; Iterative Sprint Development Continues](./0023-stage-deferred-iterative-sprint-development-continues.md) — **Accepted**
 
 - [0024 — Sprint 02 Identity and Core Participant / Asset State; Code Authorization](./0024-sprint-02-identity-core-asset-code-authorization.md) — **Accepted**
+
+- [0025 — Sprint 02 Code Review Complete; Stage Still Deferred](./0025-sprint-02-code-review-complete-stage-still-deferred.md) — **Accepted**
