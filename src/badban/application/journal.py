@@ -151,9 +151,9 @@ async def post_journal(
         business_event_id=business_event_id,
         legal_entity_id=legal_entity_id,
         currency=currency,
-        state="POSTED",
+        state="PREPARED",
         effective_at=effective,
-        posted_at=now,
+        posted_at=None,
         reversal_of_entry_id=reversal_of_entry_id,
         idempotency_key=idempotency_key,
         request_hash=request_hash,
@@ -187,6 +187,9 @@ async def post_journal(
             for line in lines
         ]
     )
+    await session.flush()
+    entry.state = "POSTED"
+    entry.posted_at = now
     await session.flush()
     return entry
 
