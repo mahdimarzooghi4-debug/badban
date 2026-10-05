@@ -1,9 +1,10 @@
 # Decision 0002 — Unified Asset and Credit Operator
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-10-05
 - **Scope:** Product / Operating Model / Financial Architecture
 - **Dependency:** Decision 0001 — Configurable Asset Input
+- **Superseded by:** Decision 0005 — Hybrid Credit Delivery Model
 
 ## Decision
 
