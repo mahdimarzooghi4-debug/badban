@@ -1,6 +1,6 @@
 # Decision 0016 — Pilot Boundary and Initial Policy-Pack Governance
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Scope:** Business / Pilot / Product Boundary / Release Governance
 - **Dependencies:** Decision 0005 — Hybrid Credit Delivery Model; Decision 0008 — Policy-Driven Asset-to-Guarantee Capacity Formula; Decision 0009 — One-to-One External Loan and Badban Guarantee; Decision 0010 — Risk Appetite and Guarantee Reserve Framework; Decision 0011 — Configurable Credit Product Rules; Decision 0013 — Participant Exit and Entitlement Rules; Decision 0014 — Regulated Operating Structure and Legal-Role Separation; Decision 0015 — Accounting and Financial Sub-Ledger Model
@@ -15,7 +15,7 @@ The pilot must validate the complete Badban value chain while minimizing regulat
 
 It must also avoid inventing unapproved numeric financial parameters.
 
-## Proposed Decision
+## Decision
 
 Badban shall begin with a **bounded external-lender pilot**.
 
