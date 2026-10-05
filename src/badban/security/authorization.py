@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from badban.infrastructure.persistence.models import RoleGrant
 from badban.security.audit import append_audit
 
-
 ROLE_OPERATIONS = "OPERATIONS"
 ROLE_RISK = "RISK"
 ROLE_FINANCE_RECONCILIATION = "FINANCE_RECONCILIATION"
