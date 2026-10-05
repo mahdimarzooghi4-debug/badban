@@ -1,12 +1,12 @@
 # Sprint 03 — Control, Valuation, and Journal Foundations
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Sprint Planning
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Decision 0025
 - **Depends on:** Sprint 02 Code + Code Review Complete
-- **Code Authorization:** NOT YET GRANTED
+- **Code Authorization:** GRANTED BY DECISION 0026
 
 ## 1. Sprint Goal
 
@@ -22,7 +22,7 @@ These capabilities unblock later Policy Pack, deterministic capacity, portfolio-
 
 ## 2. Selected Backlog Items
 
-Sprint 03 proposes:
+Sprint 03 includes:
 
 - **BL-008 — Maker-Checker / ApprovalRequest**
 - **BL-012 — Immutable Valuation Observation**
@@ -376,6 +376,6 @@ Sprint 03 may be implemented/reviewed while Stage is unavailable, but its review
 
 ## 18. Approval Effect
 
-This plan is **Proposed**.
+This plan is **Accepted**.
 
-No Sprint 03 Code is authorized until the corresponding Code Authorization decision is explicitly Accepted.
+Decision 0026 authorizes Code only for BL-008, BL-012, and BL-030. Stage remains deferred under Decision 0023.
