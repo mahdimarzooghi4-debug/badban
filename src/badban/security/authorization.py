@@ -25,6 +25,8 @@ SCOPE_PARTICIPANT = "PARTICIPANT"
 SCOPE_ASSET_TYPE = "ASSET_TYPE"
 SCOPE_ASSET_POSITION = "ASSET_POSITION"
 
+HUMAN_IDENTITY_TYPES = {"STAFF", "GOVERNANCE", "AUDITOR"}
+
 
 @dataclass(frozen=True, slots=True)
 class Principal:
@@ -51,7 +53,25 @@ async def authorize(
     target_type: str,
     target_id: str,
     correlation_id: UUID,
+    human_only: bool = True,
 ) -> RoleGrant:
+    if human_only and principal.identity_type not in HUMAN_IDENTITY_TYPES:
+        append_audit(
+            session,
+            aggregate_type=target_type,
+            aggregate_id=target_id,
+            aggregate_version=None,
+            action=action,
+            actor_type=principal.identity_type,
+            actor_id=principal.identity_id,
+            correlation_id=correlation_id,
+            outcome="DENIED",
+            reason_code="AUTHORIZATION_DENIED",
+            scope={"scope_type": scope_type, "scope_id": str(scope_id) if scope_id else None},
+        )
+        await session.commit()
+        raise AuthorizationDenied()
+
     now = datetime.now(UTC)
     scope_predicate = (
         or_(
