@@ -59,4 +59,4 @@ Each decision should include:
 
 - [0025 — Sprint 02 Code Review Complete; Stage Still Deferred](./0025-sprint-02-code-review-complete-stage-still-deferred.md) — **Accepted**
 
-- [0026 — Sprint 03 Control, Valuation, and Journal Foundations; Code Authorization](./0026-sprint-03-control-valuation-journal-code-authorization.md) — **Proposed**
+- [0026 — Sprint 03 Control, Valuation, and Journal Foundations; Code Authorization](./0026-sprint-03-control-valuation-journal-code-authorization.md) — **Accepted**
