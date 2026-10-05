@@ -11,6 +11,8 @@ dependencies = [
   "alembic>=1.14,<2",
   "asyncpg>=0.30,<1",
   "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "PyJWT[crypto]>=2.10,<3",
   "nats-py>=2.9,<3",
   "opentelemetry-api>=1.28,<2",
   "opentelemetry-instrumentation-fastapi>=0.49b0,<1",
@@ -25,7 +27,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.28,<1",
   "hypothesis>=6.115,<7",
   "pip-audit>=2.7,<3",
   "pyright>=1.1.390,<2",
@@ -49,6 +50,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
 
 [tool.pyright]
 include = ["src", "tests"]

@@ -12,6 +12,8 @@ os.environ.setdefault(
 os.environ.setdefault("BADBAN_NATS_URL", "nats://localhost:4222")
 os.environ.setdefault("BADBAN_APP_ENV", "test")
 os.environ.setdefault("BADBAN_LOG_LEVEL", "INFO")
+os.environ.setdefault("BADBAN_OIDC_ISSUER", "https://issuer.test/realms/badban")
+os.environ.setdefault("BADBAN_OIDC_AUDIENCE", "badban-api")
 
 from badban.config import Settings  # noqa: E402
 from badban.infrastructure.persistence.database import Database  # noqa: E402
@@ -36,5 +38,20 @@ async def clean_foundation_tables(database: Database):
     async with database.engine.begin() as connection:
         await connection.execute(
             text("TRUNCATE outbox_messages, inbox_messages, idempotency_records")
+        )
+    yield
+
+
+@pytest.fixture
+async def clean_sprint02_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE "
+                "asset_positions, participation_episodes, role_grants, "
+                "audit_events, evidence_references, asset_types, programs, "
+                "participants, identities, idempotency_records "
+                "RESTART IDENTITY CASCADE"
+            )
         )
     yield
