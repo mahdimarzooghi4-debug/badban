@@ -1,10 +1,10 @@
 # Badban Business Foundation
 
-- **Status:** Working Baseline
+- **Status:** Accepted Baseline for Bounded Pilot
 - **Date:** 2026-10-05
-- **Stage:** Business
+- **Stage:** Business Complete for Bounded Pilot — Technical Authorized
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, Decision 0010, Decision 0011, Decision 0012, Decision 0013, Decision 0014, and Decision 0015
+- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, Decision 0008, Decision 0009, Decision 0010, Decision 0011, Decision 0012, Decision 0013, Decision 0014, Decision 0015, Decision 0016, and Decision 0017
 
 ## 1. Product thesis
 
@@ -245,14 +245,16 @@ This preserves the original proposal's external-lender guarantee concept while e
 
 All other source assumptions remain either working inputs or open questions until separately accepted.
 
-## 12. Open business decisions — next queue
+## 12. Remaining future-scope / activation items
 
-Before Technical architecture begins, the following questions must be resolved and recorded:
+Technical architecture for the bounded external-lender pilot is authorized by Decision 0017.
+
+The following items remain outside the Technical-entry gate:
 
 1. **Direct-lending funding model:** future scope only while direct lending remains disabled for the pilot.
-2. **Pilot boundary:** target cohort, initial Asset Type, provider path, policy values, and success metrics.
+2. **Pilot activation values and named counterparties:** required before real-money activation through the Pilot Policy Pack and Decision 0016 gates.
 
-Until these are resolved, they are not implementation assumptions.
+These items must not be invented by Technical implementation.
 
 ## 13. Definition of Business-stage completion
 
@@ -268,4 +270,4 @@ The Business stage is complete only when:
 - measurable pilot economics and success criteria are approved;
 - all material decisions are recorded in the Decision Log.
 
-Only then should Badban advance to the Technical stage.
+Decision 0017 records that these conditions are satisfied for the bounded external-lender pilot scope. Badban may now advance to the Technical stage for that scope. Real-money pilot activation remains separately gated by Decision 0016.
