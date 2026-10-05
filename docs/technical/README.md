@@ -1,16 +1,17 @@
 # Badban Technical
 
-- **Stage:** Technical
+- **Stage:** Technical Complete for Bounded Pilot — Scrum/Product Backlog Authorized
 - **Entry Gate:** Authorized by Decision 0017
+- **Exit Gate:** Decision 0018
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 
 ## Parent delivery process
 
 **Business → Technical → Scrum/Product Backlog → Sprint → Code → Code Review → Stage → QA/Testing → Release Approval → Production → Monitoring → Improvement**
 
-The Business stage is complete for Technical entry only within the bounded pilot scope.
+The Technical stage is complete for translation into Scrum/Product Backlog within the bounded pilot scope.
 
-Real-money activation remains separately gated.
+This does not authorize Sprint execution, Code, real-money activation, Release, or Production.
 
 ## Technical documents
 
@@ -28,11 +29,12 @@ Real-money activation remains separately gated.
 - [11 — Identity, RBAC, and Maker-Checker Contract](./11-identity-rbac-and-maker-checker-contract.md) — **Accepted**
 - [12 — Security and Secrets Contract](./12-security-and-secrets-contract.md) — **Accepted**
 - [13 — Observability and Operational Readiness Contract](./13-observability-and-operational-readiness-contract.md) — **Accepted**
-- [14 — Deployment, Runtime Topology, and Non-Functional Requirements](./14-deployment-runtime-topology-and-non-functional-requirements.md) — **Proposed**
+- [14 — Deployment, Runtime Topology, and Non-Functional Requirements](./14-deployment-runtime-topology-and-non-functional-requirements.md) — **Accepted**
+- [15 — Technical-Stage Completion Review](./15-technical-stage-completion-review.md) — **PASS / Accepted**
 
 ## Binding inputs
 
-Technical design must comply with Accepted decisions in [../decisions](../decisions/README.md), especially Decisions 0008–0017.
+Technical design and all later implementation must comply with Accepted decisions in [../decisions](../decisions/README.md), especially Decisions 0008–0018.
 
 ## Scope guard
 
@@ -40,3 +42,8 @@ Badban Direct Lending is outside the initial pilot and must not be implemented a
 
 Any future direct-lending architecture must wait for its Business/legal gates.
 
+## Next stage
+
+The next repository stage is **Scrum/Product Backlog**.
+
+Backlog decomposition must preserve traceability to these accepted Technical contracts and must not authorize Code before Sprint scope, acceptance criteria, tests, dependencies, and required implementation selections are explicit.
