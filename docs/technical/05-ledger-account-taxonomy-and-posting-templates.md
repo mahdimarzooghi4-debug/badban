@@ -1,6 +1,6 @@
 # Badban Ledger Account Taxonomy and Posting Templates
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Stage:** Technical
 - **Scope:** bounded external-lender pilot
