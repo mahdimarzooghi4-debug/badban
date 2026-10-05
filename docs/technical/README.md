@@ -24,7 +24,8 @@ Real-money activation remains separately gated.
 - [07 — API Command and Query Contracts](./07-api-command-and-query-contracts.md) — **Accepted**
 - [08 — Domain and Integration Event Contracts](./08-domain-and-integration-event-contracts.md) — **Accepted**
 - [09 — Provider Adapter Contracts](./09-provider-adapter-contracts.md) — **Accepted**
-- [10 — Reconciliation Engine Contract](./10-reconciliation-engine-contract.md) — **Proposed**
+- [10 — Reconciliation Engine Contract](./10-reconciliation-engine-contract.md) — **Accepted**
+- [11 — Identity, RBAC, and Maker-Checker Contract](./11-identity-rbac-and-maker-checker-contract.md) — **Proposed**
 
 ## Binding inputs
 
