@@ -4,7 +4,7 @@
 - **Date:** 2026-10-05
 - **Stage:** Business
 - **Primary source:** original Badban proposal supplied by the project owner
-- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, and Decision 0006
+- **Binding repository decisions:** Decision 0001, Decision 0003, Decision 0005, Decision 0006, Decision 0007, and Decision 0009
 
 ## 1. Product thesis
 
@@ -106,6 +106,12 @@ Credit Provider
 ```
 
 The product must support one coherent customer experience while always preserving the identity of the lender of record and the responsibility split for approval, disbursement, servicing, delinquency, guarantee claims, and enforcement.
+
+For the standard external-lender channel, Decision 0009 requires the lender's loan principal to exactly match the Badban guarantee amount:
+
+```
+External Loan Principal = Issued Badban Guarantee Amount
+```
 
 ## 6. Asset model
 
