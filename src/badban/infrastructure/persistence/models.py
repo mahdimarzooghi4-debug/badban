@@ -498,12 +498,20 @@ class JournalPosting(Base):
     )
 
 
+class LegalRole(Base):
+    __tablename__ = "legal_roles"
+
+    code: Mapped[str] = mapped_column(String(120), primary_key=True)
+
+
 class LegalEntity(VersionedMixin, Base):
     __tablename__ = "legal_entities"
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    legal_identifier: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
+    registration_identifier: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
+    entity_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
     created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -531,16 +539,21 @@ class LegalAuthorization(VersionedMixin, Base):
             "role_code",
             "lifecycle_status",
         ),
+        Index("ix_legal_authorizations_expires_at", "expires_at"),
+        Index("ix_legal_authorizations_authority", "competent_authority"),
     )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     legal_entity_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("legal_entities.id", ondelete="RESTRICT"), nullable=False
     )
-    role_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    role_code: Mapped[str] = mapped_column(
+        String(120), ForeignKey("legal_roles.code", ondelete="RESTRICT"), nullable=False
+    )
     competent_authority: Mapped[str] = mapped_column(String(255), nullable=False)
     authorization_type: Mapped[str] = mapped_column(String(160), nullable=False)
     authorization_identifier: Mapped[str] = mapped_column(String(200), nullable=False)
+    scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     permitted_product_scope: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict
     )
@@ -573,6 +586,11 @@ class CreditProvider(VersionedMixin, Base):
             name="ck_credit_provider_bounded_pilot_type",
         ),
         CheckConstraint(
+            "integration_mode IN "
+            "('API','WEBHOOK_CALLBACK','POLLING','SECURE_BATCH_FILE','CONTROLLED_MANUAL')",
+            name="ck_credit_provider_integration_mode",
+        ),
+        CheckConstraint(
             "lifecycle_status IN ('DRAFT','APPROVED','ACTIVE','SUSPENDED','EXPIRED','TERMINATED')",
             name="ck_credit_provider_status",
         ),
@@ -589,6 +607,9 @@ class CreditProvider(VersionedMixin, Base):
     provider_type: Mapped[str] = mapped_column(
         String(80), nullable=False, default="EXTERNAL_LENDER"
     )
+    integration_mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    authorization_review_state: Mapped[str] = mapped_column(String(80), nullable=False)
+    suspension_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -612,6 +633,15 @@ class CreditProductVersion(VersionedMixin, Base):
             name="uq_credit_product_provider_code_version",
         ),
         CheckConstraint("version_number > 0", name="ck_credit_product_version_positive"),
+        CheckConstraint("min_principal >= 0", name="ck_credit_product_min_nonnegative"),
+        CheckConstraint(
+            "max_principal >= min_principal",
+            name="ck_credit_product_max_not_below_min",
+        ),
+        CheckConstraint(
+            "guarantee_mode IN ('FIXED','DECLINING')",
+            name="ck_credit_product_guarantee_mode",
+        ),
         CheckConstraint(
             "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','RETIRED')",
             name="ck_credit_product_status",
@@ -625,6 +655,12 @@ class CreditProductVersion(VersionedMixin, Base):
             "provider_id",
             "lifecycle_status",
         ),
+        Index(
+            "ix_credit_product_versions_provider_code_effective",
+            "provider_id",
+            "product_code",
+            "effective_from",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -637,10 +673,22 @@ class CreditProductVersion(VersionedMixin, Base):
     product_code: Mapped[str] = mapped_column(String(120), nullable=False)
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     product_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    product_type: Mapped[str] = mapped_column(String(120), nullable=False)
     lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
-    terms: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    min_principal: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    max_principal: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    tenor_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    repayment_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    pricing_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    guarantee_mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    delinquency_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    claim_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    additional_terms: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

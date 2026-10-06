@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Query, status
@@ -49,6 +49,14 @@ class ProviderCreate(BaseModel):
     legal_entity_id: UUID
     provider_code: str = Field(min_length=1, max_length=120)
     display_name: str = Field(min_length=1, max_length=255)
+    integration_mode: Literal[
+        "API",
+        "WEBHOOK_CALLBACK",
+        "POLLING",
+        "SECURE_BATCH_FILE",
+        "CONTROLLED_MANUAL",
+    ]
+    authorization_review_state: str = Field(min_length=1, max_length=80)
 
 
 class ApprovalExecution(BaseModel):
@@ -61,6 +69,9 @@ class ProviderView(OrmModel):
     provider_code: str
     display_name: str
     provider_type: str
+    integration_mode: str
+    authorization_review_state: str
+    suspension_reason: str | None
     lifecycle_status: str
     approved_at: datetime | None
     activated_at: datetime | None
@@ -92,6 +103,13 @@ class LegalAuthorizationCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_window(self) -> LegalAuthorizationCreate:
+        timestamps = [
+            self.effective_from,
+            self.last_compliance_review_at,
+            *([self.expires_at] if self.expires_at is not None else []),
+        ]
+        if any(value.tzinfo is None or value.utcoffset() is None for value in timestamps):
+            raise ValueError("authorization timestamps must be timezone-aware")
         if self.expires_at is not None and self.expires_at <= self.effective_from:
             raise ValueError("expires_at must be later than effective_from")
         return self
@@ -106,6 +124,7 @@ class LegalAuthorizationView(OrmModel):
     authorization_identifier: str
     permitted_product_scope: dict[str, Any]
     permitted_asset_type_ids: list[str]
+    scope_definition: dict[str, Any]
     evidence_reference: str
     effective_from: datetime
     expires_at: datetime | None
@@ -226,6 +245,8 @@ async def create_provider(
         provider_code=body.provider_code,
         display_name=body.display_name,
         provider_type="EXTERNAL_LENDER",
+        integration_mode=body.integration_mode,
+        authorization_review_state=body.authorization_review_state,
         lifecycle_status="DRAFT",
         created_by=principal.identity_id,
         version=1,
@@ -432,12 +453,21 @@ async def create_legal_authorization(
     if replay is not None:
         return LegalAuthorizationView.model_validate(replay)
 
+    scope_definition: dict[str, Any] = {}
+    if body.permitted_product_scope:
+        scope_definition["permitted_product_scope"] = body.permitted_product_scope
+    if body.permitted_asset_type_ids:
+        scope_definition["permitted_asset_type_ids"] = [
+            str(asset_type_id) for asset_type_id in body.permitted_asset_type_ids
+        ]
+
     authorization = LegalAuthorization(
         legal_entity_id=legal_entity_id,
         role_code=body.role_code,
         competent_authority=body.competent_authority,
         authorization_type=body.authorization_type,
         authorization_identifier=body.authorization_identifier,
+        scope_definition=scope_definition,
         permitted_product_scope=body.permitted_product_scope,
         permitted_asset_type_ids=[
             str(asset_type_id) for asset_type_id in body.permitted_asset_type_ids

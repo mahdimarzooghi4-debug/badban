@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +27,11 @@ from badban.security.authorization import (
     SCOPE_PROVIDER,
 )
 
-EXTERNAL_LENDER_ROLE = "EXTERNAL_LENDER"
+LENDER_ROLE = "LENDER"
+
+
+def _aware(value: datetime) -> bool:
+    return value.tzinfo is not None and value.utcoffset() is not None
 
 
 def legal_authorization_verification_payload(
@@ -41,6 +46,7 @@ def legal_authorization_verification_payload(
         "competent_authority": authorization.competent_authority,
         "authorization_type": authorization.authorization_type,
         "authorization_identifier": authorization.authorization_identifier,
+        "scope_definition": authorization.scope_definition,
         "permitted_product_scope": authorization.permitted_product_scope,
         "permitted_asset_type_ids": authorization.permitted_asset_type_ids,
         "evidence_reference": authorization.evidence_reference,
@@ -61,6 +67,8 @@ def provider_activation_payload(provider: CreditProvider) -> dict[str, Any]:
         "legal_entity_id": str(provider.legal_entity_id),
         "provider_code": provider.provider_code,
         "provider_type": provider.provider_type,
+        "integration_mode": provider.integration_mode,
+        "authorization_review_state": provider.authorization_review_state,
         "version": provider.version,
     }
 
@@ -94,7 +102,10 @@ def authorization_valid_at(
     *,
     at: datetime,
     required_role: str | None = None,
+    require_unscoped: bool = False,
 ) -> bool:
+    if not _aware(at):
+        return False
     if authorization.lifecycle_status != "VALID":
         return False
     if required_role is not None and authorization.role_code != required_role:
@@ -102,6 +113,8 @@ def authorization_valid_at(
     if authorization.effective_from > at:
         return False
     if authorization.expires_at is not None and authorization.expires_at <= at:
+        return False
+    if require_unscoped and authorization.scope_definition:
         return False
     return True
 
@@ -122,6 +135,14 @@ async def verify_legal_authorization(
             409,
             "INVALID_STATE_TRANSITION",
             "Only PENDING_VERIFICATION authorization can become VALID",
+        )
+
+    entity = await get_legal_entity(session, authorization.legal_entity_id)
+    if entity.status != "ACTIVE":
+        raise ApiError(
+            409,
+            "AUTHORIZATION_INVALID",
+            "Legal Entity must be ACTIVE before authorization verification",
         )
 
     approval = await get_approval_for_update(session, approval_id)
@@ -186,7 +207,6 @@ async def suspend_legal_authorization(
     actor_type: str,
     actor_id: UUID,
     correlation_id: UUID,
-    now: datetime | None = None,
 ) -> LegalAuthorization:
     authorization = await get_authorization_for_update(session, authorization_id)
     if authorization.lifecycle_status != "VALID":
@@ -231,6 +251,13 @@ async def approve_provider_due_diligence(
     )
     if provider is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "Credit Provider was not found")
+    entity = await get_legal_entity(session, provider.legal_entity_id)
+    if entity.status != "ACTIVE":
+        raise ApiError(
+            409,
+            "AUTHORIZATION_INVALID",
+            "Provider Legal Entity must be ACTIVE",
+        )
     if provider.lifecycle_status != "DRAFT":
         raise ApiError(
             409,
@@ -262,28 +289,45 @@ async def _assert_provider_legal_authorization(
     provider: CreditProvider,
     at: datetime,
 ) -> LegalAuthorization:
-    authorization = await session.scalar(
-        select(LegalAuthorization)
-        .where(
-            LegalAuthorization.legal_entity_id == provider.legal_entity_id,
-            LegalAuthorization.role_code == EXTERNAL_LENDER_ROLE,
-            LegalAuthorization.lifecycle_status == "VALID",
-            LegalAuthorization.effective_from <= at,
-            or_(
-                LegalAuthorization.expires_at.is_(None),
-                LegalAuthorization.expires_at > at,
-            ),
-        )
-        .order_by(LegalAuthorization.effective_from.desc())
-        .limit(1)
-    )
-    if authorization is None:
+    entity = await get_legal_entity(session, provider.legal_entity_id)
+    if entity.status != "ACTIVE":
         raise ApiError(
             409,
             "AUTHORIZATION_INVALID",
-            "Provider activation requires a currently VALID EXTERNAL_LENDER authorization",
+            "Provider Legal Entity is not ACTIVE",
         )
-    return authorization
+
+    authorizations = (
+        await session.scalars(
+            select(LegalAuthorization)
+            .where(
+                LegalAuthorization.legal_entity_id == provider.legal_entity_id,
+                LegalAuthorization.role_code == LENDER_ROLE,
+                LegalAuthorization.lifecycle_status == "VALID",
+                LegalAuthorization.effective_from <= at,
+                or_(
+                    LegalAuthorization.expires_at.is_(None),
+                    LegalAuthorization.expires_at > at,
+                ),
+            )
+            .order_by(LegalAuthorization.effective_from.desc())
+        )
+    ).all()
+    for authorization in authorizations:
+        if authorization_valid_at(
+            authorization,
+            at=at,
+            required_role=LENDER_ROLE,
+            require_unscoped=True,
+        ):
+            return authorization
+
+    raise ApiError(
+        409,
+        "AUTHORIZATION_INVALID",
+        "Provider requires a currently VALID unscoped LENDER authorization; "
+        "scoped authorization is fail-closed until a capability-matrix matcher is defined",
+    )
 
 
 async def activate_provider(
@@ -377,6 +421,7 @@ async def suspend_provider(
     actor_type: str,
     actor_id: UUID,
     correlation_id: UUID,
+    reason: str | None = None,
     now: datetime | None = None,
 ) -> CreditProvider:
     provider = await session.scalar(
@@ -392,6 +437,7 @@ async def suspend_provider(
         )
     provider.lifecycle_status = "SUSPENDED"
     provider.suspended_at = now or datetime.now(UTC)
+    provider.suspension_reason = reason
     provider.version += 1
     append_audit(
         session,
@@ -403,6 +449,7 @@ async def suspend_provider(
         actor_id=actor_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
+        reason_code=reason,
         scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(provider.id)},
     )
     await session.flush()
@@ -416,22 +463,72 @@ async def create_credit_product_version(
     product_code: str,
     version_number: int,
     product_name: str,
-    terms: dict[str, Any],
+    product_type: str,
+    currency: str,
+    min_principal: Decimal,
+    max_principal: Decimal,
+    tenor_definition: dict[str, Any],
+    repayment_definition: dict[str, Any],
+    pricing_definition: dict[str, Any],
+    guarantee_mode: str,
+    delinquency_definition: dict[str, Any],
+    claim_definition: dict[str, Any],
+    policy_version_reference: str,
+    additional_terms: dict[str, Any],
     effective_from: datetime,
     effective_to: datetime | None,
     created_by: UUID,
 ) -> CreditProductVersion:
-    if not terms:
-        raise ApiError(
-            409,
-            "POLICY_VALIDATION_FAILED",
-            "Credit Product terms must be explicit and non-empty",
-        )
     if version_number <= 0:
         raise ApiError(
             409,
             "POLICY_VALIDATION_FAILED",
             "Credit Product version number must be positive",
+        )
+    if not product_code or not product_name or not product_type or not currency:
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Credit Product identity fields must be explicit",
+        )
+    if min_principal < 0 or max_principal < min_principal:
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Credit Product principal bounds are invalid",
+        )
+    definitions = {
+        "tenor_definition": tenor_definition,
+        "repayment_definition": repayment_definition,
+        "pricing_definition": pricing_definition,
+        "delinquency_definition": delinquency_definition,
+        "claim_definition": claim_definition,
+    }
+    if any(not value for value in definitions.values()):
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Credit Product rule definitions must be explicit and non-empty",
+        )
+    if guarantee_mode not in {"FIXED", "DECLINING"}:
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Credit Product guarantee mode is invalid",
+        )
+    if not policy_version_reference:
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Credit Product policy version reference is required",
+        )
+    if not _aware(effective_from) or (
+        effective_to is not None and not _aware(effective_to)
+    ):
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Credit Product effective timestamps must be timezone-aware",
         )
     if effective_to is not None and effective_to <= effective_from:
         raise ApiError(
@@ -450,8 +547,19 @@ async def create_credit_product_version(
         product_code=product_code,
         version_number=version_number,
         product_name=product_name,
+        product_type=product_type,
         lifecycle_status="DRAFT",
-        terms=terms,
+        currency=currency,
+        min_principal=min_principal,
+        max_principal=max_principal,
+        tenor_definition=tenor_definition,
+        repayment_definition=repayment_definition,
+        pricing_definition=pricing_definition,
+        guarantee_mode=guarantee_mode,
+        delinquency_definition=delinquency_definition,
+        claim_definition=claim_definition,
+        policy_version_reference=policy_version_reference,
+        additional_terms=additional_terms,
         effective_from=effective_from,
         effective_to=effective_to,
         created_by=created_by,
@@ -462,10 +570,13 @@ async def create_credit_product_version(
     return product
 
 
-async def activate_credit_product_version(
+async def approve_credit_product_version(
     session: AsyncSession,
     *,
     product_version_id: UUID,
+    actor_type: str,
+    actor_id: UUID,
+    correlation_id: UUID,
     now: datetime | None = None,
 ) -> CreditProductVersion:
     product = await session.scalar(
@@ -475,12 +586,63 @@ async def activate_credit_product_version(
     )
     if product is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "Credit Product Version was not found")
-    if product.lifecycle_status != "DRAFT":
+    if product.lifecycle_status != "DRAFT" or product.approved_at is not None:
         raise ApiError(
             409,
             "INVALID_STATE_TRANSITION",
-            "Only DRAFT Credit Product Version can become ACTIVE",
+            "Only unapproved DRAFT Credit Product Version can be approved",
         )
+    product.approved_at = now or datetime.now(UTC)
+    product.version += 1
+    append_audit(
+        session,
+        aggregate_type="CreditProductVersion",
+        aggregate_id=str(product.id),
+        aggregate_version=product.version,
+        action="CREDIT_PRODUCT_VERSION_APPROVE",
+        actor_type=actor_type,
+        actor_id=actor_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(product.provider_id)},
+    )
+    await session.flush()
+    return product
+
+
+async def activate_credit_product_version(
+    session: AsyncSession,
+    *,
+    product_version_id: UUID,
+    actor_type: str,
+    actor_id: UUID,
+    correlation_id: UUID,
+    now: datetime | None = None,
+) -> CreditProductVersion:
+    product = await session.scalar(
+        select(CreditProductVersion)
+        .where(CreditProductVersion.id == product_version_id)
+        .with_for_update()
+    )
+    if product is None:
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "Credit Product Version was not found")
+    if product.lifecycle_status != "DRAFT" or product.approved_at is None:
+        raise ApiError(
+            409,
+            "INVALID_STATE_TRANSITION",
+            "Only explicitly approved DRAFT Credit Product Version can become ACTIVE",
+        )
+
+    activation_time = now or datetime.now(UTC)
+    if product.effective_from > activation_time or (
+        product.effective_to is not None and product.effective_to <= activation_time
+    ):
+        raise ApiError(
+            409,
+            "INVALID_STATE_TRANSITION",
+            "Credit Product Version is outside its effective window",
+        )
+
     provider = await session.get(CreditProvider, product.provider_id)
     if provider is None or provider.lifecycle_status != "ACTIVE":
         raise ApiError(
@@ -488,8 +650,104 @@ async def activate_credit_product_version(
             "PROVIDER_NOT_ACTIVE",
             "Credit Product Version requires an ACTIVE provider",
         )
+    await _assert_provider_legal_authorization(
+        session,
+        provider=provider,
+        at=activation_time,
+    )
+
     product.lifecycle_status = "ACTIVE"
-    product.activated_at = now or datetime.now(UTC)
+    product.activated_at = activation_time
     product.version += 1
+    append_audit(
+        session,
+        aggregate_type="CreditProductVersion",
+        aggregate_id=str(product.id),
+        aggregate_version=product.version,
+        action="CREDIT_PRODUCT_VERSION_ACTIVATE",
+        actor_type=actor_type,
+        actor_id=actor_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(product.provider_id)},
+    )
+    await session.flush()
+    return product
+
+
+async def suspend_credit_product_version(
+    session: AsyncSession,
+    *,
+    product_version_id: UUID,
+    actor_type: str,
+    actor_id: UUID,
+    correlation_id: UUID,
+) -> CreditProductVersion:
+    product = await session.scalar(
+        select(CreditProductVersion)
+        .where(CreditProductVersion.id == product_version_id)
+        .with_for_update()
+    )
+    if product is None:
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "Credit Product Version was not found")
+    if product.lifecycle_status != "ACTIVE":
+        raise ApiError(
+            409,
+            "INVALID_STATE_TRANSITION",
+            "Only ACTIVE Credit Product Version can be suspended",
+        )
+    product.lifecycle_status = "SUSPENDED"
+    product.version += 1
+    append_audit(
+        session,
+        aggregate_type="CreditProductVersion",
+        aggregate_id=str(product.id),
+        aggregate_version=product.version,
+        action="CREDIT_PRODUCT_VERSION_SUSPEND",
+        actor_type=actor_type,
+        actor_id=actor_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(product.provider_id)},
+    )
+    await session.flush()
+    return product
+
+
+async def retire_credit_product_version(
+    session: AsyncSession,
+    *,
+    product_version_id: UUID,
+    actor_type: str,
+    actor_id: UUID,
+    correlation_id: UUID,
+) -> CreditProductVersion:
+    product = await session.scalar(
+        select(CreditProductVersion)
+        .where(CreditProductVersion.id == product_version_id)
+        .with_for_update()
+    )
+    if product is None:
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "Credit Product Version was not found")
+    if product.lifecycle_status not in {"ACTIVE", "SUSPENDED"}:
+        raise ApiError(
+            409,
+            "INVALID_STATE_TRANSITION",
+            "Only ACTIVE or SUSPENDED Credit Product Version can be retired",
+        )
+    product.lifecycle_status = "RETIRED"
+    product.version += 1
+    append_audit(
+        session,
+        aggregate_type="CreditProductVersion",
+        aggregate_id=str(product.id),
+        aggregate_version=product.version,
+        action="CREDIT_PRODUCT_VERSION_RETIRE",
+        actor_type=actor_type,
+        actor_id=actor_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(product.provider_id)},
+    )
     await session.flush()
     return product
