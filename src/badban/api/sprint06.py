@@ -395,7 +395,6 @@ async def list_legal_authorizations(
     correlation_id: UUID = Depends(get_correlation_id),
 ) -> list[LegalAuthorizationView]:
     await get_legal_entity(session, legal_entity_id)
-    await assert_legal_role_registered(session, body.role_code)
     await _authorize(
         session,
         principal=principal,
@@ -434,6 +433,7 @@ async def create_legal_authorization(
     idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
 ) -> LegalAuthorizationView:
     await get_legal_entity(session, legal_entity_id)
+    await assert_legal_role_registered(session, body.role_code)
     await _authorize(
         session,
         principal=principal,
