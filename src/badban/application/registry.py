@@ -522,9 +522,7 @@ async def create_credit_product_version(
             "POLICY_VALIDATION_FAILED",
             "Credit Product policy version reference is required",
         )
-    if not _aware(effective_from) or (
-        effective_to is not None and not _aware(effective_to)
-    ):
+    if not _aware(effective_from) or (effective_to is not None and not _aware(effective_to)):
         raise ApiError(
             409,
             "POLICY_VALIDATION_FAILED",

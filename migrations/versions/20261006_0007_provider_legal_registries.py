@@ -63,9 +63,7 @@ def upgrade() -> None:
         sa.Column("competent_authority", sa.String(length=255), nullable=False),
         sa.Column("authorization_type", sa.String(length=160), nullable=False),
         sa.Column("authorization_identifier", sa.String(length=200), nullable=False),
-        sa.Column(
-            "scope_definition", postgresql.JSONB(astext_type=sa.Text()), nullable=False
-        ),
+        sa.Column("scope_definition", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column(
             "permitted_product_scope", postgresql.JSONB(astext_type=sa.Text()), nullable=False
         ),
