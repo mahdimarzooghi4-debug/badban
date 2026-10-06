@@ -1,12 +1,12 @@
 # Sprint 04 — Policy Lifecycle and Deterministic Resolution
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-06
 - **Stage:** Sprint Planning
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Decision 0027
 - **Depends on:** Sprint 03 Code + Code Review Complete
-- **Code Authorization:** NOT YET GRANTED
+- **Code Authorization:** GRANTED BY DECISION 0028
 
 ## 1. Sprint Goal
 
@@ -357,6 +357,6 @@ If later authorized and implemented, Sprint 04 output will join the accumulated 
 
 ## 20. Approval Effect
 
-This Sprint 04 plan is **Proposed**.
+This Sprint 04 plan is **Accepted**.
 
-It grants no Code authorization.
+Decision 0028 grants Code authorization only for BL-013 and BL-014.
