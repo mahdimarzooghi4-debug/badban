@@ -1,12 +1,13 @@
 # Sprint 03 — Control, Valuation, and Journal Foundations
 
-- **Status:** Accepted
+- **Status:** Completed
 - **Date:** 2026-10-05
-- **Stage:** Sprint Planning
+- **Stage:** Code + Code Review Complete
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Decision 0025
 - **Depends on:** Sprint 02 Code + Code Review Complete
 - **Code Authorization:** GRANTED BY DECISION 0026
+- **Code Review:** COMPLETE BY DECISION 0027
 
 ## 1. Sprint Goal
 
@@ -379,3 +380,11 @@ Sprint 03 may be implemented/reviewed while Stage is unavailable, but its review
 This plan is **Accepted**.
 
 Decision 0026 authorizes Code only for BL-008, BL-012, and BL-030. Stage remains deferred under Decision 0023.
+
+## 19. Completion
+
+Sprint 03 was implemented under Decision 0026.
+
+Code Review completed under Decision 0027 and PR #4 was merged to `main`.
+
+Stage remains deferred under Decision 0023; Sprint 03 is part of the accumulated future Stage candidate.
