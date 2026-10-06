@@ -359,6 +359,7 @@ async def _transition_command(
     else:
         raise RuntimeError(f"Unsupported policy transition command: {command}")
 
+    await session.refresh(policy)
     view = PolicyPackView.model_validate(policy)
     complete_idempotency(record, status_code=200, response_payload=view.model_dump(mode="json"))
     await session.commit()
