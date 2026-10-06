@@ -544,9 +544,7 @@ class LegalAuthorization(VersionedMixin, Base):
     permitted_product_scope: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict
     )
-    permitted_asset_type_ids: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=list
-    )
+    permitted_asset_type_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
     effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -80,7 +80,6 @@ async def clean_sprint04_policy_tables(database: Database):
     yield
 
 
-
 @pytest.fixture
 async def clean_sprint06_registry_tables(database: Database):
     async with database.engine.begin() as connection:

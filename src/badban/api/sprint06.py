@@ -146,7 +146,9 @@ async def _authorize(
             correlation_id=correlation_id,
         )
     except AuthorizationDenied as exc:
-        raise ApiError(403, exc.code, "Authorization denied for requested registry operation") from exc
+        raise ApiError(
+            403, exc.code, "Authorization denied for requested registry operation"
+        ) from exc
 
 
 @router.get("/providers", response_model=ProviderListView)
@@ -391,8 +393,7 @@ async def list_legal_authorizations(
         )
     ).all()
     return [
-        LegalAuthorizationView.model_validate(authorization)
-        for authorization in authorizations
+        LegalAuthorizationView.model_validate(authorization) for authorization in authorizations
     ]
 
 

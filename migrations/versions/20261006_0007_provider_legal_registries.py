@@ -25,8 +25,12 @@ def upgrade() -> None:
         sa.Column("legal_identifier", sa.String(length=160), nullable=False),
         sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("legal_identifier"),
     )
@@ -38,8 +42,12 @@ def upgrade() -> None:
         sa.Column("competent_authority", sa.String(length=255), nullable=False),
         sa.Column("authorization_type", sa.String(length=160), nullable=False),
         sa.Column("authorization_identifier", sa.String(length=200), nullable=False),
-        sa.Column("permitted_product_scope", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("permitted_asset_type_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column(
+            "permitted_product_scope", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column(
+            "permitted_asset_type_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
         sa.Column("evidence_reference", sa.String(length=500), nullable=False),
         sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
@@ -49,8 +57,12 @@ def upgrade() -> None:
         sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.CheckConstraint(
             "lifecycle_status IN ('PENDING_VERIFICATION','VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')",
             name="ck_legal_authorization_status",
@@ -81,8 +93,12 @@ def upgrade() -> None:
         sa.Column("suspended_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.CheckConstraint(
             "provider_type = 'EXTERNAL_LENDER'",
             name="ck_credit_provider_bounded_pilot_type",
@@ -111,7 +127,9 @@ def upgrade() -> None:
         "credit_product_versions",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("provider_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("lender_of_record_legal_entity_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "lender_of_record_legal_entity_id", postgresql.UUID(as_uuid=True), nullable=False
+        ),
         sa.Column("product_code", sa.String(length=120), nullable=False),
         sa.Column("version_number", sa.Integer(), nullable=False),
         sa.Column("product_name", sa.String(length=255), nullable=False),
@@ -122,8 +140,12 @@ def upgrade() -> None:
         sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.CheckConstraint("version_number > 0", name="ck_credit_product_version_positive"),
         sa.CheckConstraint(
             "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','RETIRED')",
@@ -233,9 +255,7 @@ def downgrade() -> None:
         "credit_providers",
         "legal_authorizations",
     ):
-        op.execute(
-            f"DROP TRIGGER IF EXISTS trg_{table_name}_history_immutable ON {table_name}"
-        )
+        op.execute(f"DROP TRIGGER IF EXISTS trg_{table_name}_history_immutable ON {table_name}")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_registry_history_mutation")
     op.drop_index(
         "ix_credit_product_versions_provider_status",

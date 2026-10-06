@@ -46,9 +46,7 @@ def legal_authorization_verification_payload(
         "evidence_reference": authorization.evidence_reference,
         "effective_from": authorization.effective_from.isoformat(),
         "expires_at": (
-            authorization.expires_at.isoformat()
-            if authorization.expires_at is not None
-            else None
+            authorization.expires_at.isoformat() if authorization.expires_at is not None else None
         ),
         "last_compliance_review_at": authorization.last_compliance_review_at.isoformat(),
         "version": authorization.version,
