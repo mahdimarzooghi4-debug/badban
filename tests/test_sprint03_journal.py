@@ -274,6 +274,18 @@ async def test_posted_journal_is_immutable_and_reversal_is_linked(
     assert by_account["4000"].debit_amount == Decimal("25.50")
 
     async with database.session_factory() as session:
+        async with session.begin():
+            replay = await reverse_journal(
+                session,
+                original_entry_id=original_id,
+                idempotency_key="reversal-entry",
+                actor_reference=actor_id,
+                correlation_id=uuid4(),
+                reason="correct foundation test",
+            )
+        assert replay.id == reversal_id
+
+    async with database.session_factory() as session:
         with pytest.raises(JournalError) as exc:
             async with session.begin():
                 await reverse_journal(
