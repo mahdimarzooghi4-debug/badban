@@ -12,6 +12,7 @@ from badban.application.idempotency import canonical_request_hash
 from badban.application.policy_lifecycle import (
     activate_policy,
     approve_policy,
+    assert_policy_pack_components_exist,
     assert_policy_pack_manifest_exact,
     assert_policy_payload_mutable,
     assert_policy_transition_allowed,
@@ -140,6 +141,32 @@ def test_policy_pack_manifest_accepts_explicit_unique_component_version_ids() ->
     assert_policy_pack_manifest_exact(policy)
 
 
+@pytest.mark.integration
+async def test_policy_pack_component_existence_accepts_persisted_version(
+    database,
+    clean_sprint04_policy_tables,
+) -> None:
+    component = PolicyVersion(
+        policy_type="ASSET_TYPE_POLICY",
+        policy_code=f"TEST_ASSET_{uuid4()}",
+        version_number=1,
+        lifecycle_status="DRAFT",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        payload={},
+        schema_version="1",
+        created_by=uuid4(),
+        version=1,
+    )
+    pack = _policy("REVIEWED")
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(component)
+            await session.flush()
+            pack.payload = {"component_version_ids": [str(component.id)]}
+            await assert_policy_pack_components_exist(session, pack)
+
+
 async def _approved_policy_request(
     session,
     *,
@@ -218,6 +245,55 @@ async def test_policy_approval_rejects_non_exact_pack_component_reference(
                 )
 
     assert exc.value.code == "POLICY_VALIDATION_FAILED"
+
+    async with database.session_factory() as session:
+        stored = await session.get(PolicyVersion, policy_id)
+
+    assert stored is not None
+    assert stored.lifecycle_status == "REVIEWED"
+    assert stored.payload_hash is None
+    assert stored.approved_by is None
+
+
+@pytest.mark.integration
+async def test_policy_approval_rejects_missing_pack_component_reference(
+    database,
+    clean_sprint03_tables,
+    clean_sprint04_policy_tables,
+) -> None:
+    missing_component_id = uuid4()
+    policy = _policy("REVIEWED")
+    policy.version = 2
+    policy.payload = {"component_version_ids": [str(missing_component_id)]}
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(policy)
+            await session.flush()
+            policy_id = policy.id
+            approval = await _approved_policy_request(
+                session,
+                policy=policy,
+                target_status="APPROVED",
+            )
+            approval_id = approval.id
+
+    async with database.session_factory() as session:
+        with pytest.raises(ApiError) as exc:
+            async with session.begin():
+                await approve_policy(
+                    session,
+                    policy_id=policy_id,
+                    approval_id=approval_id,
+                    actor_type="GOVERNANCE",
+                    actor_id=uuid4(),
+                    correlation_id=uuid4(),
+                )
+
+    assert exc.value.code == "POLICY_VALIDATION_FAILED"
+    assert exc.value.details == {
+        "missing_component_version_ids": [str(missing_component_id)]
+    }
 
     async with database.session_factory() as session:
         stored = await session.get(PolicyVersion, policy_id)
@@ -359,7 +435,7 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
     database,
     clean_sprint04_policy_tables,
 ) -> None:
-    previous_payload = {"component_version_ids": [str(uuid4())]}
+    previous_payload = {"component_version_ids": []}
     previous = PolicyVersion(
         policy_type="PILOT_POLICY_PACK",
         policy_code="BOUNDED_PILOT",
@@ -373,7 +449,7 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
         created_by=uuid4(),
         version=4,
     )
-    candidate_payload = {"component_version_ids": [str(uuid4())]}
+    candidate_payload = {"component_version_ids": []}
     candidate = PolicyVersion(
         policy_type="PILOT_POLICY_PACK",
         policy_code="BOUNDED_PILOT",
@@ -469,7 +545,7 @@ async def test_activate_policy_rejects_payload_changed_after_approval(
         version_number=1,
         lifecycle_status="APPROVED",
         scope_definition={"pilot_scope": "bounded-pilot"},
-        payload={"component_version_ids": [str(uuid4())]},
+        payload={"component_version_ids": []},
         payload_hash=canonical_request_hash(approved_payload),
         schema_version="1",
         approved_at=datetime.now(UTC),
@@ -520,7 +596,7 @@ async def test_concurrent_activation_leaves_only_one_active_for_exact_scope(
 ) -> None:
     policies = []
     for version_number in (1, 2):
-        payload = {"component_version_ids": [str(uuid4())]}
+        payload = {"component_version_ids": []}
         policies.append(
             PolicyVersion(
                 policy_type="PILOT_POLICY_PACK",
