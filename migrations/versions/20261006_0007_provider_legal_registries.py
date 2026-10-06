@@ -64,7 +64,8 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.CheckConstraint(
-            "lifecycle_status IN ('PENDING_VERIFICATION','VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')",
+            "lifecycle_status IN "
+            "('PENDING_VERIFICATION','VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')",
             name="ck_legal_authorization_status",
         ),
         sa.CheckConstraint(
@@ -184,7 +185,8 @@ def upgrade() -> None:
                AND OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','RETIRED')
                AND (
                     NEW.provider_id IS DISTINCT FROM OLD.provider_id
-                    OR NEW.lender_of_record_legal_entity_id IS DISTINCT FROM OLD.lender_of_record_legal_entity_id
+                    OR NEW.lender_of_record_legal_entity_id IS DISTINCT FROM
+                       OLD.lender_of_record_legal_entity_id
                     OR NEW.product_code IS DISTINCT FROM OLD.product_code
                     OR NEW.version_number IS DISTINCT FROM OLD.version_number
                     OR NEW.product_name IS DISTINCT FROM OLD.product_name
