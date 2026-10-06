@@ -141,6 +141,34 @@ async def assert_policy_pack_components_exist(
         )
 
 
+async def assert_policy_pack_component_types_compatible(
+    session: AsyncSession,
+    policy: PolicyVersion,
+) -> None:
+    if policy.policy_type != "PILOT_POLICY_PACK":
+        return
+
+    component_ids = [UUID(value) for value in policy.payload["component_version_ids"]]
+    if not component_ids:
+        return
+
+    nested_pack_ids = (
+        await session.scalars(
+            select(PolicyVersion.id).where(
+                PolicyVersion.id.in_(component_ids),
+                PolicyVersion.policy_type == "PILOT_POLICY_PACK",
+            )
+        )
+    ).all()
+    if nested_pack_ids:
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Pilot Policy Pack cannot reference another Pilot Policy Pack",
+            {"incompatible_component_version_ids": [str(value) for value in nested_pack_ids]},
+        )
+
+
 async def get_policy_for_update(
     session: AsyncSession,
     policy_id: UUID,
@@ -342,6 +370,7 @@ async def approve_policy(
     )
     assert approval.checker_identity_id is not None
     await assert_policy_pack_components_exist(session, policy)
+    await assert_policy_pack_component_types_compatible(session, policy)
 
     policy.lifecycle_status = "APPROVED"
     policy.payload_hash = canonical_request_hash(policy.payload)
@@ -387,6 +416,7 @@ async def activate_policy(
         now=activated_at,
     )
     await assert_policy_pack_components_exist(session, policy)
+    await assert_policy_pack_component_types_compatible(session, policy)
 
     if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(policy.payload):
         raise ApiError(
