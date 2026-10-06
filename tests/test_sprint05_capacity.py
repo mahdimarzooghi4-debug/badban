@@ -405,9 +405,9 @@ async def test_capacity_application_service_captures_snapshot_without_financial_
         "quote:capacity:1",
         "evidence://capacity/1",
     ]
-    assert Decimal(stored_snapshot.material_input_payload["positions"][0]["approved_price"]) == Decimal(
-        "10"
-    )
+    assert Decimal(
+        stored_snapshot.material_input_payload["positions"][0]["approved_price"]
+    ) == Decimal("10")
     assert stored_snapshot.material_output_payload["available_guarantee_capacity"] == "3"
     assert journal_count == 0
     assert stored_position is not None
