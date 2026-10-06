@@ -70,13 +70,11 @@ def upgrade() -> None:
             name="ck_policy_version_number_positive",
         ),
         sa.CheckConstraint(
-            "lifecycle_status IN "
-            "('DRAFT','REVIEWED','APPROVED','ACTIVE','SUPERSEDED','RETIRED')",
+            "lifecycle_status IN ('DRAFT','REVIEWED','APPROVED','ACTIVE','SUPERSEDED','RETIRED')",
             name="ck_policy_version_lifecycle_status",
         ),
         sa.CheckConstraint(
-            "effective_to IS NULL OR effective_from IS NULL "
-            "OR effective_to > effective_from",
+            "effective_to IS NULL OR effective_from IS NULL OR effective_to > effective_from",
             name="ck_policy_version_effective_window",
         ),
         sa.PrimaryKeyConstraint("id"),

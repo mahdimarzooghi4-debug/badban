@@ -498,7 +498,6 @@ class JournalPosting(Base):
     )
 
 
-
 class PolicyVersion(VersionedMixin, Base):
     __tablename__ = "policy_versions"
     __table_args__ = (
@@ -521,8 +520,7 @@ class PolicyVersion(VersionedMixin, Base):
             name="ck_policy_version_number_positive",
         ),
         CheckConstraint(
-            "lifecycle_status IN "
-            "('DRAFT','REVIEWED','APPROVED','ACTIVE','SUPERSEDED','RETIRED')",
+            "lifecycle_status IN ('DRAFT','REVIEWED','APPROVED','ACTIVE','SUPERSEDED','RETIRED')",
             name="ck_policy_version_lifecycle_status",
         ),
         CheckConstraint(
@@ -539,42 +537,22 @@ class PolicyVersion(VersionedMixin, Base):
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     policy_type: Mapped[str] = mapped_column(String(80), nullable=False)
     policy_code: Mapped[str] = mapped_column(String(120), nullable=False)
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    lifecycle_status: Mapped[str] = mapped_column(
-        String(40), nullable=False, default="DRAFT"
-    )
-    scope_definition: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict
-    )
-    payload: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict
-    )
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     schema_version: Mapped[str] = mapped_column(String(40), nullable=False)
-    effective_from: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    effective_to: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    activated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    superseded_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
-    approved_by: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), nullable=True
-    )
+    approved_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
