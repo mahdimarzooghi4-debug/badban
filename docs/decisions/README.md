@@ -62,3 +62,5 @@ Each decision should include:
 - [0026 — Sprint 03 Control, Valuation, and Journal Foundations; Code Authorization](./0026-sprint-03-control-valuation-journal-code-authorization.md) — **Accepted**
 
 - [0027 — Sprint 03 Code Review Complete; Stage Still Deferred](./0027-sprint-03-code-review-complete-stage-still-deferred.md) — **Accepted**
+
+- [0028 — Sprint 04 Policy Lifecycle and Deterministic Resolution; Code Authorization](./0028-sprint-04-policy-lifecycle-resolution-code-authorization.md) — **Proposed**
