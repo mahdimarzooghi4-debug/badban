@@ -342,9 +342,7 @@ async def calculate_and_snapshot_guarantee_capacity(
     ).all()
     positions_by_id = {row.id: row for row in position_rows}
     missing_positions = [
-        str(position_id)
-        for position_id in asset_position_ids
-        if position_id not in positions_by_id
+        str(position_id) for position_id in asset_position_ids if position_id not in positions_by_id
     ]
     if missing_positions:
         raise CapacityInputError(f"Asset Positions are missing: {','.join(missing_positions)}")
