@@ -496,3 +496,121 @@ class JournalPosting(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class PolicyVersion(VersionedMixin, Base):
+    __tablename__ = "policy_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "policy_type",
+            "policy_code",
+            "version_number",
+            name="uq_policy_version_identity",
+        ),
+        CheckConstraint(
+            "policy_type IN "
+            "('ASSET_TYPE_POLICY','OWNERSHIP_FUNDING_POLICY',"
+            "'PROVIDER_PRODUCT_POLICY','RISK_APPETITE_POLICY',"
+            "'RETURN_ALLOCATION_POLICY','LEGAL_AUTHORIZATION_POLICY',"
+            "'POSTING_ACCOUNTING_MAPPING_POLICY','PILOT_POLICY_PACK')",
+            name="ck_policy_version_type",
+        ),
+        CheckConstraint(
+            "version_number > 0",
+            name="ck_policy_version_number_positive",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','REVIEWED','APPROVED','ACTIVE','SUPERSEDED','RETIRED')",
+            name="ck_policy_version_lifecycle_status",
+        ),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_from IS NULL OR effective_to > effective_from",
+            name="ck_policy_version_effective_window",
+        ),
+        Index(
+            "ix_policy_versions_lookup",
+            "policy_type",
+            "policy_code",
+            "lifecycle_status",
+            "effective_from",
+            "effective_to",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    policy_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    policy_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    schema_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    approved_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class DecisionSnapshot(Base):
+    __tablename__ = "decision_snapshots"
+    __table_args__ = (
+        CheckConstraint(
+            "policy_pack_version > 0",
+            name="ck_decision_snapshot_policy_pack_version_positive",
+        ),
+        Index(
+            "ix_decision_snapshots_entity",
+            "business_entity_type",
+            "business_entity_id",
+        ),
+        Index("ix_decision_snapshots_policy_pack", "policy_pack_id"),
+        Index("ix_decision_snapshots_effective_at", "effective_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    business_entity_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    business_entity_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    decision_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    policy_pack_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    policy_pack_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    component_version_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    algorithm_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    material_input_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    material_output_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    output_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    valuation_observation_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    authoritative_external_references: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    risk_snapshot_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
