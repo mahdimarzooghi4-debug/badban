@@ -498,6 +498,161 @@ class JournalPosting(Base):
     )
 
 
+class LegalEntity(VersionedMixin, Base):
+    __tablename__ = "legal_entities"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    legal_identifier: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LegalAuthorization(VersionedMixin, Base):
+    __tablename__ = "legal_authorizations"
+    __table_args__ = (
+        CheckConstraint(
+            "lifecycle_status IN "
+            "('PENDING_VERIFICATION','VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')",
+            name="ck_legal_authorization_status",
+        ),
+        CheckConstraint(
+            "expires_at IS NULL OR expires_at > effective_from",
+            name="ck_legal_authorization_effective_window",
+        ),
+        Index(
+            "ix_legal_authorizations_entity_role_status",
+            "legal_entity_id",
+            "role_code",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    legal_entity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("legal_entities.id", ondelete="RESTRICT"), nullable=False
+    )
+    role_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    competent_authority: Mapped[str] = mapped_column(String(255), nullable=False)
+    authorization_type: Mapped[str] = mapped_column(String(160), nullable=False)
+    authorization_identifier: Mapped[str] = mapped_column(String(200), nullable=False)
+    permitted_product_scope: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    permitted_asset_type_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_compliance_review_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    lifecycle_status: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="PENDING_VERIFICATION"
+    )
+    verified_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CreditProvider(VersionedMixin, Base):
+    __tablename__ = "credit_providers"
+    __table_args__ = (
+        CheckConstraint(
+            "provider_type = 'EXTERNAL_LENDER'",
+            name="ck_credit_provider_bounded_pilot_type",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','ACTIVE','SUSPENDED','EXPIRED','TERMINATED')",
+            name="ck_credit_provider_status",
+        ),
+        Index("ix_credit_providers_legal_entity", "legal_entity_id"),
+        Index("ix_credit_providers_status", "lifecycle_status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    legal_entity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("legal_entities.id", ondelete="RESTRICT"), nullable=False
+    )
+    provider_code: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_type: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="EXTERNAL_LENDER"
+    )
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CreditProductVersion(VersionedMixin, Base):
+    __tablename__ = "credit_product_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "provider_id",
+            "product_code",
+            "version_number",
+            name="uq_credit_product_provider_code_version",
+        ),
+        CheckConstraint("version_number > 0", name="ck_credit_product_version_positive"),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','RETIRED')",
+            name="ck_credit_product_status",
+        ),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_credit_product_effective_window",
+        ),
+        Index(
+            "ix_credit_product_versions_provider_status",
+            "provider_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    provider_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("credit_providers.id", ondelete="RESTRICT"), nullable=False
+    )
+    lender_of_record_legal_entity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("legal_entities.id", ondelete="RESTRICT"), nullable=False
+    )
+    product_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    product_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    terms: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class PolicyVersion(VersionedMixin, Base):
     __tablename__ = "policy_versions"
     __table_args__ = (

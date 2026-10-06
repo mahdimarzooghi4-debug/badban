@@ -1,0 +1,253 @@
+"""Sprint 06 provider/product and legal authorization registries.
+
+Revision ID: 20261006_0007
+Revises: 20261006_0006
+Create Date: 2026-10-06
+"""
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
+
+revision: str = "20261006_0007"
+down_revision: str | None = "20261006_0006"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "legal_entities",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("legal_name", sa.String(length=255), nullable=False),
+        sa.Column("legal_identifier", sa.String(length=160), nullable=False),
+        sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("legal_identifier"),
+    )
+    op.create_table(
+        "legal_authorizations",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("legal_entity_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("role_code", sa.String(length=120), nullable=False),
+        sa.Column("competent_authority", sa.String(length=255), nullable=False),
+        sa.Column("authorization_type", sa.String(length=160), nullable=False),
+        sa.Column("authorization_identifier", sa.String(length=200), nullable=False),
+        sa.Column("permitted_product_scope", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("permitted_asset_type_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("evidence_reference", sa.String(length=500), nullable=False),
+        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_compliance_review_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lifecycle_status", sa.String(length=40), nullable=False),
+        sa.Column("verified_by", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint(
+            "lifecycle_status IN ('PENDING_VERIFICATION','VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')",
+            name="ck_legal_authorization_status",
+        ),
+        sa.CheckConstraint(
+            "expires_at IS NULL OR expires_at > effective_from",
+            name="ck_legal_authorization_effective_window",
+        ),
+        sa.ForeignKeyConstraint(["legal_entity_id"], ["legal_entities.id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_legal_authorizations_entity_role_status",
+        "legal_authorizations",
+        ["legal_entity_id", "role_code", "lifecycle_status"],
+        unique=False,
+    )
+    op.create_table(
+        "credit_providers",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("legal_entity_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("provider_code", sa.String(length=120), nullable=False),
+        sa.Column("display_name", sa.String(length=255), nullable=False),
+        sa.Column("provider_type", sa.String(length=80), nullable=False),
+        sa.Column("lifecycle_status", sa.String(length=40), nullable=False),
+        sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("suspended_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint(
+            "provider_type = 'EXTERNAL_LENDER'",
+            name="ck_credit_provider_bounded_pilot_type",
+        ),
+        sa.CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','ACTIVE','SUSPENDED','EXPIRED','TERMINATED')",
+            name="ck_credit_provider_status",
+        ),
+        sa.ForeignKeyConstraint(["legal_entity_id"], ["legal_entities.id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("provider_code"),
+    )
+    op.create_index(
+        "ix_credit_providers_legal_entity",
+        "credit_providers",
+        ["legal_entity_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_credit_providers_status",
+        "credit_providers",
+        ["lifecycle_status"],
+        unique=False,
+    )
+    op.create_table(
+        "credit_product_versions",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("provider_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("lender_of_record_legal_entity_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("product_code", sa.String(length=120), nullable=False),
+        sa.Column("version_number", sa.Integer(), nullable=False),
+        sa.Column("product_name", sa.String(length=255), nullable=False),
+        sa.Column("lifecycle_status", sa.String(length=40), nullable=False),
+        sa.Column("terms", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("effective_to", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint("version_number > 0", name="ck_credit_product_version_positive"),
+        sa.CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','RETIRED')",
+            name="ck_credit_product_status",
+        ),
+        sa.CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_credit_product_effective_window",
+        ),
+        sa.ForeignKeyConstraint(
+            ["lender_of_record_legal_entity_id"],
+            ["legal_entities.id"],
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(["provider_id"], ["credit_providers.id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "provider_id",
+            "product_code",
+            "version_number",
+            name="uq_credit_product_provider_code_version",
+        ),
+    )
+    op.create_index(
+        "ix_credit_product_versions_provider_status",
+        "credit_product_versions",
+        ["provider_id", "lifecycle_status"],
+        unique=False,
+    )
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION badban_reject_registry_history_mutation()
+        RETURNS trigger AS $$
+        BEGIN
+            IF TG_TABLE_NAME = 'credit_product_versions'
+               AND OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','RETIRED')
+               AND (
+                    NEW.provider_id IS DISTINCT FROM OLD.provider_id
+                    OR NEW.lender_of_record_legal_entity_id IS DISTINCT FROM OLD.lender_of_record_legal_entity_id
+                    OR NEW.product_code IS DISTINCT FROM OLD.product_code
+                    OR NEW.version_number IS DISTINCT FROM OLD.version_number
+                    OR NEW.product_name IS DISTINCT FROM OLD.product_name
+                    OR NEW.terms IS DISTINCT FROM OLD.terms
+                    OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+                    OR NEW.effective_to IS DISTINCT FROM OLD.effective_to
+                    OR NEW.created_by IS DISTINCT FROM OLD.created_by
+               )
+            THEN
+                RAISE EXCEPTION 'credit product version history is immutable';
+            END IF;
+
+            IF TG_TABLE_NAME = 'legal_authorizations'
+               AND OLD.lifecycle_status IN ('VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')
+               AND (
+                    NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
+                    OR NEW.role_code IS DISTINCT FROM OLD.role_code
+                    OR NEW.competent_authority IS DISTINCT FROM OLD.competent_authority
+                    OR NEW.authorization_type IS DISTINCT FROM OLD.authorization_type
+                    OR NEW.authorization_identifier IS DISTINCT FROM OLD.authorization_identifier
+                    OR NEW.permitted_product_scope IS DISTINCT FROM OLD.permitted_product_scope
+                    OR NEW.permitted_asset_type_ids IS DISTINCT FROM OLD.permitted_asset_type_ids
+                    OR NEW.evidence_reference IS DISTINCT FROM OLD.evidence_reference
+                    OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+                    OR NEW.expires_at IS DISTINCT FROM OLD.expires_at
+                    OR NEW.last_compliance_review_at IS DISTINCT FROM OLD.last_compliance_review_at
+                    OR NEW.created_by IS DISTINCT FROM OLD.created_by
+               )
+            THEN
+                RAISE EXCEPTION 'legal authorization history is immutable';
+            END IF;
+
+            IF TG_TABLE_NAME = 'credit_providers'
+               AND OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','EXPIRED','TERMINATED')
+               AND (
+                    NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
+                    OR NEW.provider_code IS DISTINCT FROM OLD.provider_code
+                    OR NEW.display_name IS DISTINCT FROM OLD.display_name
+                    OR NEW.provider_type IS DISTINCT FROM OLD.provider_type
+                    OR NEW.created_by IS DISTINCT FROM OLD.created_by
+               )
+            THEN
+                RAISE EXCEPTION 'credit provider history is immutable';
+            END IF;
+
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+    )
+    for table_name in (
+        "legal_authorizations",
+        "credit_providers",
+        "credit_product_versions",
+    ):
+        op.execute(
+            f"""
+            CREATE TRIGGER trg_{table_name}_history_immutable
+            BEFORE UPDATE ON {table_name}
+            FOR EACH ROW EXECUTE FUNCTION badban_reject_registry_history_mutation()
+            """
+        )
+
+
+def downgrade() -> None:
+    for table_name in (
+        "credit_product_versions",
+        "credit_providers",
+        "legal_authorizations",
+    ):
+        op.execute(
+            f"DROP TRIGGER IF EXISTS trg_{table_name}_history_immutable ON {table_name}"
+        )
+    op.execute("DROP FUNCTION IF EXISTS badban_reject_registry_history_mutation")
+    op.drop_index(
+        "ix_credit_product_versions_provider_status",
+        table_name="credit_product_versions",
+    )
+    op.drop_table("credit_product_versions")
+    op.drop_index("ix_credit_providers_status", table_name="credit_providers")
+    op.drop_index("ix_credit_providers_legal_entity", table_name="credit_providers")
+    op.drop_table("credit_providers")
+    op.drop_index(
+        "ix_legal_authorizations_entity_role_status",
+        table_name="legal_authorizations",
+    )
+    op.drop_table("legal_authorizations")
+    op.drop_table("legal_entities")

@@ -78,3 +78,17 @@ async def clean_sprint04_policy_tables(database: Database):
     async with database.engine.begin() as connection:
         await connection.execute(text("TRUNCATE policy_versions RESTART IDENTITY CASCADE"))
     yield
+
+
+
+@pytest.fixture
+async def clean_sprint06_registry_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE "
+                "credit_product_versions, credit_providers, legal_authorizations, legal_entities "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
+    yield
