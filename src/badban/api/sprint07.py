@@ -11,7 +11,7 @@ from badban.api.dependencies import get_correlation_id, get_current_principal, g
 from badban.api.errors import ApiError
 from badban.application.guarantee_request import create_guarantee_request
 from badban.application.idempotency import acquire_idempotency, complete_idempotency
-from badban.infrastructure.persistence.models import GuaranteeCase, ParticipationEpisode
+from badban.infrastructure.persistence.models import ParticipationEpisode
 from badban.security.authorization import (
     ROLE_OPERATIONS,
     SCOPE_PROGRAM,
