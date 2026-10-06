@@ -13,7 +13,11 @@ from badban.application.approval import (
     get_approval_for_update,
 )
 from badban.application.idempotency import canonical_request_hash
-from badban.infrastructure.persistence.models import (\n    ApprovalRequest,\n    OutboxMessage,\n    PolicyVersion,\n)
+from badban.infrastructure.persistence.models import (
+    ApprovalRequest,
+    OutboxMessage,
+    PolicyVersion,
+)
 from badban.security.audit import append_audit
 
 POLICY_LIFECYCLE_TRANSITIONS: Mapping[str, frozenset[str]] = {
@@ -309,7 +313,9 @@ async def activate_policy(
         now=activated_at,
     )
 
-    if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(\n        policy.payload\n    ):
+    if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(
+        policy.payload
+    ):
         raise ApiError(
             409,
             "POLICY_VALIDATION_FAILED",
