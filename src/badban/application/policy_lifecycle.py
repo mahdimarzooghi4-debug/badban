@@ -454,9 +454,7 @@ async def activate_policy(
         active_predicates.append(PolicyVersion.policy_code == policy.policy_code)
 
     active_versions = (
-        await session.scalars(
-            select(PolicyVersion).where(*active_predicates).with_for_update()
-        )
+        await session.scalars(select(PolicyVersion).where(*active_predicates).with_for_update())
     ).all()
 
     if len(active_versions) > 1:

@@ -26,9 +26,7 @@ def _active_pack(
         lifecycle_status="ACTIVE",
         scope_definition=scope_definition,
         payload={"component_version_ids": component_version_ids or []},
-        payload_hash=canonical_request_hash(
-            {"component_version_ids": component_version_ids or []}
-        ),
+        payload_hash=canonical_request_hash({"component_version_ids": component_version_ids or []}),
         schema_version="1",
         effective_from=effective_from,
         effective_to=effective_to,
@@ -250,7 +248,6 @@ async def test_resolve_active_policy_pack_fails_closed_on_ambiguous_exact_scope(
 
     assert exc.value.code == "POLICY_SCOPE_AMBIGUOUS"
     assert exc.value.details == {"policy_pack_ids": expected_ids}
-
 
 
 @pytest.mark.integration

@@ -55,7 +55,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_policy_versions_immutable_content ON policy_versions"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_policy_versions_immutable_content ON policy_versions")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_immutable_policy_content_mutation")

@@ -173,7 +173,6 @@ async def test_policy_version_rows_are_queryable_by_explicit_identity(
     assert found.payload == {"version_marker": 2}
 
 
-
 @pytest.mark.integration
 async def test_activated_policy_content_is_database_immutable(
     database,
