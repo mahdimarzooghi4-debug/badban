@@ -101,7 +101,7 @@ async def test_resolve_active_policy_pack_fails_closed_on_ambiguous_exact_scope(
     database,
     clean_sprint04_policy_tables,
 ) -> None:
-    scope = {"pilot_scope": "bounded-pilot"}
+    scope: dict[str, object] = {"pilot_scope": "bounded-pilot"}
     first = _active_pack(policy_code="PACK_A", scope_definition=scope)
     second = _active_pack(policy_code="PACK_B", scope_definition=scope)
 
