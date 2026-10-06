@@ -51,7 +51,6 @@ async def _persist_snapshot(database) -> tuple[UUID, UUID, dict[str, object], di
             session.add(pack)
             await session.flush()
             pack_id = pack.id
-            component_id = component.id
 
     effective_at = datetime.now(UTC)
     async with database.session_factory() as session:
