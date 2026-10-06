@@ -244,6 +244,8 @@ async def _seed_capacity_evidence(
     database,
     *,
     stale: bool = False,
+    future: bool = False,
+    position_quantity: Decimal = Decimal("2"),
 ) -> tuple[Identity, AssetPosition, ValuationObservation, ResolvedPolicyPack]:
     actor = Identity(
         identity_type="SYSTEM",
@@ -295,7 +297,7 @@ async def _seed_capacity_evidence(
                 ownership_funding_type="PARTICIPANT_OWNED",
                 legal_owner_participant_id=participant.id,
                 legal_owner_entity_id=None,
-                quantity=Decimal("2"),
+                quantity=position_quantity,
                 unit_code="UNIT",
                 lifecycle_status="ACTIVE",
                 source_reference="synthetic-capacity-position",
@@ -315,9 +317,19 @@ async def _seed_capacity_evidence(
                 source_name="synthetic-approved-source",
                 source_reference="quote:capacity:1",
                 source_version_reference="source:v1",
-                observed_at=now - (timedelta(hours=2) if stale else timedelta(seconds=1)),
-                received_at=now,
-                valid_until=(now - timedelta(minutes=1) if stale else now + timedelta(hours=1)),
+                observed_at=(
+                    now + timedelta(hours=1)
+                    if future
+                    else now - (timedelta(hours=2) if stale else timedelta(seconds=1))
+                ),
+                received_at=now + timedelta(hours=1) if future else now,
+                valid_until=(
+                    now + timedelta(hours=2)
+                    if future
+                    else now - timedelta(minutes=1)
+                    if stale
+                    else now + timedelta(hours=1)
+                ),
                 freshness_status="STALE" if stale else "FRESH",
                 evidence_reference="evidence://capacity/1",
                 created_by=actor.id,
@@ -403,11 +415,19 @@ async def test_capacity_application_service_captures_snapshot_without_financial_
     assert stored_snapshot.valuation_observation_ids == [str(observation.id)]
     assert stored_snapshot.authoritative_external_references == [
         "quote:capacity:1",
+        "source:v1",
         "evidence://capacity/1",
     ]
-    assert Decimal(
-        stored_snapshot.material_input_payload["positions"][0]["approved_price"]
-    ) == Decimal("10")
+    captured_position = stored_snapshot.material_input_payload["positions"][0]
+    assert captured_position["asset_type_id"] == str(position.asset_type_id)
+    assert Decimal(captured_position["asset_position_quantity"]) == Decimal("2")
+    assert captured_position["asset_position_version"] == position.version
+    assert captured_position["valuation_source_name"] == "synthetic-approved-source"
+    assert captured_position["valuation_source_reference"] == "quote:capacity:1"
+    assert captured_position["valuation_source_version_reference"] == "source:v1"
+    assert captured_position["valuation_observed_at"] == observation.observed_at.isoformat()
+    assert captured_position["valuation_received_at"] == observation.received_at.isoformat()
+    assert Decimal(captured_position["approved_price"]) == Decimal("10")
     assert stored_snapshot.material_output_payload["available_guarantee_capacity"] == "3"
     assert journal_count == 0
     assert stored_position is not None
@@ -465,6 +485,82 @@ async def test_capacity_service_fails_closed_for_stale_observation_and_missing_f
                             pledgeable_fraction=Decimal("0.75"),
                             advance_rate=Decimal("0.5"),
                             fx_required=True,
+                        )
+                    ],
+                    capacity_currency="IRR",
+                    resolved_policy_pack=resolved,
+                    capped_gross_backing_capacity=Decimal("0"),
+                    reserved_guarantee_capacity=Decimal("0"),
+                    active_guarantee_exposure=Decimal("0"),
+                    other_approved_capacity_holds=Decimal("0"),
+                    effective_at=datetime.now(UTC),
+                    actor_type=actor.identity_type,
+                    actor_id=actor.id,
+                )
+
+
+
+@pytest.mark.integration
+async def test_capacity_service_rejects_future_valuation_relative_to_effective_time(
+    database,
+    clean_sprint03_tables,
+    clean_sprint04_policy_tables,
+) -> None:
+    actor, position, observation, resolved = await _seed_capacity_evidence(database, future=True)
+
+    async with database.session_factory() as session:
+        with pytest.raises(CapacityInputError):
+            async with session.begin():
+                await calculate_and_snapshot_guarantee_capacity(
+                    session,
+                    business_entity_type="ASSET_POSITION",
+                    business_entity_id=str(position.id),
+                    position_requests=[
+                        CapacityPositionRequest(
+                            valuation_observation_id=observation.id,
+                            eligible_quantity=Decimal("2"),
+                            pledgeable_fraction=Decimal("0.75"),
+                            advance_rate=Decimal("0.5"),
+                            fx_required=False,
+                        )
+                    ],
+                    capacity_currency="IRR",
+                    resolved_policy_pack=resolved,
+                    capped_gross_backing_capacity=Decimal("7"),
+                    reserved_guarantee_capacity=Decimal("0"),
+                    active_guarantee_exposure=Decimal("0"),
+                    other_approved_capacity_holds=Decimal("0"),
+                    effective_at=datetime.now(UTC),
+                    actor_type=actor.identity_type,
+                    actor_id=actor.id,
+                )
+
+
+@pytest.mark.integration
+async def test_capacity_service_rejects_quantity_above_current_asset_position(
+    database,
+    clean_sprint03_tables,
+    clean_sprint04_policy_tables,
+) -> None:
+    actor, position, observation, resolved = await _seed_capacity_evidence(
+        database,
+        position_quantity=Decimal("1"),
+    )
+
+    async with database.session_factory() as session:
+        with pytest.raises(CapacityInputError):
+            async with session.begin():
+                await calculate_and_snapshot_guarantee_capacity(
+                    session,
+                    business_entity_type="ASSET_POSITION",
+                    business_entity_id=str(position.id),
+                    position_requests=[
+                        CapacityPositionRequest(
+                            valuation_observation_id=observation.id,
+                            eligible_quantity=Decimal("2"),
+                            pledgeable_fraction=Decimal("0.75"),
+                            advance_rate=Decimal("0.5"),
+                            fx_required=False,
                         )
                     ],
                     capacity_currency="IRR",
