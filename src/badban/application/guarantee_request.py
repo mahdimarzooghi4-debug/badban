@@ -15,6 +15,32 @@ from badban.infrastructure.persistence.models import (
 from badban.security.audit import append_audit
 from badban.security.authorization import SCOPE_PROGRAM
 
+_MAX_DECIMAL_INTEGER_DIGITS = 20
+_MAX_DECIMAL_SCALE = 18
+
+
+def validate_requested_principal(requested_principal: Decimal) -> None:
+    if not requested_principal.is_finite() or requested_principal <= 0:
+        raise ApiError(
+            422,
+            "GUARANTEE_REQUEST_INVALID",
+            "Requested principal must be a finite value greater than zero",
+        )
+
+    exponent = requested_principal.as_tuple().exponent
+    scale = max(-exponent, 0)
+    integer_digits = max(requested_principal.adjusted() + 1, 0)
+    if scale > _MAX_DECIMAL_SCALE or integer_digits > _MAX_DECIMAL_INTEGER_DIGITS:
+        raise ApiError(
+            422,
+            "GUARANTEE_REQUEST_INVALID",
+            "Requested principal exceeds NUMERIC(38,18) precision",
+            {
+                "max_integer_digits": _MAX_DECIMAL_INTEGER_DIGITS,
+                "max_decimal_places": _MAX_DECIMAL_SCALE,
+            },
+        )
+
 
 async def create_guarantee_request(
     session: AsyncSession,
@@ -27,6 +53,8 @@ async def create_guarantee_request(
     actor_id: UUID,
     correlation_id: UUID,
 ) -> GuaranteeCase:
+    validate_requested_principal(requested_principal)
+
     episode = await session.get(ParticipationEpisode, participation_episode_id)
     if episode is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "Participation Episode was not found")
@@ -44,12 +72,6 @@ async def create_guarantee_request(
             422,
             "GUARANTEE_REQUEST_INVALID",
             "Credit Product Version does not belong to the selected provider",
-        )
-    if requested_principal <= 0:
-        raise ApiError(
-            422,
-            "GUARANTEE_REQUEST_INVALID",
-            "Requested principal must be greater than zero",
         )
     if requested_principal < product.min_principal or requested_principal > product.max_principal:
         raise ApiError(
@@ -94,7 +116,7 @@ async def create_guarantee_request(
             "participation_episode_id": str(guarantee.participation_episode_id),
             "provider_id": str(guarantee.provider_id),
             "credit_product_version_id": str(guarantee.credit_product_version_id),
-            "requested_principal": str(guarantee.requested_principal),
+            "requested_principal": format(guarantee.requested_principal, "f"),
             "guarantee_mode": guarantee.guarantee_mode,
             "policy_pack_id": None,
         },

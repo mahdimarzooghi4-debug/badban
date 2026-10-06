@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
@@ -221,6 +222,7 @@ async def test_create_guarantee_request_is_idempotent_requested_only_and_side_ef
     body = first.json()
     guarantee_id = UUID(body["id"])
     assert body["state"] == "REQUESTED"
+    assert isinstance(body["requested_principal"], str)
     assert Decimal(body["requested_principal"]) == Decimal("25.125")
     assert body["provider_id"] == str(provider.id)
     assert body["credit_product_version_id"] == str(product.id)
@@ -228,6 +230,7 @@ async def test_create_guarantee_request_is_idempotent_requested_only_and_side_ef
     assert body["policy_pack_id"] is None
     assert body["reserved_guarantee_amount"] is None
     assert body["issued_guarantee_amount"] is None
+    assert isinstance(body["current_guarantee_exposure"], str)
     assert Decimal(body["current_guarantee_exposure"]) == Decimal("0")
     assert body["reservation_expires_at"] is None
     assert body["legal_guarantee_external_id"] is None
@@ -255,6 +258,132 @@ async def test_create_guarantee_request_is_idempotent_requested_only_and_side_ef
             )
         ).all()
         assert audit_actions == ["GUARANTEE_REQUEST_CREATE"]
+
+
+@pytest.mark.integration
+async def test_concurrent_same_key_same_payload_creates_one_case_and_replays(
+    settings: Settings,
+    database,
+    clean_sprint07_guarantee_tables,
+) -> None:
+    operations, _, episode, provider, product = await _seed_request_context(database)
+    payload = {
+        "participation_episode_id": str(episode.id),
+        "provider_id": str(provider.id),
+        "credit_product_version_id": str(product.id),
+        "requested_principal": "25.125",
+    }
+
+    async with await _client(settings) as client:
+        first, second = await asyncio.gather(
+            client.post(
+                "/api/v1/guarantees",
+                headers=_headers(operations.external_subject, "guarantee-concurrent"),
+                json=payload,
+            ),
+            client.post(
+                "/api/v1/guarantees",
+                headers=_headers(operations.external_subject, "guarantee-concurrent"),
+                json=payload,
+            ),
+        )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json() == second.json()
+    async with database.session_factory() as session:
+        assert await _count(session, GuaranteeCase) == 1
+
+
+@pytest.mark.integration
+async def test_requested_principal_requires_decimal_string_and_storage_safe_scale(
+    settings: Settings,
+    database,
+    clean_sprint07_guarantee_tables,
+) -> None:
+    operations, _, episode, provider, product = await _seed_request_context(database)
+    common = {
+        "participation_episode_id": str(episode.id),
+        "provider_id": str(provider.id),
+        "credit_product_version_id": str(product.id),
+    }
+
+    async with await _client(settings) as client:
+        binary_number = await client.post(
+            "/api/v1/guarantees",
+            headers=_headers(operations.external_subject, "decimal-number"),
+            json={**common, "requested_principal": 25.125},
+        )
+        excessive_scale = await client.post(
+            "/api/v1/guarantees",
+            headers=_headers(operations.external_subject, "decimal-scale"),
+            json={**common, "requested_principal": "25.0000000000000000001"},
+        )
+
+    assert binary_number.status_code == 422
+    assert excessive_scale.status_code == 422
+    assert excessive_scale.json()["error"]["code"] == "GUARANTEE_REQUEST_INVALID"
+    async with database.session_factory() as session:
+        assert await _count(session, GuaranteeCase) == 0
+
+
+@pytest.mark.integration
+async def test_operations_grant_for_different_program_cannot_create_request(
+    settings: Settings,
+    database,
+    clean_sprint07_guarantee_tables,
+) -> None:
+    operations, _, episode, provider, product = await _seed_request_context(database)
+    wrong_scope_identity = Identity(
+        identity_type="STAFF",
+        external_subject="sprint07-wrong-program",
+        status="ACTIVE",
+    )
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(wrong_scope_identity)
+            await session.flush()
+            other_program = Program(
+                code=f"PROGRAM-{uuid4()}",
+                name="Other Synthetic Program",
+                status="ACTIVE",
+                legal_entity_id=None,
+                created_by=operations.id,
+                version=1,
+            )
+            session.add(other_program)
+            await session.flush()
+            session.add(
+                RoleGrant(
+                    identity_id=wrong_scope_identity.id,
+                    role_code=ROLE_OPERATIONS,
+                    scope_type=SCOPE_PROGRAM,
+                    scope_id=other_program.id,
+                    valid_from=datetime.now(UTC) - timedelta(minutes=1),
+                    valid_until=None,
+                    status="ACTIVE",
+                    granted_by=None,
+                    reason_ref="sprint07-wrong-scope",
+                    version=1,
+                )
+            )
+
+    async with await _client(settings) as client:
+        response = await client.post(
+            "/api/v1/guarantees",
+            headers=_headers("sprint07-wrong-program", "wrong-program"),
+            json={
+                "participation_episode_id": str(episode.id),
+                "provider_id": str(provider.id),
+                "credit_product_version_id": str(product.id),
+                "requested_principal": "25",
+            },
+        )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "AUTHORIZATION_DENIED"
+    async with database.session_factory() as session:
+        assert await _count(session, GuaranteeCase) == 0
 
 
 @pytest.mark.integration
