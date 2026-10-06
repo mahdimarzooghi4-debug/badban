@@ -509,6 +509,18 @@ class PolicyVersion(VersionedMixin, Base):
             name="uq_policy_version_identity",
         ),
         CheckConstraint(
+            "policy_type IN "
+            "('ASSET_TYPE_POLICY','OWNERSHIP_FUNDING_POLICY',"
+            "'PROVIDER_PRODUCT_POLICY','RISK_APPETITE_POLICY',"
+            "'RETURN_ALLOCATION_POLICY','LEGAL_AUTHORIZATION_POLICY',"
+            "'POSTING_ACCOUNTING_MAPPING_POLICY','PILOT_POLICY_PACK')",
+            name="ck_policy_version_type",
+        ),
+        CheckConstraint(
+            "version_number > 0",
+            name="ck_policy_version_number_positive",
+        ),
+        CheckConstraint(
             "lifecycle_status IN "
             "('DRAFT','REVIEWED','APPROVED','ACTIVE','SUPERSEDED','RETIRED')",
             name="ck_policy_version_lifecycle_status",
