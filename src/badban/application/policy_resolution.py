@@ -46,16 +46,12 @@ async def _resolve_component_version_ids(
         return component_ids
 
     components = (
-        await session.scalars(
-            select(PolicyVersion).where(PolicyVersion.id.in_(component_ids))
-        )
+        await session.scalars(select(PolicyVersion).where(PolicyVersion.id.in_(component_ids)))
     ).all()
     components_by_id = {component.id: component for component in components}
 
     missing_ids = [
-        str(component_id)
-        for component_id in component_ids
-        if component_id not in components_by_id
+        str(component_id) for component_id in component_ids if component_id not in components_by_id
     ]
     if missing_ids:
         raise ApiError(
