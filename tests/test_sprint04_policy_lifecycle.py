@@ -291,9 +291,7 @@ async def test_policy_approval_rejects_missing_pack_component_reference(
                 )
 
     assert exc.value.code == "POLICY_VALIDATION_FAILED"
-    assert exc.value.details == {
-        "missing_component_version_ids": [str(missing_component_id)]
-    }
+    assert exc.value.details == {"missing_component_version_ids": [str(missing_component_id)]}
 
     async with database.session_factory() as session:
         stored = await session.get(PolicyVersion, policy_id)
