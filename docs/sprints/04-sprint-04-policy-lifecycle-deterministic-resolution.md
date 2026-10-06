@@ -1,8 +1,8 @@
 # Sprint 04 — Policy Lifecycle and Deterministic Resolution
 
-- **Status:** Accepted
+- **Status:** Completed through Code Review; Merged to main
 - **Date:** 2026-10-06
-- **Stage:** Sprint Planning
+- **Stage:** Deferred by Decision 0023
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Decision 0027
 - **Depends on:** Sprint 03 Code + Code Review Complete
@@ -360,3 +360,21 @@ If later authorized and implemented, Sprint 04 output will join the accumulated 
 This Sprint 04 plan is **Accepted**.
 
 Decision 0028 grants Code authorization only for BL-013 and BL-014.
+
+
+## 21. Completion Record
+
+Sprint 04 completed its authorized Code and Code Review scope for BL-013 and BL-014.
+
+- Pull Request: #5 — `Sprint 04: policy lifecycle persistence foundation`
+- Reviewed head: `7892b8f4aa56c842ddc26ae251d37149032bbedb`
+- Reviewed-head CI: Run #159 — SUCCESS
+- Merge commit on `main`: `36eb5656a9417a1da6586b3caa9f006d0efb4792`
+- BL-013: Code + Code Review complete
+- BL-014: Code + Code Review complete
+- Stage: Deferred under Decision 0023
+- QA/Testing gate completion: not claimed
+- Release Approval: not claimed
+- Production / real-money use: not authorized
+
+No BL-015, BL-016, BL-032, Provider/Product Registry, Legal Entity Authorization Registry, guarantee flow, lending integration, claims/recovery, return allocation, or Direct Lending work is authorized by this completion record.

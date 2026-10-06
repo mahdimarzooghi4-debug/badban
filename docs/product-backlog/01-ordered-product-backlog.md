@@ -264,7 +264,8 @@ Resolve and record:
 **Priority:** P1  
 **Type:** Domain/Platform Capability  
 **Depends on:** BL-004, BL-007, BL-008  
-**Traceability:** Technical 06
+**Traceability:** Technical 06  
+**Delivery Status:** Code + Code Review complete in Sprint 04; merged to `main`; Stage deferred by Decision 0023
 
 **Acceptance Criteria**
 
@@ -281,7 +282,8 @@ Resolve and record:
 **Priority:** P1  
 **Type:** Domain/Platform Capability  
 **Depends on:** BL-013  
-**Traceability:** Technical 06 §§5-9,21-24
+**Traceability:** Technical 06 §§5-9,21-24  
+**Delivery Status:** Code + Code Review complete in Sprint 04; merged to `main`; Stage deferred by Decision 0023
 
 **Acceptance Criteria**
 
