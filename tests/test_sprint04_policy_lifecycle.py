@@ -16,7 +16,7 @@ from badban.application.policy_lifecycle import (
     assert_policy_transition_allowed,
     review_policy,
 )
-from badban.infrastructure.persistence.models import PolicyVersion
+from badban.infrastructure.persistence.models import AuditEvent, OutboxMessage, PolicyVersion
 
 
 @pytest.mark.parametrize(
@@ -109,7 +109,13 @@ async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
 
     async with database.session_factory() as session:
         async with session.begin():
-            reviewed = await review_policy(session, policy_id=policy_id)
+            reviewed = await review_policy(
+                session,
+                policy_id=policy_id,
+                actor_type="GOVERNANCE",
+                actor_id=uuid4(),
+                correlation_id=uuid4(),
+            )
             assert reviewed.lifecycle_status == "REVIEWED"
             assert reviewed.version == 2
             assert reviewed.payload_hash is None
@@ -125,6 +131,8 @@ async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
                 session,
                 policy_id=policy_id,
                 approved_by=approver_id,
+                actor_type="GOVERNANCE",
+                correlation_id=uuid4(),
                 now=approved_at,
             )
             assert approved.lifecycle_status == "APPROVED"
@@ -133,6 +141,31 @@ async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
             assert approved.approved_by == approver_id
             assert approved.approved_at == approved_at
             assert approved.activated_at is None
+
+    async with database.session_factory() as session:
+        audit_actions = set(
+            (
+                await session.scalars(
+                    select(AuditEvent.action).where(
+                        AuditEvent.aggregate_type == "PolicyVersion",
+                        AuditEvent.aggregate_id == str(policy_id),
+                    )
+                )
+            ).all()
+        )
+        outbox_types = set(
+            (
+                await session.scalars(
+                    select(OutboxMessage.event_type).where(
+                        OutboxMessage.aggregate_type == "PolicyVersion",
+                        OutboxMessage.aggregate_id == str(policy_id),
+                    )
+                )
+            ).all()
+        )
+
+    assert {"POLICY_VERSION_REVIEWED", "POLICY_VERSION_APPROVED"} <= audit_actions
+    assert {"PolicyPackReviewed", "PolicyPackApproved"} <= outbox_types
 
 
 @pytest.mark.integration
@@ -154,6 +187,8 @@ async def test_approve_command_cannot_skip_review(
                     session,
                     policy_id=policy_id,
                     approved_by=uuid4(),
+                    actor_type="GOVERNANCE",
+                    correlation_id=uuid4(),
                 )
 
     assert exc.value.code == "POLICY_VALIDATION_FAILED"
@@ -216,6 +251,9 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
             activated = await activate_policy(
                 session,
                 policy_id=candidate_id,
+                actor_type="GOVERNANCE",
+                actor_id=uuid4(),
+                correlation_id=uuid4(),
                 now=activated_at,
             )
 
@@ -233,6 +271,35 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
     assert old.version == 5
     assert new is not None
     assert new.lifecycle_status == "ACTIVE"
+
+    async with database.session_factory() as session:
+        audit_actions = set(
+            (
+                await session.scalars(
+                    select(AuditEvent.action).where(
+                        AuditEvent.aggregate_type == "PolicyVersion",
+                        AuditEvent.aggregate_id.in_(
+                            [str(previous_id), str(candidate_id)]
+                        ),
+                    )
+                )
+            ).all()
+        )
+        outbox_types = set(
+            (
+                await session.scalars(
+                    select(OutboxMessage.event_type).where(
+                        OutboxMessage.aggregate_type == "PolicyVersion",
+                        OutboxMessage.aggregate_id.in_(
+                            [str(previous_id), str(candidate_id)]
+                        ),
+                    )
+                )
+            ).all()
+        )
+
+    assert {"POLICY_VERSION_SUPERSEDED", "POLICY_VERSION_ACTIVE"} <= audit_actions
+    assert {"PolicyPackSuperseded", "PolicyPackActivated"} <= outbox_types
 
 
 @pytest.mark.integration
@@ -265,7 +332,13 @@ async def test_activate_policy_rejects_payload_changed_after_approval(
     async with database.session_factory() as session:
         with pytest.raises(ApiError) as exc:
             async with session.begin():
-                await activate_policy(session, policy_id=policy_id)
+                await activate_policy(
+                    session,
+                    policy_id=policy_id,
+                    actor_type="GOVERNANCE",
+                    actor_id=uuid4(),
+                    correlation_id=uuid4(),
+                )
 
     assert exc.value.code == "POLICY_VALIDATION_FAILED"
 
@@ -311,7 +384,13 @@ async def test_concurrent_activation_leaves_only_one_active_for_exact_scope(
     async def activate(policy_id):
         async with database.session_factory() as session:
             async with session.begin():
-                await activate_policy(session, policy_id=policy_id)
+                await activate_policy(
+                    session,
+                    policy_id=policy_id,
+                    actor_type="GOVERNANCE",
+                    actor_id=uuid4(),
+                    correlation_id=uuid4(),
+                )
 
     await asyncio.gather(*(activate(policy_id) for policy_id in policy_ids))
 
