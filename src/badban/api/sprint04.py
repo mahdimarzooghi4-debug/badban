@@ -20,7 +20,7 @@ from badban.application.policy_lifecycle import (
     retire_policy,
     review_policy,
 )
-from badban.infrastructure.persistence.models import DecisionSnapshot, PolicyVersion
+from badban.infrastructure.persistence.models import PolicyVersion
 from badban.security.audit import append_audit
 from badban.security.authorization import (
     ROLE_AUDITOR,
