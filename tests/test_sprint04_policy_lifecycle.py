@@ -123,7 +123,9 @@ async def _approved_policy_request(
     await session.flush()
 
     payload = policy_transition_approval_payload(policy, target_status)
-    action_type = (\n        "POLICY_APPROVAL" if target_status == "APPROVED" else "POLICY_ACTIVATION"\n    )
+    action_type = (
+        "POLICY_APPROVAL" if target_status == "APPROVED" else "POLICY_ACTIVATION"
+    )
     approval = ApprovalRequest(
         action_type=action_type,
         target_type="PolicyVersion",
