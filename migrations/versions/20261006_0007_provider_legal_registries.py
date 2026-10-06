@@ -284,12 +284,9 @@ def downgrade() -> None:
         "DROP TRIGGER IF EXISTS trg_credit_product_versions_history_immutable "
         "ON credit_product_versions"
     )
+    op.execute("DROP TRIGGER IF EXISTS trg_credit_providers_history_immutable ON credit_providers")
     op.execute(
-        "DROP TRIGGER IF EXISTS trg_credit_providers_history_immutable ON credit_providers"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_legal_authorizations_history_immutable "
-        "ON legal_authorizations"
+        "DROP TRIGGER IF EXISTS trg_legal_authorizations_history_immutable ON legal_authorizations"
     )
     op.execute("DROP FUNCTION IF EXISTS badban_reject_credit_product_history_mutation")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_credit_provider_history_mutation")
