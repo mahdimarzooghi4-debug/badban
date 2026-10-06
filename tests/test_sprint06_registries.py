@@ -560,7 +560,9 @@ async def test_product_version_is_explicit_approved_audited_and_immutable(
                 additional_terms={"eligibility": {"reference": "synthetic"}},
                 effective_from=datetime.now(UTC) - timedelta(minutes=1),
                 effective_to=None,
+                actor_type=actor.identity_type,
                 created_by=actor.id,
+                correlation_id=uuid4(),
             )
             product_id = product.id
             await approve_credit_product_version(
@@ -598,6 +600,7 @@ async def test_product_version_is_explicit_approved_audited_and_immutable(
             )
         ).all()
         assert actions == [
+            "CREDIT_PRODUCT_VERSION_CREATE",
             "CREDIT_PRODUCT_VERSION_APPROVE",
             "CREDIT_PRODUCT_VERSION_ACTIVATE",
         ]
@@ -662,7 +665,9 @@ async def test_product_activation_rechecks_current_legal_authorization(
                 additional_terms={},
                 effective_from=datetime.now(UTC) - timedelta(minutes=1),
                 effective_to=None,
+                actor_type=actor.identity_type,
                 created_by=actor.id,
+                correlation_id=uuid4(),
             )
             product_id = product.id
             await approve_credit_product_version(
@@ -691,6 +696,53 @@ async def test_product_activation_rechecks_current_legal_authorization(
                     correlation_id=uuid4(),
                 )
     assert getattr(exc.value, "code", None) == "AUTHORIZATION_INVALID"
+
+
+@pytest.mark.integration
+async def test_unregistered_legal_role_fails_with_stable_domain_error(
+    settings: Settings,
+    database,
+    clean_sprint03_tables,
+    clean_sprint06_registry_tables,
+) -> None:
+    legal = await _identity(database, "sprint06-invalid-role")
+    await _grant(
+        database,
+        identity_id=legal.id,
+        role_code=ROLE_LEGAL_COMPLIANCE,
+        scope_type=SCOPE_GLOBAL,
+        scope_id=None,
+    )
+    entity = await _legal_entity(database, created_by=legal.id)
+    await _grant(
+        database,
+        identity_id=legal.id,
+        role_code=ROLE_LEGAL_COMPLIANCE,
+        scope_type=SCOPE_LEGAL_ENTITY,
+        scope_id=entity.id,
+    )
+    now = datetime.now(UTC)
+
+    async with await _client(settings) as client:
+        response = await client.post(
+            f"/api/v1/admin/legal-entities/{entity.id}/authorizations",
+            headers=_headers("sprint06-invalid-role", "invalid-role"),
+            json={
+                "role_code": "UNREGISTERED_ROLE",
+                "competent_authority": "Synthetic Competent Authority",
+                "authorization_type": "SYNTHETIC_LICENSE",
+                "authorization_identifier": "SYNTHETIC-INVALID-ROLE",
+                "permitted_product_scope": {},
+                "permitted_asset_type_ids": [],
+                "evidence_reference": "evidence://sprint06/legal/invalid-role",
+                "effective_from": (now - timedelta(days=1)).isoformat(),
+                "expires_at": (now + timedelta(days=1)).isoformat(),
+                "last_compliance_review_at": now.isoformat(),
+            },
+        )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "AUTHORIZATION_INVALID"
 
 
 @pytest.mark.integration

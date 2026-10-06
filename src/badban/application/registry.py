@@ -18,6 +18,7 @@ from badban.infrastructure.persistence.models import (
     CreditProvider,
     LegalAuthorization,
     LegalEntity,
+    LegalRole,
 )
 from badban.security.audit import append_audit
 from badban.security.authorization import (
@@ -81,6 +82,19 @@ async def get_legal_entity(
     if entity is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "Legal Entity was not found")
     return entity
+
+
+async def assert_legal_role_registered(
+    session: AsyncSession,
+    role_code: str,
+) -> None:
+    role = await session.get(LegalRole, role_code)
+    if role is None:
+        raise ApiError(
+            409,
+            "AUTHORIZATION_INVALID",
+            "Legal role is not registered",
+        )
 
 
 async def get_authorization_for_update(
@@ -477,7 +491,9 @@ async def create_credit_product_version(
     additional_terms: dict[str, Any],
     effective_from: datetime,
     effective_to: datetime | None,
+    actor_type: str,
     created_by: UUID,
+    correlation_id: UUID,
 ) -> CreditProductVersion:
     if version_number <= 0:
         raise ApiError(
@@ -564,6 +580,19 @@ async def create_credit_product_version(
         version=1,
     )
     session.add(product)
+    await session.flush()
+    append_audit(
+        session,
+        aggregate_type="CreditProductVersion",
+        aggregate_id=str(product.id),
+        aggregate_version=product.version,
+        action="CREDIT_PRODUCT_VERSION_CREATE",
+        actor_type=actor_type,
+        actor_id=created_by,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(product.provider_id)},
+    )
     await session.flush()
     return product
 

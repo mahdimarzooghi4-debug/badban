@@ -14,6 +14,7 @@ from badban.api.errors import ApiError
 from badban.application.idempotency import acquire_idempotency, complete_idempotency
 from badban.application.registry import (
     activate_provider,
+    assert_legal_role_registered,
     get_legal_entity,
     suspend_legal_authorization,
     suspend_provider,
@@ -394,6 +395,7 @@ async def list_legal_authorizations(
     correlation_id: UUID = Depends(get_correlation_id),
 ) -> list[LegalAuthorizationView]:
     await get_legal_entity(session, legal_entity_id)
+    await assert_legal_role_registered(session, body.role_code)
     await _authorize(
         session,
         principal=principal,
