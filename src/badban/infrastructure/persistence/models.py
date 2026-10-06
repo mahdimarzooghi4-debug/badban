@@ -773,9 +773,7 @@ class GuaranteeCase(VersionedMixin, Base):
     reserved_guarantee_amount: Mapped[Decimal | None] = mapped_column(
         Numeric(38, 18), nullable=True
     )
-    issued_guarantee_amount: Mapped[Decimal | None] = mapped_column(
-        Numeric(38, 18), nullable=True
-    )
+    issued_guarantee_amount: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
     current_guarantee_exposure: Mapped[Decimal] = mapped_column(
         Numeric(38, 18), nullable=False, default=Decimal("0")
     )
@@ -783,9 +781,7 @@ class GuaranteeCase(VersionedMixin, Base):
     reservation_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    legal_guarantee_external_id: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    legal_guarantee_external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     legal_guarantee_issuer_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("legal_entities.id", ondelete="RESTRICT"),

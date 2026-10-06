@@ -93,7 +93,6 @@ async def clean_sprint06_registry_tables(database: Database):
     yield
 
 
-
 @pytest.fixture
 async def clean_sprint07_guarantee_tables(database: Database):
     async with database.engine.begin() as connection:
