@@ -92,7 +92,6 @@ def _policy(status: str) -> PolicyVersion:
     )
 
 
-
 @pytest.mark.integration
 async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
     database,
