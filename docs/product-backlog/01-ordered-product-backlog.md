@@ -397,7 +397,8 @@ Additionally:
 **Priority:** P1  
 **Type:** Domain Capability  
 **Depends on:** BL-009, BL-017, BL-018  
-**Traceability:** Technical 02, 03, 07
+**Traceability:** Technical 02, 03, 07  
+**Delivery Status:** Selected for Sprint 07; Code authorized by Decision 0031; Stage deferred by Decision 0023
 
 **Acceptance Criteria**
 
