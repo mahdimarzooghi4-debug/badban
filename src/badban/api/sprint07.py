@@ -33,7 +33,7 @@ class GuaranteeRequestCreate(BaseModel):
     requested_principal: str = Field(
         min_length=1,
         max_length=80,
-        pattern=r"^\\d+(?:\\.\\d+)?$",
+        pattern=r"^\d+(?:\.\d+)?$",
         json_schema_extra={"format": "decimal"},
     )
 
