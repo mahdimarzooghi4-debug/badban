@@ -115,9 +115,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_decision_snapshots_append_only ON decision_snapshots"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_decision_snapshots_append_only ON decision_snapshots")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_decision_snapshot_mutation")
     op.drop_index("ix_decision_snapshots_effective_at", table_name="decision_snapshots")
     op.drop_index("ix_decision_snapshots_policy_pack", table_name="decision_snapshots")
