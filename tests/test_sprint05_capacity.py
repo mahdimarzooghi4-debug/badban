@@ -160,7 +160,7 @@ def test_capacity_aggregate_subtracts_utilization_and_floors_at_zero() -> None:
     [
         ("pledgeable_fraction", Decimal("1.01")),
         ("advance_rate", Decimal("-0.01")),
-        ("eligible_quantity", Decimal("-1")),
+        ("quantity", Decimal("-1")),
     ],
 )
 def test_invalid_position_values_fail_closed(field: str, value: Decimal) -> None:
@@ -405,7 +405,9 @@ async def test_capacity_application_service_captures_snapshot_without_financial_
         "quote:capacity:1",
         "evidence://capacity/1",
     ]
-    assert stored_snapshot.material_input_payload["positions"][0]["approved_price"] == "10"
+    assert Decimal(stored_snapshot.material_input_payload["positions"][0]["approved_price"]) == Decimal(
+        "10"
+    )
     assert stored_snapshot.material_output_payload["available_guarantee_capacity"] == "3"
     assert journal_count == 0
     assert stored_position is not None
