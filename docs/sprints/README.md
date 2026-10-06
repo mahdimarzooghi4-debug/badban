@@ -1,6 +1,6 @@
 # Badban Sprints
 
-- **Delivery State:** Sprint 03 Code + Code Review Complete; Stage Deferred; Sprint 04 Planning Next
+- **Delivery State:** Sprint 03 Code + Code Review Complete; Stage Deferred; Sprint 04 Proposed
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 - **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
@@ -75,4 +75,18 @@ Relevant gates:
 - Decision 0026 — Sprint 03 Code Authorization — **Accepted**
 - Decision 0027 — Sprint 03 Code Review Complete; Stage Still Deferred — **Accepted**
 
-The next permitted delivery action is Sprint 04 planning from the accepted Product Backlog and now-satisfied dependencies.
+Sprint 04 planning is now Proposed from the accepted Product Backlog and satisfied dependencies.
+
+
+## Current Sprint Planning
+
+- [Sprint 04 — Policy Lifecycle and Deterministic Resolution](./04-sprint-04-policy-lifecycle-deterministic-resolution.md) — **Proposed**
+
+Proposed Sprint 04 scope:
+
+- BL-013 Policy Version and Policy Pack Lifecycle
+- BL-014 PolicyResolver and DecisionSnapshot
+
+Decision 0028 — Sprint 04 Code Authorization — **Proposed**
+
+Sprint 04 Code is not yet authorized.
