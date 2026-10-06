@@ -55,3 +55,19 @@ async def clean_sprint02_tables(database: Database):
             )
         )
     yield
+
+
+@pytest.fixture
+async def clean_sprint03_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE "
+                "journal_postings, journal_entries, valuation_observations, approval_requests, "
+                "asset_positions, participation_episodes, role_grants, audit_events, "
+                "evidence_references, asset_types, programs, participants, identities, "
+                "idempotency_records "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
+    yield

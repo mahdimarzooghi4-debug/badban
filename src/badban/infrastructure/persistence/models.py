@@ -338,3 +338,161 @@ class EvidenceReference(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class ApprovalRequest(VersionedMixin, Base):
+    __tablename__ = "approval_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "checker_identity_id IS NULL OR checker_identity_id <> maker_identity_id",
+            name="ck_approval_request_distinct_checker",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING','APPROVED','REJECTED','CANCELLED','EXPIRED')",
+            name="ck_approval_request_status",
+        ),
+        Index("ix_approval_requests_status_expires", "status", "expires_at"),
+        Index("ix_approval_requests_scope", "scope_type", "scope_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    action_type: Mapped[str] = mapped_column(String(160), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    target_aggregate_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    maker_identity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    checker_identity_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    required_checker_role: Mapped[str] = mapped_column(String(80), nullable=False)
+    scope_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    scope_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    evidence_refs: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="PENDING")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ValuationObservation(Base):
+    __tablename__ = "valuation_observations"
+    __table_args__ = (
+        CheckConstraint("valued_quantity >= 0", name="ck_valuation_quantity_nonnegative"),
+        CheckConstraint("unit_price >= 0", name="ck_valuation_unit_price_nonnegative"),
+        CheckConstraint("fx_rate IS NULL OR fx_rate > 0", name="ck_valuation_fx_positive"),
+        CheckConstraint("gross_market_value >= 0", name="ck_valuation_gross_nonnegative"),
+        Index(
+            "ix_valuation_observations_position_observed",
+            "asset_position_id",
+            "observed_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    asset_position_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("asset_positions.id", ondelete="RESTRICT"), nullable=False
+    )
+    valued_quantity: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    valuation_currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    fx_rate: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
+    gross_market_value: Mapped[Decimal] = mapped_column(Numeric(114, 54), nullable=False)
+    source_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    source_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_version_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    freshness_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class JournalEntry(Base):
+    __tablename__ = "journal_entries"
+    __table_args__ = (
+        CheckConstraint("state IN ('PREPARED','POSTED')", name="ck_journal_entry_state"),
+        UniqueConstraint("idempotency_key", name="uq_journal_entry_idempotency_key"),
+        UniqueConstraint("reversal_of_entry_id", name="uq_journal_entry_reversal"),
+        Index("ix_journal_entries_business_event", "business_event_type", "business_event_id"),
+        Index("ix_journal_entries_posted_at", "posted_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    business_event_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    business_event_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    legal_entity_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    state: Mapped[str] = mapped_column(String(40), nullable=False, default="PREPARED")
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reversal_of_entry_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("journal_entries.id", ondelete="RESTRICT"), nullable=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_reference: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    causation_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class JournalPosting(Base):
+    __tablename__ = "journal_postings"
+    __table_args__ = (
+        CheckConstraint("debit_amount >= 0", name="ck_journal_posting_debit_nonnegative"),
+        CheckConstraint("credit_amount >= 0", name="ck_journal_posting_credit_nonnegative"),
+        CheckConstraint(
+            "(debit_amount > 0 AND credit_amount = 0) OR (credit_amount > 0 AND debit_amount = 0)",
+            name="ck_journal_posting_one_sided_positive",
+        ),
+        Index("ix_journal_postings_entry", "journal_entry_id"),
+        Index("ix_journal_postings_account_currency", "account_code", "currency"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    journal_entry_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("journal_entries.id", ondelete="RESTRICT"), nullable=False
+    )
+    account_code: Mapped[str] = mapped_column(String(80), nullable=False)
+    legal_entity_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    economic_owner_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    economic_owner_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    participant_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=True
+    )
+    program_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("programs.id", ondelete="RESTRICT"), nullable=True
+    )
+    provider_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    asset_position_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("asset_positions.id", ondelete="RESTRICT"), nullable=True
+    )
+    guarantee_case_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    claim_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    reserve_account_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    debit_amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    credit_amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
