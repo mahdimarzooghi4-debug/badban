@@ -19,6 +19,7 @@ from badban.infrastructure.persistence.models import (
     PolicyVersion,
 )
 from badban.security.audit import append_audit
+from badban.security.authorization import ROLE_GOVERNANCE_APPROVER
 
 POLICY_LIFECYCLE_TRANSITIONS: Mapping[str, frozenset[str]] = {
     "DRAFT": frozenset({"REVIEWED"}),
@@ -225,6 +226,12 @@ async def _get_policy_transition_approval(
             "APPROVAL_PAYLOAD_CHANGED",
             "Approval Request is not bound to this policy transition",
         )
+    if approval.required_checker_role != ROLE_GOVERNANCE_APPROVER:
+        raise ApiError(
+            409,
+            "MAKER_CHECKER_REQUIRED",
+            "Policy transition requires a GOVERNANCE_APPROVER checker",
+        )
     if approval.checker_identity_id is None:
         raise ApiError(
             409,
@@ -425,29 +432,30 @@ async def activate_policy(
             "Approved policy payload changed before activation",
         )
 
-    scope_identity = canonical_request_hash(
-        {
-            "policy_type": policy.policy_type,
-            "policy_code": policy.policy_code,
-            "scope_definition": policy.scope_definition,
-        }
-    )
+    scope_identity_fields = {
+        "policy_type": policy.policy_type,
+        "scope_definition": policy.scope_definition,
+    }
+    if policy.policy_type != "PILOT_POLICY_PACK":
+        scope_identity_fields["policy_code"] = policy.policy_code
+    scope_identity = canonical_request_hash(scope_identity_fields)
     await session.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:scope_identity, 0))"),
         {"scope_identity": scope_identity},
     )
 
+    active_predicates = [
+        PolicyVersion.id != policy.id,
+        PolicyVersion.policy_type == policy.policy_type,
+        PolicyVersion.scope_definition == policy.scope_definition,
+        PolicyVersion.lifecycle_status == "ACTIVE",
+    ]
+    if policy.policy_type != "PILOT_POLICY_PACK":
+        active_predicates.append(PolicyVersion.policy_code == policy.policy_code)
+
     active_versions = (
         await session.scalars(
-            select(PolicyVersion)
-            .where(
-                PolicyVersion.id != policy.id,
-                PolicyVersion.policy_type == policy.policy_type,
-                PolicyVersion.policy_code == policy.policy_code,
-                PolicyVersion.scope_definition == policy.scope_definition,
-                PolicyVersion.lifecycle_status == "ACTIVE",
-            )
-            .with_for_update()
+            select(PolicyVersion).where(*active_predicates).with_for_update()
         )
     ).all()
 

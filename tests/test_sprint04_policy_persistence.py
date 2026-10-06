@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select, update
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from badban.infrastructure.persistence.models import PolicyVersion
 
@@ -171,3 +171,46 @@ async def test_policy_version_rows_are_queryable_by_explicit_identity(
 
     assert found is not None
     assert found.payload == {"version_marker": 2}
+
+
+
+@pytest.mark.integration
+async def test_activated_policy_content_is_database_immutable(
+    database,
+    clean_sprint04_policy_tables,
+) -> None:
+    payload = {"component_version_ids": []}
+    policy = PolicyVersion(
+        policy_type="PILOT_POLICY_PACK",
+        policy_code="IMMUTABLE_PACK",
+        version_number=1,
+        lifecycle_status="ACTIVE",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        payload=payload,
+        payload_hash="0" * 64,
+        schema_version="1",
+        activated_at=datetime.now(UTC),
+        created_by=uuid4(),
+        version=4,
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(policy)
+            await session.flush()
+            policy_id = policy.id
+
+    with pytest.raises(DBAPIError):
+        async with database.session_factory() as session:
+            async with session.begin():
+                await session.execute(
+                    update(PolicyVersion)
+                    .where(PolicyVersion.id == policy_id)
+                    .values(payload={"component_version_ids": [str(uuid4())]})
+                )
+
+    async with database.session_factory() as session:
+        stored = await session.get(PolicyVersion, policy_id)
+
+    assert stored is not None
+    assert stored.payload == payload

@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 
 from badban.api.errors import ApiError
+from badban.application.idempotency import canonical_request_hash
 from badban.application.policy_resolution import resolve_active_policy_pack
 from badban.infrastructure.persistence.models import PolicyVersion
 
@@ -25,6 +26,9 @@ def _active_pack(
         lifecycle_status="ACTIVE",
         scope_definition=scope_definition,
         payload={"component_version_ids": component_version_ids or []},
+        payload_hash=canonical_request_hash(
+            {"component_version_ids": component_version_ids or []}
+        ),
         schema_version="1",
         effective_from=effective_from,
         effective_to=effective_to,
@@ -246,3 +250,30 @@ async def test_resolve_active_policy_pack_fails_closed_on_ambiguous_exact_scope(
 
     assert exc.value.code == "POLICY_SCOPE_AMBIGUOUS"
     assert exc.value.details == {"policy_pack_ids": expected_ids}
+
+
+
+@pytest.mark.integration
+async def test_resolve_active_policy_pack_fails_closed_on_payload_hash_mismatch(
+    database,
+    clean_sprint04_policy_tables,
+) -> None:
+    pack = _active_pack(
+        policy_code="HASH_MISMATCH",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+    )
+    pack.payload_hash = "0" * 64
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(pack)
+
+    async with database.session_factory() as session:
+        with pytest.raises(ApiError) as exc:
+            await resolve_active_policy_pack(
+                session,
+                scope_definition={"pilot_scope": "bounded-pilot"},
+                effective_at=datetime.now(UTC),
+            )
+
+    assert exc.value.code == "POLICY_RESOLUTION_UNAVAILABLE"

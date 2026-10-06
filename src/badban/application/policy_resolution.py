@@ -8,6 +8,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.errors import ApiError
+from badban.application.idempotency import canonical_request_hash
 from badban.infrastructure.persistence.models import PolicyVersion
 
 
@@ -117,6 +118,12 @@ async def resolve_active_policy_pack(
         )
 
     policy = matches[0]
+    if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(policy.payload):
+        raise ApiError(
+            409,
+            "POLICY_RESOLUTION_UNAVAILABLE",
+            "ACTIVE Pilot Policy Pack failed payload integrity verification",
+        )
     component_version_ids = await _resolve_component_version_ids(session, policy)
     return ResolvedPolicyPack(
         policy_pack_id=policy.id,
