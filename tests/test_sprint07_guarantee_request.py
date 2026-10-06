@@ -184,6 +184,27 @@ async def _count(session, model) -> int:
     return int(await session.scalar(select(func.count()).select_from(model)) or 0)
 
 
+def test_guarantee_request_openapi_declares_decimal_string_idempotency_and_role(
+    settings: Settings,
+) -> None:
+    schema = create_app(settings).openapi()
+    operation = schema["paths"]["/api/v1/guarantees"]["post"]
+
+    assert "OPERATIONS" in operation["description"]
+    assert any(
+        parameter["name"] == "Idempotency-Key" and parameter["in"] == "header"
+        for parameter in operation["parameters"]
+    )
+    request_ref = operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    request_name = request_ref.rsplit("/", 1)[-1]
+    principal_schema = schema["components"]["schemas"][request_name]["properties"][
+        "requested_principal"
+    ]
+    assert principal_schema["type"] == "string"
+    assert principal_schema["format"] == "decimal"
+    assert set(("403", "404", "409", "422")).issubset(operation["responses"])
+
+
 @pytest.mark.integration
 async def test_create_guarantee_request_is_idempotent_requested_only_and_side_effect_free(
     settings: Settings,

@@ -30,7 +30,12 @@ class GuaranteeRequestCreate(BaseModel):
     participation_episode_id: UUID
     provider_id: UUID
     credit_product_version_id: UUID
-    requested_principal: str = Field(min_length=1, max_length=80)
+    requested_principal: str = Field(
+        min_length=1,
+        max_length=80,
+        pattern=r"^\\d+(?:\\.\\d+)?$",
+        json_schema_extra={"format": "decimal"},
+    )
 
 
 class GuaranteeCaseView(BaseModel):
@@ -40,10 +45,14 @@ class GuaranteeCaseView(BaseModel):
     credit_product_version_id: UUID
     policy_pack_id: UUID | None
     state: str
-    requested_principal: str
-    reserved_guarantee_amount: str | None
-    issued_guarantee_amount: str | None
-    current_guarantee_exposure: str
+    requested_principal: str = Field(json_schema_extra={"format": "decimal"})
+    reserved_guarantee_amount: str | None = Field(
+        default=None, json_schema_extra={"format": "decimal"}
+    )
+    issued_guarantee_amount: str | None = Field(
+        default=None, json_schema_extra={"format": "decimal"}
+    )
+    current_guarantee_exposure: str = Field(json_schema_extra={"format": "decimal"})
     guarantee_mode: str
     reservation_expires_at: datetime | None
     legal_guarantee_external_id: str | None
