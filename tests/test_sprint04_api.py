@@ -89,9 +89,7 @@ async def _approved_transition(
             policy = await session.get(PolicyVersion, policy_id)
             assert policy is not None
             payload = policy_transition_approval_payload(policy, target_status)
-            action_type = (
-                "POLICY_APPROVAL" if target_status == "APPROVED" else "POLICY_ACTIVATION"
-            )
+            action_type = "POLICY_APPROVAL" if target_status == "APPROVED" else "POLICY_ACTIVATION"
             approval = ApprovalRequest(
                 action_type=action_type,
                 target_type="PolicyVersion",

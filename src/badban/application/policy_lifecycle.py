@@ -496,7 +496,6 @@ async def activate_policy(
     return policy
 
 
-
 async def retire_policy(
     session: AsyncSession,
     *,
