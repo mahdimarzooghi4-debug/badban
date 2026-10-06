@@ -11,6 +11,7 @@ from badban.api.middleware import CorrelationIdMiddleware
 from badban.api.sprint03 import router as sprint03_router
 from badban.api.sprint04 import router as sprint04_router
 from badban.api.sprint06 import router as sprint06_router
+from badban.api.sprint07 import router as sprint07_router
 from badban.api.v1 import router as v1_router
 from badban.config import Settings, get_settings
 from badban.infrastructure.persistence.database import Database
@@ -42,6 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sprint03_router)
     app.include_router(sprint04_router)
     app.include_router(sprint06_router)
+    app.include_router(sprint07_router)
     configure_tracing(app, resolved)
     return app
 

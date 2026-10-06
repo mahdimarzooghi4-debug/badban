@@ -699,6 +699,111 @@ class CreditProductVersion(VersionedMixin, Base):
     )
 
 
+class GuaranteeCase(VersionedMixin, Base):
+    __tablename__ = "guarantee_cases"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ("
+            "'REQUESTED','RESERVED','ISSUED','ACTIVE','DELINQUENT','CLAIM_PENDING',"
+            "'CLAIM_APPROVED','CLAIM_REJECTED','ENFORCEMENT','SETTLEMENT','RELEASED',"
+            "'CLOSED','CANCELLED','EXPIRED'"
+            ")",
+            name="ck_guarantee_case_state",
+        ),
+        CheckConstraint(
+            "requested_principal > 0",
+            name="ck_guarantee_case_requested_principal_positive",
+        ),
+        CheckConstraint(
+            "reserved_guarantee_amount IS NULL OR reserved_guarantee_amount >= 0",
+            name="ck_guarantee_case_reserved_nonnegative",
+        ),
+        CheckConstraint(
+            "issued_guarantee_amount IS NULL OR issued_guarantee_amount >= 0",
+            name="ck_guarantee_case_issued_nonnegative",
+        ),
+        CheckConstraint(
+            "current_guarantee_exposure >= 0",
+            name="ck_guarantee_case_exposure_nonnegative",
+        ),
+        CheckConstraint(
+            "issued_guarantee_amount IS NULL OR reserved_guarantee_amount IS NULL "
+            "OR issued_guarantee_amount <= reserved_guarantee_amount",
+            name="ck_guarantee_case_issued_not_above_reserved",
+        ),
+        CheckConstraint(
+            "closed_at IS NULL OR state IN ('CLOSED','CANCELLED','EXPIRED')",
+            name="ck_guarantee_case_closed_terminal",
+        ),
+        UniqueConstraint(
+            "legal_guarantee_issuer_id",
+            "legal_guarantee_external_id",
+            name="uq_guarantee_case_issuer_external_id",
+        ),
+        Index("ix_guarantee_cases_episode", "participation_episode_id"),
+        Index("ix_guarantee_cases_provider", "provider_id"),
+        Index("ix_guarantee_cases_state", "state"),
+        Index("ix_guarantee_cases_reservation_expiry", "reservation_expires_at"),
+        Index("ix_guarantee_cases_legal_external_id", "legal_guarantee_external_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    participation_episode_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("participation_episodes.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    provider_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("credit_providers.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    credit_product_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("credit_product_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    policy_pack_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    state: Mapped[str] = mapped_column(String(40), nullable=False, default="REQUESTED")
+    requested_principal: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    reserved_guarantee_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(38, 18), nullable=True
+    )
+    issued_guarantee_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(38, 18), nullable=True
+    )
+    current_guarantee_exposure: Mapped[Decimal] = mapped_column(
+        Numeric(38, 18), nullable=False, default=Decimal("0")
+    )
+    guarantee_mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    reservation_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    legal_guarantee_external_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    legal_guarantee_issuer_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("legal_entities.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    external_loan_mirror_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    risk_snapshot_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class PolicyVersion(VersionedMixin, Base):
     __tablename__ = "policy_versions"
     __table_args__ = (
