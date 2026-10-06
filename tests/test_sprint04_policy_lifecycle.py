@@ -303,6 +303,68 @@ async def test_policy_approval_rejects_missing_pack_component_reference(
 
 
 @pytest.mark.integration
+async def test_policy_approval_rejects_nested_policy_pack_component(
+    database,
+    clean_sprint03_tables,
+    clean_sprint04_policy_tables,
+) -> None:
+    nested_pack = PolicyVersion(
+        policy_type="PILOT_POLICY_PACK",
+        policy_code=f"NESTED_TEST_{uuid4()}",
+        version_number=1,
+        lifecycle_status="DRAFT",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        payload={"component_version_ids": []},
+        schema_version="1",
+        created_by=uuid4(),
+        version=1,
+    )
+    policy = _policy("REVIEWED")
+    policy.version = 2
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(nested_pack)
+            await session.flush()
+            policy.payload = {"component_version_ids": [str(nested_pack.id)]}
+            session.add(policy)
+            await session.flush()
+            policy_id = policy.id
+            nested_pack_id = nested_pack.id
+            approval = await _approved_policy_request(
+                session,
+                policy=policy,
+                target_status="APPROVED",
+            )
+            approval_id = approval.id
+
+    async with database.session_factory() as session:
+        with pytest.raises(ApiError) as exc:
+            async with session.begin():
+                await approve_policy(
+                    session,
+                    policy_id=policy_id,
+                    approval_id=approval_id,
+                    actor_type="GOVERNANCE",
+                    actor_id=uuid4(),
+                    correlation_id=uuid4(),
+                )
+
+    assert exc.value.code == "POLICY_VALIDATION_FAILED"
+    assert exc.value.details == {
+        "incompatible_component_version_ids": [str(nested_pack_id)]
+    }
+
+    async with database.session_factory() as session:
+        stored = await session.get(PolicyVersion, policy_id)
+
+    assert stored is not None
+    assert stored.lifecycle_status == "REVIEWED"
+    assert stored.payload_hash is None
+    assert stored.approved_by is None
+
+
+@pytest.mark.integration
 async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
     database,
     clean_sprint04_policy_tables,
