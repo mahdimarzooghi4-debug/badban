@@ -94,6 +94,7 @@ def _policy(status: str) -> PolicyVersion:
         version=1,
     )
 
+
 @pytest.mark.integration
 async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
     database,
@@ -166,7 +167,6 @@ async def test_approve_command_cannot_skip_review(
     assert stored.approved_by is None
     assert stored.approved_at is None
     assert stored.activated_at is None
-
 
 
 @pytest.mark.integration
