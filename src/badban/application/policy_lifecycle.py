@@ -8,8 +8,12 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.errors import ApiError
+from badban.application.approval import (
+    assert_approval_execution_eligible,
+    get_approval_for_update,
+)
 from badban.application.idempotency import canonical_request_hash
-from badban.infrastructure.persistence.models import OutboxMessage, PolicyVersion
+from badban.infrastructure.persistence.models import ApprovalRequest, OutboxMessage, PolicyVersion
 from badban.security.audit import append_audit
 
 POLICY_LIFECYCLE_TRANSITIONS: Mapping[str, frozenset[str]] = {
@@ -22,6 +26,11 @@ POLICY_LIFECYCLE_TRANSITIONS: Mapping[str, frozenset[str]] = {
 }
 
 IMMUTABLE_POLICY_STATES = frozenset({"ACTIVE", "SUPERSEDED", "RETIRED"})
+
+_POLICY_TRANSITION_APPROVAL_ACTIONS: Mapping[str, str] = {
+    "APPROVED": "POLICY_APPROVAL",
+    "ACTIVE": "POLICY_ACTIVATION",
+}
 
 _POLICY_PACK_EVENT_TYPES: Mapping[tuple[str, str], str] = {
     ("DRAFT", "REVIEWED"): "PolicyPackReviewed",
@@ -66,6 +75,73 @@ async def get_policy_for_update(
     if policy is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "Policy Version was not found")
     return policy
+
+
+
+def policy_transition_approval_payload(
+    policy: PolicyVersion,
+    target_status: str,
+) -> dict[str, object]:
+    action_type = _POLICY_TRANSITION_APPROVAL_ACTIONS[target_status]
+    return {
+        "action_type": action_type,
+        "target_status": target_status,
+        "policy_id": str(policy.id),
+        "policy_type": policy.policy_type,
+        "policy_code": policy.policy_code,
+        "version_number": policy.version_number,
+        "scope_definition": policy.scope_definition,
+        "payload_hash": canonical_request_hash(policy.payload),
+        "schema_version": policy.schema_version,
+        "effective_from": (
+            policy.effective_from.isoformat() if policy.effective_from is not None else None
+        ),
+        "effective_to": (
+            policy.effective_to.isoformat() if policy.effective_to is not None else None
+        ),
+    }
+
+
+async def _get_policy_transition_approval(
+    session: AsyncSession,
+    *,
+    approval_id: UUID,
+    policy: PolicyVersion,
+    target_status: str,
+    now: datetime,
+) -> ApprovalRequest:
+    approval = await get_approval_for_update(session, approval_id)
+    expected_action = _POLICY_TRANSITION_APPROVAL_ACTIONS[target_status]
+    if (
+        approval.action_type != expected_action
+        or approval.target_type != "PolicyVersion"
+        or approval.target_id != str(policy.id)
+    ):
+        raise ApiError(
+            409,
+            "APPROVAL_PAYLOAD_CHANGED",
+            "Approval Request is not bound to this policy transition",
+        )
+    if approval.checker_identity_id is None:
+        raise ApiError(
+            409,
+            "MAKER_CHECKER_REQUIRED",
+            "Policy transition requires an approved maker-checker request",
+        )
+    if approval.checker_identity_id == approval.maker_identity_id:
+        raise ApiError(
+            409,
+            "SELF_APPROVAL_FORBIDDEN",
+            "Maker and checker must be distinct identities",
+        )
+
+    assert_approval_execution_eligible(
+        approval,
+        payload=policy_transition_approval_payload(policy, target_status),
+        current_target_version=policy.version,
+        now=now,
+    )
+    return approval
 
 
 def _record_policy_transition(
@@ -169,8 +245,9 @@ async def approve_policy(
     session: AsyncSession,
     *,
     policy_id: UUID,
-    approved_by: UUID,
+    approval_id: UUID,
     actor_type: str,
+    actor_id: UUID,
     correlation_id: UUID,
     causation_id: UUID | None = None,
     now: datetime | None = None,
@@ -180,9 +257,18 @@ async def approve_policy(
     assert_policy_transition_allowed(previous_status, "APPROVED")
 
     approved_at = now or datetime.now(UTC)
+    approval = await _get_policy_transition_approval(
+        session,
+        approval_id=approval_id,
+        policy=policy,
+        target_status="APPROVED",
+        now=approved_at,
+    )
+    assert approval.checker_identity_id is not None
+
     policy.lifecycle_status = "APPROVED"
     policy.payload_hash = canonical_request_hash(policy.payload)
-    policy.approved_by = approved_by
+    policy.approved_by = approval.checker_identity_id
     policy.approved_at = approved_at
     policy.version += 1
     _record_policy_transition(
@@ -190,7 +276,7 @@ async def approve_policy(
         policy=policy,
         previous_status=previous_status,
         actor_type=actor_type,
-        actor_id=approved_by,
+        actor_id=actor_id,
         correlation_id=correlation_id,
         causation_id=causation_id,
         occurred_at=approved_at,
@@ -203,6 +289,7 @@ async def activate_policy(
     session: AsyncSession,
     *,
     policy_id: UUID,
+    approval_id: UUID,
     actor_type: str,
     actor_id: UUID,
     correlation_id: UUID,
@@ -212,6 +299,15 @@ async def activate_policy(
     policy = await get_policy_for_update(session, policy_id)
     previous_status = policy.lifecycle_status
     assert_policy_transition_allowed(previous_status, "ACTIVE")
+
+    activated_at = now or datetime.now(UTC)
+    await _get_policy_transition_approval(
+        session,
+        approval_id=approval_id,
+        policy=policy,
+        target_status="ACTIVE",
+        now=activated_at,
+    )
 
     if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(policy.payload):
         raise ApiError(
@@ -253,7 +349,6 @@ async def activate_policy(
             "Exclusive policy scope has multiple ACTIVE versions",
         )
 
-    activated_at = now or datetime.now(UTC)
     previous_active_policy_id = None
     if active_versions:
         previous = active_versions[0]
