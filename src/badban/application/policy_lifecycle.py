@@ -81,7 +81,6 @@ async def get_policy_for_update(
     return policy
 
 
-
 def policy_transition_approval_payload(
     policy: PolicyVersion,
     target_status: str,
@@ -313,9 +312,7 @@ async def activate_policy(
         now=activated_at,
     )
 
-    if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(
-        policy.payload
-    ):
+    if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(policy.payload):
         raise ApiError(
             409,
             "POLICY_VALIDATION_FAILED",
