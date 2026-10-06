@@ -351,9 +351,7 @@ async def test_policy_approval_rejects_nested_policy_pack_component(
                 )
 
     assert exc.value.code == "POLICY_VALIDATION_FAILED"
-    assert exc.value.details == {
-        "incompatible_component_version_ids": [str(nested_pack_id)]
-    }
+    assert exc.value.details == {"incompatible_component_version_ids": [str(nested_pack_id)]}
 
     async with database.session_factory() as session:
         stored = await session.get(PolicyVersion, policy_id)
