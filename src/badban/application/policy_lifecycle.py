@@ -69,6 +69,47 @@ def assert_policy_payload_mutable(policy: PolicyVersion) -> None:
         )
 
 
+def assert_policy_pack_manifest_exact(policy: PolicyVersion) -> None:
+    if policy.policy_type != "PILOT_POLICY_PACK":
+        return
+
+    component_version_ids = policy.payload.get("component_version_ids")
+    if not isinstance(component_version_ids, list):
+        raise ApiError(
+            409,
+            "POLICY_VALIDATION_FAILED",
+            "Pilot Policy Pack must declare component_version_ids as a list",
+            {"field": "component_version_ids"},
+        )
+
+    seen_component_ids: set[UUID] = set()
+    for component_version_id in component_version_ids:
+        if not isinstance(component_version_id, str):
+            raise ApiError(
+                409,
+                "POLICY_VALIDATION_FAILED",
+                "Pilot Policy Pack component references must be exact PolicyVersion IDs",
+                {"field": "component_version_ids"},
+            )
+        try:
+            parsed_component_id = UUID(component_version_id)
+        except ValueError as exc:
+            raise ApiError(
+                409,
+                "POLICY_VALIDATION_FAILED",
+                "Pilot Policy Pack component references must be exact PolicyVersion IDs",
+                {"field": "component_version_ids"},
+            ) from exc
+        if parsed_component_id in seen_component_ids:
+            raise ApiError(
+                409,
+                "POLICY_VALIDATION_FAILED",
+                "Pilot Policy Pack component references must be unique",
+                {"field": "component_version_ids"},
+            )
+        seen_component_ids.add(parsed_component_id)
+
+
 async def get_policy_for_update(
     session: AsyncSession,
     policy_id: UUID,
@@ -260,6 +301,7 @@ async def approve_policy(
     assert_policy_transition_allowed(previous_status, "APPROVED")
 
     approved_at = now or datetime.now(UTC)
+    assert_policy_pack_manifest_exact(policy)
     approval = await _get_policy_transition_approval(
         session,
         approval_id=approval_id,
@@ -304,6 +346,7 @@ async def activate_policy(
     assert_policy_transition_allowed(previous_status, "ACTIVE")
 
     activated_at = now or datetime.now(UTC)
+    assert_policy_pack_manifest_exact(policy)
     await _get_policy_transition_approval(
         session,
         approval_id=approval_id,
