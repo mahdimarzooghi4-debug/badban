@@ -494,3 +494,35 @@ async def activate_policy(
     )
     await session.flush()
     return policy
+
+
+
+async def retire_policy(
+    session: AsyncSession,
+    *,
+    policy_id: UUID,
+    actor_type: str,
+    actor_id: UUID,
+    correlation_id: UUID,
+    causation_id: UUID | None = None,
+    now: datetime | None = None,
+) -> PolicyVersion:
+    policy = await get_policy_for_update(session, policy_id)
+    previous_status = policy.lifecycle_status
+    assert_policy_transition_allowed(previous_status, "RETIRED")
+
+    retired_at = now or datetime.now(UTC)
+    policy.lifecycle_status = "RETIRED"
+    policy.version += 1
+    _record_policy_transition(
+        session,
+        policy=policy,
+        previous_status=previous_status,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        correlation_id=correlation_id,
+        causation_id=causation_id,
+        occurred_at=retired_at,
+    )
+    await session.flush()
+    return policy
