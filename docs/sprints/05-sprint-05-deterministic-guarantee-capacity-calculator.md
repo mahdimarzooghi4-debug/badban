@@ -1,8 +1,8 @@
 # Sprint 05 — Deterministic Guarantee Capacity Calculator
 
-- **Status:** Accepted
+- **Status:** Completed through Code Review; Merged to main
 - **Date:** 2026-10-06
-- **Stage:** Sprint Planning
+- **Stage:** Deferred by Decision 0023
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Sprint 04 Code + Code Review Complete
 - **Depends on:** BL-011, BL-012, BL-014 complete through Code Review
@@ -246,3 +246,28 @@ Sprint 05 does not implement:
 This Sprint 05 plan is Accepted.
 
 Decision 0029 grants Code authorization only for BL-015 under the boundaries above.
+
+
+## 16. Completion Record
+
+Sprint 05 completed its authorized Code and Code Review scope for BL-015.
+
+- Pull Request: #6 — `Sprint 05: deterministic guarantee capacity calculator`
+- Reviewed head: `cc35fbc29395d7a1faec92874cc6c49e59676935`
+- Reviewed-head CI: Run #171 — SUCCESS
+- Merge commit on `main`: `5599ccdad92fd1da1ec1ca632feee4c2714aa7ae`
+- BL-015: Code + Code Review complete
+- Stage: Deferred under Decision 0023
+- QA/Testing gate completion: not claimed
+- Release Approval: not claimed
+- Production / real-money use: not authorized
+
+Review hardening included:
+
+- current AssetPosition quantity bounds eligible quantity;
+- valuation observations newer than the decision effective timestamp are rejected;
+- DecisionSnapshot evidence preserves Asset Type, AssetPosition quantity/version/unit, valuation source/version/timestamps/currency, and valuation observation IDs;
+- exact Decimal CAPACITY_V1 arithmetic remains separate from policy versions;
+- no implicit rounding or production policy values were introduced.
+
+No BL-016, BL-032, Provider/Product Registry, Legal Entity Authorization Registry, GuaranteeCase reservation/issuance, BackingAllocation reservation, lender integration, ledger posting, claims/recovery, return allocation, Direct Lending, Stage, QA gate completion, Release Approval, Production, or real-money behavior is authorized by this completion record.

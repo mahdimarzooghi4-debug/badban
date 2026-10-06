@@ -301,7 +301,7 @@ Resolve and record:
 **Type:** Domain Capability  
 **Depends on:** BL-011, BL-012, BL-014  
 **Traceability:** Decision 0008; Technical 06  
-**Delivery Status:** Selected for Sprint 05; Code authorized by Decision 0029; Stage deferred by Decision 0023
+**Delivery Status:** Code + Code Review complete in Sprint 05; merged to `main`; Stage deferred by Decision 0023
 
 **Acceptance Criteria**
 
