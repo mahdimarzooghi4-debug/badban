@@ -102,7 +102,6 @@ def _policy(status: str) -> PolicyVersion:
     )
 
 
-
 async def _approved_policy_request(
     session,
     *,
@@ -123,9 +122,7 @@ async def _approved_policy_request(
     await session.flush()
 
     payload = policy_transition_approval_payload(policy, target_status)
-    action_type = (
-        "POLICY_APPROVAL" if target_status == "APPROVED" else "POLICY_ACTIVATION"
-    )
+    action_type = "POLICY_APPROVAL" if target_status == "APPROVED" else "POLICY_ACTIVATION"
     approval = ApprovalRequest(
         action_type=action_type,
         target_type="PolicyVersion",
@@ -502,7 +499,6 @@ async def test_concurrent_activation_leaves_only_one_active_for_exact_scope(
 
     assert sum(policy.lifecycle_status == "ACTIVE" for policy in stored) == 1
     assert sum(policy.lifecycle_status == "SUPERSEDED" for policy in stored) == 1
-
 
 
 @pytest.mark.integration
