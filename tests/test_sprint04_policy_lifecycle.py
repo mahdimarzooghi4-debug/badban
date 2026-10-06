@@ -278,9 +278,7 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
                 await session.scalars(
                     select(AuditEvent.action).where(
                         AuditEvent.aggregate_type == "PolicyVersion",
-                        AuditEvent.aggregate_id.in_(
-                            [str(previous_id), str(candidate_id)]
-                        ),
+                        AuditEvent.aggregate_id.in_([str(previous_id), str(candidate_id)]),
                     )
                 )
             ).all()
@@ -290,9 +288,7 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
                 await session.scalars(
                     select(OutboxMessage.event_type).where(
                         OutboxMessage.aggregate_type == "PolicyVersion",
-                        OutboxMessage.aggregate_id.in_(
-                            [str(previous_id), str(candidate_id)]
-                        ),
+                        OutboxMessage.aggregate_id.in_([str(previous_id), str(candidate_id)]),
                     )
                 )
             ).all()
