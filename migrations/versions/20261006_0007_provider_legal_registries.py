@@ -178,29 +178,10 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        CREATE OR REPLACE FUNCTION badban_reject_registry_history_mutation()
+        CREATE OR REPLACE FUNCTION badban_reject_legal_authorization_history_mutation()
         RETURNS trigger AS $$
         BEGIN
-            IF TG_TABLE_NAME = 'credit_product_versions'
-               AND OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','RETIRED')
-               AND (
-                    NEW.provider_id IS DISTINCT FROM OLD.provider_id
-                    OR NEW.lender_of_record_legal_entity_id IS DISTINCT FROM
-                       OLD.lender_of_record_legal_entity_id
-                    OR NEW.product_code IS DISTINCT FROM OLD.product_code
-                    OR NEW.version_number IS DISTINCT FROM OLD.version_number
-                    OR NEW.product_name IS DISTINCT FROM OLD.product_name
-                    OR NEW.terms IS DISTINCT FROM OLD.terms
-                    OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
-                    OR NEW.effective_to IS DISTINCT FROM OLD.effective_to
-                    OR NEW.created_by IS DISTINCT FROM OLD.created_by
-               )
-            THEN
-                RAISE EXCEPTION 'credit product version history is immutable';
-            END IF;
-
-            IF TG_TABLE_NAME = 'legal_authorizations'
-               AND OLD.lifecycle_status IN ('VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')
+            IF OLD.lifecycle_status IN ('VALID','SUSPENDED','EXPIRED','REVOKED','SUPERSEDED')
                AND (
                     NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
                     OR NEW.role_code IS DISTINCT FROM OLD.role_code
@@ -218,9 +199,26 @@ def upgrade() -> None:
             THEN
                 RAISE EXCEPTION 'legal authorization history is immutable';
             END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_legal_authorizations_history_immutable
+        BEFORE UPDATE ON legal_authorizations
+        FOR EACH ROW
+        EXECUTE FUNCTION badban_reject_legal_authorization_history_mutation()
+        """
+    )
 
-            IF TG_TABLE_NAME = 'credit_providers'
-               AND OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','EXPIRED','TERMINATED')
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION badban_reject_credit_provider_history_mutation()
+        RETURNS trigger AS $$
+        BEGIN
+            IF OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','EXPIRED','TERMINATED')
                AND (
                     NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
                     OR NEW.provider_code IS DISTINCT FROM OLD.provider_code
@@ -231,34 +229,71 @@ def upgrade() -> None:
             THEN
                 RAISE EXCEPTION 'credit provider history is immutable';
             END IF;
-
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql
         """
     )
-    for table_name in (
-        "legal_authorizations",
-        "credit_providers",
-        "credit_product_versions",
-    ):
-        op.execute(
-            f"""
-            CREATE TRIGGER trg_{table_name}_history_immutable
-            BEFORE UPDATE ON {table_name}
-            FOR EACH ROW EXECUTE FUNCTION badban_reject_registry_history_mutation()
-            """
-        )
+    op.execute(
+        """
+        CREATE TRIGGER trg_credit_providers_history_immutable
+        BEFORE UPDATE ON credit_providers
+        FOR EACH ROW
+        EXECUTE FUNCTION badban_reject_credit_provider_history_mutation()
+        """
+    )
+
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION badban_reject_credit_product_history_mutation()
+        RETURNS trigger AS $$
+        BEGIN
+            IF OLD.lifecycle_status IN ('ACTIVE','SUSPENDED','RETIRED')
+               AND (
+                    NEW.provider_id IS DISTINCT FROM OLD.provider_id
+                    OR NEW.lender_of_record_legal_entity_id IS DISTINCT FROM
+                       OLD.lender_of_record_legal_entity_id
+                    OR NEW.product_code IS DISTINCT FROM OLD.product_code
+                    OR NEW.version_number IS DISTINCT FROM OLD.version_number
+                    OR NEW.product_name IS DISTINCT FROM OLD.product_name
+                    OR NEW.terms IS DISTINCT FROM OLD.terms
+                    OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+                    OR NEW.effective_to IS DISTINCT FROM OLD.effective_to
+                    OR NEW.created_by IS DISTINCT FROM OLD.created_by
+               )
+            THEN
+                RAISE EXCEPTION 'credit product version history is immutable';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_credit_product_versions_history_immutable
+        BEFORE UPDATE ON credit_product_versions
+        FOR EACH ROW
+        EXECUTE FUNCTION badban_reject_credit_product_history_mutation()
+        """
+    )
 
 
 def downgrade() -> None:
-    for table_name in (
-        "credit_product_versions",
-        "credit_providers",
-        "legal_authorizations",
-    ):
-        op.execute(f"DROP TRIGGER IF EXISTS trg_{table_name}_history_immutable ON {table_name}")
-    op.execute("DROP FUNCTION IF EXISTS badban_reject_registry_history_mutation")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_credit_product_versions_history_immutable "
+        "ON credit_product_versions"
+    )
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_credit_providers_history_immutable ON credit_providers"
+    )
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_legal_authorizations_history_immutable "
+        "ON legal_authorizations"
+    )
+    op.execute("DROP FUNCTION IF EXISTS badban_reject_credit_product_history_mutation")
+    op.execute("DROP FUNCTION IF EXISTS badban_reject_credit_provider_history_mutation")
+    op.execute("DROP FUNCTION IF EXISTS badban_reject_legal_authorization_history_mutation")
     op.drop_index(
         "ix_credit_product_versions_provider_status",
         table_name="credit_product_versions",
