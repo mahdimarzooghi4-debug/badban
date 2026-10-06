@@ -1,8 +1,8 @@
 # Sprint 06 — Provider/Product and Legal Authorization Registries
 
-- **Status:** Accepted
+- **Status:** Completed through Code Review; Merged to main
 - **Date:** 2026-10-06
-- **Stage:** Sprint Planning
+- **Stage:** Deferred by Decision 0023
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Sprint 05 Code + Code Review Complete
 - **Depends on:** BL-007, BL-013 complete through Code Review
@@ -276,3 +276,36 @@ Sprint 06 does not implement:
 This Sprint 06 plan is Accepted.
 
 Decision 0030 grants Code authorization only for BL-017 and BL-018 under the boundaries above.
+
+
+## 16. Completion Record
+
+Sprint 06 completed its authorized Code and Code Review scope for BL-017 and BL-018.
+
+- Pull Request: #7 — `Sprint 06: provider/product and legal authorization registries`
+- Reviewed head: `4d4bfe88b19729868ce026c2555b36435d685fd0`
+- Reviewed-head CI: Run #183 — SUCCESS
+- Merge commit on `main`: `3ebbef55740666e96d4755b176b7ea9677292558`
+- Merge-commit CI: Run #184 — SUCCESS
+- BL-017: Code + Code Review complete
+- BL-018: Code + Code Review complete
+- Stage: Deferred under Decision 0023
+- QA/Testing gate completion: not claimed
+- Release Approval: not claimed
+- Production / real-money use: not authorized
+
+Review hardening included:
+
+- Legal Entity identity now preserves registration identifier, entity type, and status;
+- canonical Legal Role Registry is explicit and unknown roles fail closed;
+- Legal Authorization preserves validity, evidence, role, scope definition, permitted product scope, and permitted Asset Types;
+- scoped authorization remains fail-closed until an accepted capability-matrix matcher is defined;
+- Credit Provider preserves explicit integration mode, authorization review state, lifecycle, and suspension reason;
+- Direct Lending remains disabled for the bounded pilot;
+- Credit Product Version preserves explicit lender of record, product type, currency, principal bounds, tenor/repayment/pricing definitions, guarantee mode, delinquency/claim definitions, policy-version reference, and effective window;
+- Product Version creation, approval, activation, suspension, and retirement are auditable;
+- provider/product activation rechecks current legal authorization rather than inferring authority from registry existence;
+- historical provider/product/legal authorization content is protected from silent mutation;
+- no production provider/product/legal values were introduced.
+
+No BL-016, BL-019, BL-020, BL-021, BL-032, GuaranteeCase, BackingAllocation, reservation, provider adapter/network call, legal guarantee issuance, external loan mirror, ledger posting, claims/recovery, Direct Lending, Stage, QA gate completion, Release Approval, Production, or real-money behavior is authorized by this completion record.
