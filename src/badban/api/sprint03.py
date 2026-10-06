@@ -74,7 +74,15 @@ class ApprovalCreate(BaseModel):
         "LEGAL_COMPLIANCE",
         "GOVERNANCE_APPROVER",
     ]
-    scope_type: Literal["GLOBAL", "PROGRAM", "PARTICIPANT", "ASSET_TYPE", "ASSET_POSITION"]
+    scope_type: Literal[
+        "GLOBAL",
+        "PROGRAM",
+        "PARTICIPANT",
+        "ASSET_TYPE",
+        "ASSET_POSITION",
+        "PROVIDER",
+        "LEGAL_ENTITY",
+    ]
     scope_id: UUID | None = None
     payload: dict[str, Any]
     reason: str | None = Field(default=None, max_length=500)
