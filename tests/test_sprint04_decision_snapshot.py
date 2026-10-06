@@ -36,13 +36,15 @@ async def _persist_snapshot(database) -> tuple[UUID, UUID, dict[str, object], di
         async with session.begin():
             session.add(component)
             await session.flush()
+            pack_payload = {"component_version_ids": [str(component.id)]}
             pack = PolicyVersion(
                 policy_type="PILOT_POLICY_PACK",
                 policy_code="SNAPSHOT_TEST_PACK",
                 version_number=1,
                 lifecycle_status="ACTIVE",
                 scope_definition=scope,
-                payload={"component_version_ids": [str(component.id)]},
+                payload=pack_payload,
+                payload_hash=canonical_request_hash(pack_payload),
                 schema_version="1",
                 activated_at=datetime.now(UTC),
                 created_by=uuid4(),
