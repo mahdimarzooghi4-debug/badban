@@ -12,7 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.decision_snapshot import create_decision_snapshot
 from badban.application.policy_resolution import ResolvedPolicyPack
-from badban.infrastructure.persistence.models import DecisionSnapshot, ValuationObservation
+from badban.infrastructure.persistence.models import (
+    AssetPosition,
+    DecisionSnapshot,
+    ValuationObservation,
+)
 
 CAPACITY_ALGORITHM_CODE = "GUARANTEE_CAPACITY"
 CAPACITY_ALGORITHM_VERSION = "CAPACITY_V1"
@@ -93,11 +97,18 @@ def _working_precision(values: Sequence[Decimal]) -> int:
     return max(32, sum(max(1, len(value.as_tuple().digits)) for value in values) + 16)
 
 
+def _require_aware_datetime(name: str, value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise CapacityInputError(f"{name} must be timezone-aware")
+    return value
+
+
 def calculate_position_capacity(
     position: PositionCapacityInput,
     *,
     effective_at: datetime,
 ) -> PositionCapacityResult:
+    decision_time = _require_aware_datetime("effective_at", effective_at)
     quantity = _require_decimal("eligible_quantity", position.eligible_quantity)
     price = _require_decimal("approved_price", position.approved_price)
     pledgeable_fraction = _require_fraction("pledgeable_fraction", position.pledgeable_fraction)
@@ -119,10 +130,14 @@ def calculate_position_capacity(
         if fx <= 0:
             raise CapacityInputError("approved_fx_conversion must be positive")
 
+    valid_until = position.valid_until
+    if valid_until is not None:
+        _require_aware_datetime("valid_until", valid_until)
+
     freshness_eligible = (
         position.freshness_status == "FRESH"
-        and position.valid_until is not None
-        and effective_at <= position.valid_until
+        and valid_until is not None
+        and decision_time <= valid_until
     )
 
     operands = [quantity, price, fx, pledgeable_fraction, advance_rate]
@@ -199,6 +214,7 @@ def _decimal_text(value: Decimal) -> str:
 def _capacity_input_payload(
     *,
     observations: Sequence[ValuationObservation],
+    asset_positions: Sequence[AssetPosition],
     requests: Sequence[CapacityPositionRequest],
     capacity_currency: str,
     capped_gross_backing_capacity: Decimal,
@@ -207,12 +223,19 @@ def _capacity_input_payload(
     other_approved_capacity_holds: Decimal,
 ) -> dict[str, Any]:
     requests_by_id = {request.valuation_observation_id: request for request in requests}
+    positions_by_id = {position.id: position for position in asset_positions}
     return {
         "capacity_currency": capacity_currency,
         "positions": [
             {
                 "valuation_observation_id": str(observation.id),
                 "asset_position_id": str(observation.asset_position_id),
+                "asset_type_id": str(positions_by_id[observation.asset_position_id].asset_type_id),
+                "asset_position_quantity": _decimal_text(
+                    positions_by_id[observation.asset_position_id].quantity
+                ),
+                "asset_position_version": positions_by_id[observation.asset_position_id].version,
+                "unit_code": positions_by_id[observation.asset_position_id].unit_code,
                 "eligible_quantity": _decimal_text(
                     requests_by_id[observation.id].eligible_quantity
                 ),
@@ -221,6 +244,12 @@ def _capacity_input_payload(
                     _decimal_text(observation.fx_rate) if observation.fx_rate is not None else None
                 ),
                 "fx_required": requests_by_id[observation.id].fx_required,
+                "valuation_currency": observation.valuation_currency,
+                "valuation_source_name": observation.source_name,
+                "valuation_source_reference": observation.source_reference,
+                "valuation_source_version_reference": observation.source_version_reference,
+                "valuation_observed_at": observation.observed_at.isoformat(),
+                "valuation_received_at": observation.received_at.isoformat(),
                 "pledgeable_fraction": _decimal_text(
                     requests_by_id[observation.id].pledgeable_fraction
                 ),
@@ -283,6 +312,7 @@ async def calculate_and_snapshot_guarantee_capacity(
 ) -> tuple[CapacityCalculationResult, DecisionSnapshot]:
     if not capacity_currency:
         raise CapacityInputError("capacity_currency is required")
+    decision_time = _require_aware_datetime("effective_at", effective_at)
 
     observation_ids = [request.valuation_observation_id for request in position_requests]
     if len(observation_ids) != len(set(observation_ids)):
@@ -307,27 +337,46 @@ async def calculate_and_snapshot_guarantee_capacity(
     if len(asset_position_ids) != len(set(asset_position_ids)):
         raise CapacityInputError("only one valuation observation per Asset Position is allowed")
 
+    position_rows = (
+        await session.scalars(select(AssetPosition).where(AssetPosition.id.in_(asset_position_ids)))
+    ).all()
+    positions_by_id = {row.id: row for row in position_rows}
+    missing_positions = [
+        str(position_id)
+        for position_id in asset_position_ids
+        if position_id not in positions_by_id
+    ]
+    if missing_positions:
+        raise CapacityInputError(f"Asset Positions are missing: {','.join(missing_positions)}")
+
+    asset_positions = [positions_by_id[position_id] for position_id in asset_position_ids]
+
     position_inputs: list[PositionCapacityInput] = []
     for request, observation in zip(position_requests, observations, strict=True):
         if observation.valuation_currency != capacity_currency:
             raise CapacityInputError(
                 "all valuation observations must use the explicit capacity currency"
             )
+
+        _require_aware_datetime("valuation observed_at", observation.observed_at)
+        _require_aware_datetime("valuation received_at", observation.received_at)
+        if observation.observed_at > decision_time or observation.received_at > decision_time:
+            raise CapacityInputError(
+                "valuation observation cannot be newer than the decision effective timestamp"
+            )
+        if observation.valid_until is not None:
+            _require_aware_datetime("valuation valid_until", observation.valid_until)
+
+        asset_position = positions_by_id[observation.asset_position_id]
         eligible_quantity = _require_decimal("eligible_quantity", request.eligible_quantity)
         if eligible_quantity > observation.valued_quantity:
             raise CapacityInputError(
                 "eligible_quantity cannot exceed the immutable valued quantity"
             )
-
-        fx = observation.fx_rate
-        expected_fx = fx if fx is not None else Decimal("1")
-        with localcontext() as context:
-            context.prec = _working_precision(
-                [observation.valued_quantity, observation.unit_price, expected_fx]
+        if eligible_quantity > asset_position.quantity:
+            raise CapacityInputError(
+                "eligible_quantity cannot exceed the current Asset Position quantity"
             )
-            expected_gross = observation.valued_quantity * observation.unit_price * expected_fx
-        if expected_gross != observation.gross_market_value:
-            raise CapacityInputError("valuation observation gross value failed integrity check")
 
         position_inputs.append(
             PositionCapacityInput(
@@ -354,6 +403,7 @@ async def calculate_and_snapshot_guarantee_capacity(
     )
     material_input_payload = _capacity_input_payload(
         observations=observations,
+        asset_positions=asset_positions,
         requests=position_requests,
         capacity_currency=capacity_currency,
         capped_gross_backing_capacity=capped_gross_backing_capacity,
@@ -365,7 +415,11 @@ async def calculate_and_snapshot_guarantee_capacity(
     external_references = [
         reference
         for observation in observations
-        for reference in (observation.source_reference, observation.evidence_reference)
+        for reference in (
+            observation.source_reference,
+            observation.source_version_reference,
+            observation.evidence_reference,
+        )
         if reference is not None
     ]
 
@@ -379,7 +433,7 @@ async def calculate_and_snapshot_guarantee_capacity(
         algorithm_version=result.algorithm_version,
         material_input_payload=material_input_payload,
         material_output_payload=material_output_payload,
-        effective_at=effective_at,
+        effective_at=decision_time,
         actor_type=actor_type,
         actor_id=actor_id,
         valuation_observation_ids=observation_ids,
