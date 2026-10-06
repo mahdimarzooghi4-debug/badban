@@ -363,7 +363,6 @@ async def _seed_capacity_evidence(
             )
             return actor, position, observation, resolved
 
-
 @pytest.mark.integration
 async def test_capacity_application_service_captures_snapshot_without_financial_side_effects(
     database,
@@ -433,7 +432,6 @@ async def test_capacity_application_service_captures_snapshot_without_financial_
     assert stored_position is not None
     assert stored_position.quantity == Decimal("2")
 
-
 @pytest.mark.integration
 async def test_capacity_service_fails_closed_for_stale_observation_and_missing_fx(
     database,
@@ -498,8 +496,6 @@ async def test_capacity_service_fails_closed_for_stale_observation_and_missing_f
                     actor_id=actor.id,
                 )
 
-
-
 @pytest.mark.integration
 async def test_capacity_service_rejects_future_valuation_relative_to_effective_time(
     database,
@@ -534,7 +530,6 @@ async def test_capacity_service_rejects_future_valuation_relative_to_effective_t
                     actor_type=actor.identity_type,
                     actor_id=actor.id,
                 )
-
 
 @pytest.mark.integration
 async def test_capacity_service_rejects_quantity_above_current_asset_position(
