@@ -91,7 +91,6 @@ async def approve_policy(
     return policy
 
 
-
 async def activate_policy(
     session: AsyncSession,
     *,
@@ -116,11 +115,7 @@ async def activate_policy(
         }
     )
     await session.execute(
-        text(
-            "SELECT pg_advisory_xact_lock("
-            "hashtextextended(:scope_identity, 0)"
-            ")"
-        ),
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:scope_identity, 0))"),
         {"scope_identity": scope_identity},
     )
 

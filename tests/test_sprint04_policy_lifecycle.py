@@ -94,7 +94,6 @@ def _policy(status: str) -> PolicyVersion:
         version=1,
     )
 
-
 @pytest.mark.integration
 async def test_review_and_approve_commands_persist_separate_lifecycle_steps(
     database,
@@ -182,9 +181,7 @@ async def test_activate_policy_supersedes_prior_active_in_same_exact_scope(
         lifecycle_status="ACTIVE",
         scope_definition={"pilot_scope": "bounded-pilot"},
         payload={"component_version_ids": ["component-v1"]},
-        payload_hash=canonical_request_hash(
-            {"component_version_ids": ["component-v1"]}
-        ),
+        payload_hash=canonical_request_hash({"component_version_ids": ["component-v1"]}),
         schema_version="1",
         activated_at=datetime.now(UTC),
         created_by=uuid4(),
