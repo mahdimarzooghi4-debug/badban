@@ -218,9 +218,7 @@ def _capacity_input_payload(
                 ),
                 "approved_price": _decimal_text(observation.unit_price),
                 "approved_fx_conversion": (
-                    _decimal_text(observation.fx_rate)
-                    if observation.fx_rate is not None
-                    else None
+                    _decimal_text(observation.fx_rate) if observation.fx_rate is not None else None
                 ),
                 "fx_required": requests_by_id[observation.id].fx_required,
                 "pledgeable_fraction": _decimal_text(
@@ -247,27 +245,19 @@ def _capacity_output_payload(result: CapacityCalculationResult) -> dict[str, Any
     return {
         "algorithm_code": result.algorithm_code,
         "algorithm_version": result.algorithm_version,
-        "uncapped_gross_backing_capacity": _decimal_text(
-            result.uncapped_gross_backing_capacity
-        ),
+        "uncapped_gross_backing_capacity": _decimal_text(result.uncapped_gross_backing_capacity),
         "capped_gross_backing_capacity": _decimal_text(result.capped_gross_backing_capacity),
         "reserved_guarantee_capacity": _decimal_text(result.reserved_guarantee_capacity),
         "active_guarantee_exposure": _decimal_text(result.active_guarantee_exposure),
-        "other_approved_capacity_holds": _decimal_text(
-            result.other_approved_capacity_holds
-        ),
+        "other_approved_capacity_holds": _decimal_text(result.other_approved_capacity_holds),
         "available_guarantee_capacity": _decimal_text(result.available_guarantee_capacity),
         "positions": [
             {
                 "valuation_observation_id": str(position.valuation_observation_id),
                 "gross_market_value": _decimal_text(position.gross_market_value),
                 "pledgeable_market_value": _decimal_text(position.pledgeable_market_value),
-                "position_backing_capacity": _decimal_text(
-                    position.position_backing_capacity
-                ),
-                "new_capacity_contribution": _decimal_text(
-                    position.new_capacity_contribution
-                ),
+                "position_backing_capacity": _decimal_text(position.position_backing_capacity),
+                "new_capacity_contribution": _decimal_text(position.new_capacity_contribution),
                 "freshness_eligible": position.freshness_eligible,
             }
             for position in result.position_results
@@ -335,9 +325,7 @@ async def calculate_and_snapshot_guarantee_capacity(
             context.prec = _working_precision(
                 [observation.valued_quantity, observation.unit_price, expected_fx]
             )
-            expected_gross = (
-                observation.valued_quantity * observation.unit_price * expected_fx
-            )
+            expected_gross = observation.valued_quantity * observation.unit_price * expected_fx
         if expected_gross != observation.gross_market_value:
             raise CapacityInputError("valuation observation gross value failed integrity check")
 

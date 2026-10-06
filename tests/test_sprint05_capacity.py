@@ -317,9 +317,7 @@ async def _seed_capacity_evidence(
                 source_version_reference="source:v1",
                 observed_at=now - (timedelta(hours=2) if stale else timedelta(seconds=1)),
                 received_at=now,
-                valid_until=(
-                    now - timedelta(minutes=1) if stale else now + timedelta(hours=1)
-                ),
+                valid_until=(now - timedelta(minutes=1) if stale else now + timedelta(hours=1)),
                 freshness_status="STALE" if stale else "FRESH",
                 evidence_reference="evidence://capacity/1",
                 created_by=actor.id,
