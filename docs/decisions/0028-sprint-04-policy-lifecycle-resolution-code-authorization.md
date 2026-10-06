@@ -1,11 +1,11 @@
 # Decision 0028 — Sprint 04 Policy Lifecycle and Deterministic Resolution; Code Authorization
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-06
 - **Scope:** Sprint 04 / Code Authorization / Bounded External-Lender Pilot
 - **Depends on:** Decision 0023; Decision 0027; Sprint 04 Plan
 
-## Proposed Decision
+## Decision
 
 Accept Sprint 04 and authorize Code only for:
 
@@ -22,7 +22,7 @@ Sprint 03 completed the prerequisite foundations:
 
 Sprint 04 deliberately stops at deterministic policy lifecycle/resolution so the policy runtime can be reviewed independently before it becomes an input to guarantee-capacity and portfolio-risk calculations.
 
-## Authorized Scope If Accepted
+## Authorized Scope
 
 Implementation may include:
 
@@ -68,7 +68,7 @@ Acceptance would not authorize:
 
 ## Hard Invariants
 
-If accepted, Sprint 04 Code must preserve:
+Sprint 04 Code must preserve:
 
 1. approval does not automatically activate;
 2. only ACTIVE policy may authorize new pilot decisions;
@@ -110,6 +110,6 @@ Sprint 04 may be implemented and reviewed while Stage is unavailable, but its re
 
 ## Approval Effect
 
-This decision is **Proposed**.
+This decision is **Accepted**.
 
-It grants no Code authorization until explicitly Accepted.
+Sprint 04 Code is authorized only for BL-013 and BL-014 under the scope, non-goals, and invariants above.
