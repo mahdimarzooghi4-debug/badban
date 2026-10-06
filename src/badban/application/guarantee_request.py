@@ -28,6 +28,12 @@ def validate_requested_principal(requested_principal: Decimal) -> None:
         )
 
     exponent = requested_principal.as_tuple().exponent
+    if not isinstance(exponent, int):
+        raise ApiError(
+            422,
+            "GUARANTEE_REQUEST_INVALID",
+            "Requested principal must be a finite decimal value",
+        )
     scale = max(-exponent, 0)
     integer_digits = max(requested_principal.adjusted() + 1, 0)
     if scale > _MAX_DECIMAL_SCALE or integer_digits > _MAX_DECIMAL_INTEGER_DIGITS:
