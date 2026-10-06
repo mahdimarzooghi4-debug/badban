@@ -14,6 +14,7 @@ def _active_pack(
     *,
     policy_code: str,
     scope_definition: dict[str, object],
+    component_version_ids: list[str] | None = None,
     effective_from: datetime | None = None,
     effective_to: datetime | None = None,
 ) -> PolicyVersion:
@@ -23,7 +24,7 @@ def _active_pack(
         version_number=1,
         lifecycle_status="ACTIVE",
         scope_definition=scope_definition,
-        payload={"component_version_ids": []},
+        payload={"component_version_ids": component_version_ids or []},
         schema_version="1",
         effective_from=effective_from,
         effective_to=effective_to,
@@ -66,6 +67,130 @@ async def test_resolve_active_policy_pack_returns_exact_scope_and_effective_matc
     assert resolved.policy_pack_id == expected_id
     assert resolved.policy_code == "BOUNDED_PILOT"
     assert resolved.version_number == 1
+    assert resolved.component_version_ids == ()
+
+
+@pytest.mark.integration
+async def test_resolve_active_policy_pack_returns_exact_component_version_ids(
+    database,
+    clean_sprint04_policy_tables,
+) -> None:
+    first_component = PolicyVersion(
+        policy_type="ASSET_TYPE_POLICY",
+        policy_code="ASSET_COMPONENT",
+        version_number=1,
+        lifecycle_status="DRAFT",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        payload={},
+        schema_version="1",
+        created_by=uuid4(),
+        version=1,
+    )
+    second_component = PolicyVersion(
+        policy_type="RISK_APPETITE_POLICY",
+        policy_code="RISK_COMPONENT",
+        version_number=1,
+        lifecycle_status="DRAFT",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        payload={},
+        schema_version="1",
+        created_by=uuid4(),
+        version=1,
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add_all([first_component, second_component])
+            await session.flush()
+            pack = _active_pack(
+                policy_code="BOUNDED_PILOT",
+                scope_definition={"pilot_scope": "bounded-pilot"},
+                component_version_ids=[
+                    str(first_component.id),
+                    str(second_component.id),
+                ],
+            )
+            session.add(pack)
+            await session.flush()
+            expected_component_ids = (first_component.id, second_component.id)
+
+    async with database.session_factory() as session:
+        resolved = await resolve_active_policy_pack(
+            session,
+            scope_definition={"pilot_scope": "bounded-pilot"},
+            effective_at=datetime.now(UTC),
+        )
+
+    assert resolved.component_version_ids == expected_component_ids
+
+
+@pytest.mark.integration
+async def test_resolve_active_policy_pack_fails_when_component_is_missing(
+    database,
+    clean_sprint04_policy_tables,
+) -> None:
+    missing_component_id = uuid4()
+    pack = _active_pack(
+        policy_code="BOUNDED_PILOT",
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        component_version_ids=[str(missing_component_id)],
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(pack)
+
+    async with database.session_factory() as session:
+        with pytest.raises(ApiError) as exc:
+            await resolve_active_policy_pack(
+                session,
+                scope_definition={"pilot_scope": "bounded-pilot"},
+                effective_at=datetime.now(UTC),
+            )
+
+    assert exc.value.code == "POLICY_COMPONENT_MISSING"
+    assert exc.value.details == {"component_version_ids": [str(missing_component_id)]}
+
+
+@pytest.mark.integration
+async def test_resolve_active_policy_pack_rejects_nested_policy_pack_component(
+    database,
+    clean_sprint04_policy_tables,
+) -> None:
+    nested_pack = PolicyVersion(
+        policy_type="PILOT_POLICY_PACK",
+        policy_code="NESTED_PACK",
+        version_number=1,
+        lifecycle_status="DRAFT",
+        scope_definition={"pilot_scope": "nested"},
+        payload={"component_version_ids": []},
+        schema_version="1",
+        created_by=uuid4(),
+        version=1,
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(nested_pack)
+            await session.flush()
+            pack = _active_pack(
+                policy_code="BOUNDED_PILOT",
+                scope_definition={"pilot_scope": "bounded-pilot"},
+                component_version_ids=[str(nested_pack.id)],
+            )
+            session.add(pack)
+            nested_pack_id = nested_pack.id
+
+    async with database.session_factory() as session:
+        with pytest.raises(ApiError) as exc:
+            await resolve_active_policy_pack(
+                session,
+                scope_definition={"pilot_scope": "bounded-pilot"},
+                effective_at=datetime.now(UTC),
+            )
+
+    assert exc.value.code == "POLICY_COMPONENT_INCOMPATIBLE"
+    assert exc.value.details == {"component_version_ids": [str(nested_pack_id)]}
 
 
 @pytest.mark.integration
