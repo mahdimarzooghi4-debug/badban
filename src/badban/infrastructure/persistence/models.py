@@ -564,7 +564,6 @@ class PolicyVersion(VersionedMixin, Base):
     )
 
 
-
 class DecisionSnapshot(Base):
     __tablename__ = "decision_snapshots"
     __table_args__ = (
