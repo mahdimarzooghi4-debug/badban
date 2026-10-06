@@ -130,9 +130,7 @@ async def assert_policy_pack_components_exist(
         ).all()
     )
     missing_ids = [
-        str(component_id)
-        for component_id in component_ids
-        if component_id not in existing_ids
+        str(component_id) for component_id in component_ids if component_id not in existing_ids
     ]
     if missing_ids:
         raise ApiError(
