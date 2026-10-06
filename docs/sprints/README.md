@@ -1,6 +1,6 @@
 # Badban Sprints
 
-- **Delivery State:** Sprint 02 Code + Code Review Complete; Stage Deferred; Sprint 03 Accepted — Code Authorized
+- **Delivery State:** Sprint 03 Code + Code Review Complete; Stage Deferred; Sprint 04 Planning Next
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 - **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
@@ -17,6 +17,7 @@ Reviewed Sprint outputs merged to `main` accumulate into the future Stage candid
 
 - [Sprint 01 — Implementation Foundation](./01-sprint-01-implementation-foundation-plan.md) — **Accepted / Code + Code Review Complete**
 - [Sprint 02 — Identity and Core Participant / Asset State](./02-sprint-02-identity-core-participant-asset-state.md) — **Completed / Code + Code Review Complete**
+- [Sprint 03 — Control, Valuation, and Journal Foundations](./03-sprint-03-control-valuation-journal-foundations.md) — **Completed / Code + Code Review Complete**
 
 ### Sprint 01 scope
 
@@ -61,9 +62,7 @@ Direct Lending remains outside scope.
 
 Sprint development while Stage is deferred does not grant QA/Testing, Release Approval, Production, provider-production certification, or real-money activation.
 
-## Current Sprint Planning
-
-- [Sprint 03 — Control, Valuation, and Journal Foundations](./03-sprint-03-control-valuation-journal-foundations.md) — **Accepted / Active**
+## Sprint 03 completion
 
 Sprint 03 scope:
 
@@ -71,4 +70,9 @@ Sprint 03 scope:
 - BL-012 Immutable Valuation Observation
 - BL-030 Append-Only Journal Engine
 
-Decision 0026 is **Accepted**. Code is authorized only for the selected Sprint 03 scope.
+Relevant gates:
+
+- Decision 0026 — Sprint 03 Code Authorization — **Accepted**
+- Decision 0027 — Sprint 03 Code Review Complete; Stage Still Deferred — **Accepted**
+
+The next permitted delivery action is Sprint 04 planning from the accepted Product Backlog and now-satisfied dependencies.
