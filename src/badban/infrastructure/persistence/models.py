@@ -424,6 +424,83 @@ class ValuationObservation(Base):
     )
 
 
+class JournalAccountTaxonomy(Base):
+    __tablename__ = "journal_account_taxonomy"
+    __table_args__ = (
+        CheckConstraint(
+            "account_class IN ("
+            "'CONTROLLED_ASSET','OWNER_OR_ENTITLEMENT_BALANCE',"
+            "'RETURN_OR_INCOME_CLEARING','LOSS_OR_COST_CONTROL','MEMORANDUM_CONTROL'"
+            ")",
+            name="ck_journal_account_taxonomy_class",
+        ),
+        CheckConstraint(
+            "normal_balance IN ('DEBIT','CREDIT','MEMO')",
+            name="ck_journal_account_taxonomy_normal_balance",
+        ),
+        CheckConstraint(
+            "ledger_layer IN ('MONETARY','MEMORANDUM_CONTROL','EXTERNAL_MIRROR')",
+            name="ck_journal_account_taxonomy_layer",
+        ),
+    )
+
+    account_code: Mapped[str] = mapped_column(String(80), primary_key=True)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    account_class: Mapped[str] = mapped_column(String(80), nullable=False)
+    normal_balance: Mapped[str] = mapped_column(String(16), nullable=False)
+    ledger_layer: Mapped[str] = mapped_column(String(40), nullable=False)
+    active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class LegalEntityAccountMapping(Base):
+    __tablename__ = "legal_entity_account_mappings"
+    __table_args__ = (
+        UniqueConstraint(
+            "legal_entity_id",
+            "product_account_code",
+            "mapping_version",
+            name="uq_legal_entity_account_mapping_version",
+        ),
+        CheckConstraint(
+            "mapping_version > 0",
+            name="ck_legal_entity_account_mapping_version_positive",
+        ),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_legal_entity_account_mapping_window",
+        ),
+        Index(
+            "ix_legal_entity_account_mapping_lookup",
+            "legal_entity_id",
+            "product_account_code",
+            "effective_from",
+            "effective_to",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    legal_entity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("legal_entities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    product_account_code: Mapped[str] = mapped_column(
+        String(80),
+        ForeignKey("journal_account_taxonomy.account_code", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    external_chart_account_code: Mapped[str] = mapped_column(String(160), nullable=False)
+    mapping_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class JournalEntry(Base):
     __tablename__ = "journal_entries"
     __table_args__ = (
