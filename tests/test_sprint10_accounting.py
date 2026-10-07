@@ -17,7 +17,7 @@ from badban.application.accounting import (
     resolve_product_account,
     validate_template_accounts,
 )
-from badban.application.journal import JournalLine, post_journal
+from badban.application.journal import JournalError, JournalLine, post_governed_journal
 from badban.config import Settings
 from badban.infrastructure.persistence.models import (
     JournalAccountTaxonomy,
@@ -258,19 +258,10 @@ async def test_journal_keeps_explicit_template_and_mapping_references_after_late
 
     async with database.session_factory() as session:
         async with session.begin():
-            mappings = await resolve_legal_entity_account_mapping_set(
+            entry = await post_governed_journal(
                 session,
-                legal_entity_id=entity.id,
-                product_account_codes={
-                    "3000.RECOGNIZED_RETURN_CLEARING",
-                    "2040.GUARANTEE_RESERVE_DESIGNATED_BALANCE",
-                },
-                effective_at=now,
-            )
-            mapping_ref = account_mapping_reference(mappings["3000.RECOGNIZED_RETURN_CLEARING"])
-            template_ref = resolve_posting_template("RETURN_ALLOCATION", 1).reference
-            entry = await post_journal(
-                session,
+                template_code="RETURN_ALLOCATION",
+                template_version=1,
                 business_event_type="SPRINT10_TEMPLATE_REFERENCE_TEST",
                 business_event_id=str(uuid4()),
                 legal_entity_id=entity.id,
@@ -278,8 +269,7 @@ async def test_journal_keeps_explicit_template_and_mapping_references_after_late
                 idempotency_key=f"sprint10-{uuid4()}",
                 actor_reference=actor_id,
                 correlation_id=uuid4(),
-                posting_template_reference=template_ref,
-                account_mapping_reference=mapping_ref,
+                require_account_mapping=True,
                 lines=[
                     JournalLine(
                         account_code="3000.RECOGNIZED_RETURN_CLEARING",
@@ -324,6 +314,45 @@ async def test_journal_keeps_explicit_template_and_mapping_references_after_late
     assert stored is not None
     assert stored.posting_template_reference == "RETURN_ALLOCATION@1"
     assert stored.account_mapping_reference == f"{entity.id}@1"
+
+
+@pytest.mark.integration
+async def test_governed_journal_fails_closed_for_non_monetary_template(
+    database,
+    clean_sprint10_accounting_tables,
+) -> None:
+    async with database.session_factory() as session:
+        with pytest.raises(JournalError) as exc:
+            async with session.begin():
+                await post_governed_journal(
+                    session,
+                    template_code="RESERVATION",
+                    template_version=1,
+                    business_event_type="SHOULD_NOT_POST",
+                    business_event_id=str(uuid4()),
+                    legal_entity_id=uuid4(),
+                    currency="IRR",
+                    idempotency_key=f"sprint10-no-post-{uuid4()}",
+                    actor_reference=uuid4(),
+                    correlation_id=uuid4(),
+                    lines=[
+                        JournalLine(
+                            account_code="1000.SETTLEMENT_CASH_CONTROL",
+                            economic_owner_type="PROGRAM",
+                            debit_amount=Decimal("1"),
+                        ),
+                        JournalLine(
+                            account_code="3000.RECOGNIZED_RETURN_CLEARING",
+                            economic_owner_type="PROGRAM",
+                            credit_amount=Decimal("1"),
+                        ),
+                    ],
+                )
+    assert exc.value.code == "POSTING_TEMPLATE_NO_MONETARY_JOURNAL"
+
+    async with database.session_factory() as session:
+        count = await session.scalar(select(func.count()).select_from(JournalEntry))
+    assert count == 0
 
 
 @pytest.mark.integration
