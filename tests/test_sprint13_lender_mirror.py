@@ -497,6 +497,24 @@ def test_normalized_lender_event_rejects_missing_event_specific_fields_and_naive
                 "event_time": datetime(2026, 10, 7, 12, 0, 0),
             }
         )
+    with pytest.raises(ValidationError):
+        NormalizedLenderEvent(
+            **{
+                **common,
+                "event_type": "LOAN_APPROVED",
+                "original_principal": "100000000000000000000",
+                "outstanding_principal": "1",
+            }
+        )
+    with pytest.raises(ValidationError):
+        NormalizedLenderEvent(
+            **{
+                **common,
+                "event_type": "LOAN_APPROVED",
+                "original_principal": "1.0000000000000000001",
+                "outstanding_principal": "1",
+            }
+        )
 
 
 @pytest.mark.integration
