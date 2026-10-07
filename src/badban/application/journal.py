@@ -212,7 +212,9 @@ def _append_material_trace(
         actor_type=actor_type,
         actor_id=entry.actor_reference,
         correlation_id=entry.correlation_id,
+        causation_id=entry.causation_id,
         outcome="SUCCESS",
+        evidence_reference=entry.evidence_reference,
         new_state=payload,
         scope={"scope_type": SCOPE_LEGAL_ENTITY, "scope_id": str(entry.legal_entity_id)},
     )
