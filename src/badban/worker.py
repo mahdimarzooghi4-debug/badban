@@ -7,6 +7,7 @@ from collections.abc import Sequence
 
 import structlog
 
+from badban.application.external_loan import process_pending_lender_inbox_batch
 from badban.application.integration_events import publish_outbox_batch
 from badban.config import Settings, get_settings
 from badban.infrastructure.messaging import NatsJetStreamTransport
@@ -60,25 +61,37 @@ async def run_worker(settings: Settings) -> None:
     try:
         while not stop.is_set():
             try:
-                result = await publish_outbox_batch(
+                inbox_result = await process_pending_lender_inbox_batch(
+                    database,
+                    batch_size=OUTBOX_BATCH_SIZE,
+                )
+                outbox_result = await publish_outbox_batch(
                     database,
                     transport,
                     batch_size=OUTBOX_BATCH_SIZE,
                     subject_prefix=EVENT_SUBJECT_PREFIX,
                 )
             except Exception:
-                logger.exception("outbox_batch_failed")
+                logger.exception("worker_batch_failed")
                 await _wait_or_stop(stop, OUTBOX_IDLE_POLL_SECONDS)
                 continue
 
-            if result.failed:
+            if inbox_result.failed:
+                logger.warning(
+                    "lender_inbox_processing_failures",
+                    claimed=inbox_result.claimed,
+                    processed=inbox_result.processed,
+                    failed=inbox_result.failed,
+                )
+            if outbox_result.failed:
                 logger.warning(
                     "outbox_publish_failures",
-                    claimed=result.claimed,
-                    published=result.published,
-                    failed=result.failed,
+                    claimed=outbox_result.claimed,
+                    published=outbox_result.published,
+                    failed=outbox_result.failed,
                 )
-            if result.claimed == 0:
+
+            if (inbox_result.claimed == 0 and outbox_result.claimed == 0) or inbox_result.failed:
                 await _wait_or_stop(stop, OUTBOX_IDLE_POLL_SECONDS)
     finally:
         await transport.close()

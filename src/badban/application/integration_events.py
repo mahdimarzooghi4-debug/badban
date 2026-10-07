@@ -158,6 +158,7 @@ async def accept_authenticated_inbox_event(
     event_type: str,
     external_event_id: str,
     payload: dict[str, Any],
+    dedupe_payload: dict[str, Any] | None = None,
 ) -> InboxAcceptance:
     if not source_id.strip() or not event_type.strip() or not external_event_id.strip():
         raise IntegrationEventError(
@@ -165,7 +166,7 @@ async def accept_authenticated_inbox_event(
             "Inbox identity fields must not be empty",
         )
 
-    digest = payload_sha256(payload)
+    digest = payload_sha256(dedupe_payload if dedupe_payload is not None else payload)
     message_id = uuid4()
 
     async with database.session_factory() as session:
