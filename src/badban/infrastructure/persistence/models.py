@@ -795,7 +795,11 @@ class GuaranteeCase(VersionedMixin, Base):
     external_loan_mirror_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), nullable=True
     )
-    risk_snapshot_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    risk_snapshot_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("portfolio_risk_snapshots.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -871,6 +875,67 @@ class PolicyVersion(VersionedMixin, Base):
     )
 
 
+class PortfolioRiskSnapshot(Base):
+    __tablename__ = "portfolio_risk_snapshots"
+    __table_args__ = (
+        CheckConstraint(
+            "risk_state IN ('GREEN','AMBER','RED')",
+            name="ck_portfolio_risk_snapshot_state",
+        ),
+        CheckConstraint(
+            "total_active_exposure >= 0 "
+            "AND total_reserved_exposure >= 0 "
+            "AND committed_exposure >= 0 "
+            "AND approved_portfolio_limit >= 0 "
+            "AND reserve_requirement >= 0 "
+            "AND reserve_available >= 0",
+            name="ck_portfolio_risk_snapshot_metrics_nonnegative",
+        ),
+        CheckConstraint(
+            "policy_pack_version > 0 AND risk_policy_version_number > 0",
+            name="ck_portfolio_risk_snapshot_versions_positive",
+        ),
+        Index("ix_portfolio_risk_snapshots_evaluated", "evaluated_at", "created_at"),
+        Index("ix_portfolio_risk_snapshots_policy_pack", "policy_pack_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    policy_pack_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    policy_pack_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    risk_policy_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    risk_policy_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    risk_policy_version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    risk_state: Mapped[str] = mapped_column(String(20), nullable=False)
+    total_active_exposure: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    total_reserved_exposure: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    committed_exposure: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    approved_portfolio_limit: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    reserve_requirement: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    reserve_available: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    reserve_metrics_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    concentration_metrics_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    stress_result_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    evaluated_inputs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    algorithm_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class DecisionSnapshot(Base):
     __tablename__ = "decision_snapshots"
     __table_args__ = (
@@ -914,7 +979,11 @@ class DecisionSnapshot(Base):
     authoritative_external_references: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list
     )
-    risk_snapshot_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    risk_snapshot_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("portfolio_risk_snapshots.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     actor_type: Mapped[str] = mapped_column(String(40), nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
