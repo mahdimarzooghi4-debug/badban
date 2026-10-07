@@ -66,3 +66,5 @@ Each decision should include:
 - [0028 — Sprint 04 Policy Lifecycle and Deterministic Resolution; Code Authorization](./0028-sprint-04-policy-lifecycle-resolution-code-authorization.md) — **Proposed**
 
 - [0033 — Stage, QA, and Release Approval Gates Reactivated](./0033-stage-qa-release-gates-reactivated.md) — **Accepted**
+
+- [0034 — Sprint 09 Portfolio Risk Snapshot and Gate; Code Authorization](./0034-sprint-09-portfolio-risk-gate-code-authorization.md) — **Accepted**

@@ -1,6 +1,6 @@
 # Sprint 08 — Append-Only Journal Engine Completion
 
-- **Status:** Accepted
+- **Status:** Code + Code Review complete; merged to `main`
 - **Date:** 2026-10-07
 - **Stage:** Sprint Planning
 - **Scope:** bounded external-lender pilot
@@ -162,7 +162,7 @@ Tests must cover exact balance/precision, append-only DB enforcement, safe repla
 
 Sprint 08 is Done through Code Review only when BL-030 acceptance criteria are satisfied, the existing foundation is hardened rather than duplicated, read/reversal APIs are covered, append-only protections remain intact, audit/outbox and maker-checker are proven, full CI is green, and no BL-031/BL-032/BL-020 behavior is introduced.
 
-Stage remains Deferred under Decision 0023.
+Stage deferral was later superseded by Decision 0033; Stage remains a separate evidence gate and has not yet been claimed for Sprint 08.
 
 ## 17. Explicit Non-Goals
 
