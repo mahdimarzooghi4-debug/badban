@@ -184,8 +184,7 @@ async def test_outbox_failure_is_retryable_without_losing_event(
         retry_at = stored.next_attempt_at
         assert stored.published_at is None
         assert stored.publish_attempts == 1
-        assert stored.last_error is not None
-        assert "broker unavailable" in stored.last_error
+        assert stored.last_error == "RuntimeError"
         assert retry_at is not None
         assert retry_at > attempt_time
 
