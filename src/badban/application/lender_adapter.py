@@ -40,6 +40,20 @@ OperationState = Literal[
 ]
 
 
+_MAX_DECIMAL_INTEGER_DIGITS = 20
+_MAX_DECIMAL_SCALE = 18
+
+
+def _validate_decimal_storage_boundary(name: str, value: Decimal) -> None:
+    exponent = value.as_tuple().exponent
+    if not isinstance(exponent, int):
+        raise ValueError(f"{name} must use a finite decimal exponent")
+    scale = max(-exponent, 0)
+    integer_digits = max(value.adjusted() + 1, 0)
+    if scale > _MAX_DECIMAL_SCALE or integer_digits > _MAX_DECIMAL_INTEGER_DIGITS:
+        raise ValueError(f"{name} exceeds NUMERIC(38,18) precision")
+
+
 class LenderAdapterError(RuntimeError):
     def __init__(
         self,
@@ -175,10 +189,14 @@ class NormalizedLenderEvent(BaseModel):
             raise ValueError("original_principal must be finite and positive")
         if not outstanding.is_finite() or outstanding < 0:
             raise ValueError("outstanding_principal must be finite and non-negative")
+        _validate_decimal_storage_boundary("original_principal", original)
+        _validate_decimal_storage_boundary("outstanding_principal", outstanding)
         if outstanding > original:
             raise ValueError("outstanding_principal cannot exceed original_principal")
-        if disbursed is not None and (not disbursed.is_finite() or disbursed < 0):
-            raise ValueError("disbursed_principal must be finite and non-negative")
+        if disbursed is not None:
+            if not disbursed.is_finite() or disbursed < 0:
+                raise ValueError("disbursed_principal must be finite and non-negative")
+            _validate_decimal_storage_boundary("disbursed_principal", disbursed)
         if self.event_type == "LOAN_DISBURSED" and (disbursed is None or disbursed <= 0):
             raise ValueError("LOAN_DISBURSED requires positive disbursed_principal")
         if self.event_type == "REPAYMENT_RECEIVED" and self.repayment_reference is None:
