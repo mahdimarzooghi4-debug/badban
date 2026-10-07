@@ -532,7 +532,7 @@ async def test_ingestion_is_idempotent_and_changed_payload_fails_closed(
     assert duplicate.status_code == 202
     assert duplicate.json()["status"] == "DUPLICATE"
     assert duplicate.json()["inbox_message_id"] == first.json()["inbox_message_id"]
-    assert changed.status_code == 422
+    assert changed.status_code == 409
     assert changed.json()["error"]["code"] == "EVENT_DUPLICATE_PAYLOAD_MISMATCH"
 
 
@@ -595,10 +595,9 @@ async def test_disbursement_updates_only_lender_mirror_not_guarantee_or_journal(
                 guarantee_id=guarantee.id,
             ),
         )
-    assert approved.status_code == 202
-    assert (await process_pending_lender_inbox_batch(database)).processed == 1
+        assert approved.status_code == 202
+        assert (await process_pending_lender_inbox_batch(database)).processed == 1
 
-    async with client:
         disbursed = await client.post(
             f"/api/v1/integrations/lenders/{provider.id}/events",
             headers={"x-test-signature": "valid"},
@@ -611,31 +610,30 @@ async def test_disbursement_updates_only_lender_mirror_not_guarantee_or_journal(
                 disbursed="100",
             ),
         )
-    assert disbursed.status_code == 202
-    assert (await process_pending_lender_inbox_batch(database)).processed == 1
+        assert disbursed.status_code == 202
+        assert (await process_pending_lender_inbox_batch(database)).processed == 1
 
-    async with database.session_factory() as session:
-        stored_guarantee = await session.get(GuaranteeCase, guarantee.id)
-        mirror = await session.scalar(
-            select(ExternalLoanMirror).where(
-                ExternalLoanMirror.provider_id == provider.id,
-                ExternalLoanMirror.external_loan_id == "loan-1",
+        async with database.session_factory() as session:
+            stored_guarantee = await session.get(GuaranteeCase, guarantee.id)
+            mirror = await session.scalar(
+                select(ExternalLoanMirror).where(
+                    ExternalLoanMirror.provider_id == provider.id,
+                    ExternalLoanMirror.external_loan_id == "loan-1",
+                )
             )
-        )
-        journal_count = int(
-            await session.scalar(select(func.count()).select_from(JournalEntry)) or 0
-        )
+            journal_count = int(
+                await session.scalar(select(func.count()).select_from(JournalEntry)) or 0
+            )
 
-    assert stored_guarantee is not None
-    assert stored_guarantee.state == "ISSUED"
-    assert stored_guarantee.external_loan_mirror_id is None
-    assert mirror is not None
-    assert mirror.state == "ACTIVE"
-    assert mirror.guarantee_case_id == guarantee.id
-    assert mirror.disbursed_at is not None
-    assert journal_count == 0
+        assert stored_guarantee is not None
+        assert stored_guarantee.state == "ISSUED"
+        assert stored_guarantee.external_loan_mirror_id is None
+        assert mirror is not None
+        assert mirror.state == "ACTIVE"
+        assert mirror.guarantee_case_id == guarantee.id
+        assert mirror.disbursed_at is not None
+        assert journal_count == 0
 
-    async with client:
         read = await client.get(
             f"/api/v1/external-loans/{mirror.id}",
             headers={"Authorization": f"Bearer {auditor.external_subject}"},
