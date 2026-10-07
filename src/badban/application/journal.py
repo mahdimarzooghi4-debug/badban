@@ -20,6 +20,7 @@ from badban.infrastructure.persistence.models import (
 )
 from badban.security.audit import append_audit
 from badban.security.authorization import (
+    ROLE_FINANCE_RECONCILIATION,
     ROLE_GOVERNANCE_APPROVER,
     SCOPE_GLOBAL,
     SCOPE_LEGAL_ENTITY,
@@ -438,6 +439,36 @@ def reversal_approval_payload(original: JournalEntry, reason: str) -> dict[str, 
     }
 
 
+async def _assert_finance_initiator_is_active(
+    session: AsyncSession,
+    *,
+    identity_id: UUID,
+    legal_entity_id: UUID,
+) -> None:
+    now = datetime.now(UTC)
+    grant = await session.scalar(
+        select(RoleGrant)
+        .where(
+            RoleGrant.identity_id == identity_id,
+            RoleGrant.role_code == ROLE_FINANCE_RECONCILIATION,
+            RoleGrant.status == "ACTIVE",
+            RoleGrant.valid_from <= now,
+            or_(RoleGrant.valid_until.is_(None), RoleGrant.valid_until > now),
+            or_(
+                (RoleGrant.scope_type == SCOPE_LEGAL_ENTITY)
+                & (RoleGrant.scope_id == legal_entity_id),
+                (RoleGrant.scope_type == SCOPE_GLOBAL) & (RoleGrant.scope_id.is_(None)),
+            ),
+        )
+        .limit(1)
+    )
+    if grant is None:
+        raise JournalError(
+            "JOURNAL_REVERSAL_INITIATOR_NOT_AUTHORIZED",
+            "Journal reversal initiator no longer has an active finance reconciliation grant",
+        )
+
+
 async def _assert_governance_checker_is_active(
     session: AsyncSession,
     *,
@@ -605,6 +636,11 @@ async def reverse_journal_with_approval(
             "JOURNAL_REVERSAL_APPROVAL_BINDING_INVALID",
             "Approval is not bound to this exact journal reversal",
         )
+    await _assert_finance_initiator_is_active(
+        session,
+        identity_id=actor_reference,
+        legal_entity_id=original.legal_entity_id,
+    )
     await _assert_governance_checker_is_active(
         session,
         request=approval,
