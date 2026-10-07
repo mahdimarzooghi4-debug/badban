@@ -30,6 +30,7 @@ class PostingTemplateSpec:
     permitted_account_codes: frozenset[str] | None = None
     control_effect: bool = False
     external_mirror_effect: bool = False
+    dedicated_workflow_only: bool = False
 
     @property
     def reference(self) -> str:
@@ -136,8 +137,8 @@ POSTING_TEMPLATES: dict[tuple[str, int], PostingTemplateSpec] = {
         permitted_account_codes=frozenset({"2020.FUTURE_FINANCIAL_ENTITLEMENT"})
         | CONTROLLED_CASH_ACCOUNTS,
     ),
-    ("RESERVE_FUNDING_RECLASSIFICATION", 1): PostingTemplateSpec(
-        code="RESERVE_FUNDING_RECLASSIFICATION",
+    ("RESERVE_DESIGNATION_RECLASSIFICATION", 1): PostingTemplateSpec(
+        code="RESERVE_DESIGNATION_RECLASSIFICATION",
         version=1,
         technical_section="Technical 05 §16",
         creates_monetary_journal=True,
@@ -145,6 +146,16 @@ POSTING_TEMPLATES: dict[tuple[str, int], PostingTemplateSpec] = {
             {
                 "2030.PROGRAM_CAPITAL_BALANCE",
                 "2040.GUARANTEE_RESERVE_DESIGNATED_BALANCE",
+            }
+        ),
+    ),
+    ("RESERVE_CASH_SEGREGATION", 1): PostingTemplateSpec(
+        code="RESERVE_CASH_SEGREGATION",
+        version=1,
+        technical_section="Technical 05 §16",
+        creates_monetary_journal=True,
+        permitted_account_codes=frozenset(
+            {
                 "1010.PROGRAM_CASH_CONTROL",
                 "1020.GUARANTEE_RESERVE_CASH_CONTROL",
             }
@@ -196,6 +207,22 @@ POSTING_TEMPLATES: dict[tuple[str, int], PostingTemplateSpec] = {
             }
         ),
     ),
+    ("COLLATERAL_REALIZATION_RECOVERY", 1): PostingTemplateSpec(
+        code="COLLATERAL_REALIZATION_RECOVERY",
+        version=1,
+        technical_section="Technical 05 §20",
+        creates_monetary_journal=True,
+        permitted_account_codes=frozenset(
+            {
+                "1030.RECOVERY_CASH_CONTROL",
+                "1040.CLAIM_SETTLEMENT_PENDING_RECOVERY_CONTROL",
+                "2000.PARTICIPANT_PAYABLE_BALANCE",
+                "2070.PARTICIPANT_RELEASE_PAYABLE",
+                "2030.PROGRAM_CAPITAL_BALANCE",
+                "2080.PROGRAM_RECYCLABLE_BALANCE",
+            }
+        ),
+    ),
     ("ENFORCEMENT_COST", 1): PostingTemplateSpec(
         code="ENFORCEMENT_COST",
         version=1,
@@ -203,12 +230,32 @@ POSTING_TEMPLATES: dict[tuple[str, int], PostingTemplateSpec] = {
         creates_monetary_journal=True,
         permitted_account_codes=frozenset({"4010.ENFORCEMENT_COST"}) | CONTROLLED_CASH_ACCOUNTS,
     ),
-    ("PARTICIPANT_OWNED_ASSET_RELEASE", 1): PostingTemplateSpec(
-        code="PARTICIPANT_OWNED_ASSET_RELEASE",
+    ("PARTICIPANT_COLLATERAL_RESTRICTION_RELEASE", 1): PostingTemplateSpec(
+        code="PARTICIPANT_COLLATERAL_RESTRICTION_RELEASE",
         version=1,
-        technical_section="Technical 05 §23",
+        technical_section="Technical 05 §23 Case A",
         creates_monetary_journal=False,
         control_effect=True,
+    ),
+    ("PARTICIPANT_RELEASE_PAYABLE_RECLASSIFICATION", 1): PostingTemplateSpec(
+        code="PARTICIPANT_RELEASE_PAYABLE_RECLASSIFICATION",
+        version=1,
+        technical_section="Technical 05 §23 Case B",
+        creates_monetary_journal=True,
+        permitted_account_codes=frozenset(
+            {
+                "2000.PARTICIPANT_PAYABLE_BALANCE",
+                "2070.PARTICIPANT_RELEASE_PAYABLE",
+            }
+        ),
+    ),
+    ("PARTICIPANT_RELEASE_PAYMENT", 1): PostingTemplateSpec(
+        code="PARTICIPANT_RELEASE_PAYMENT",
+        version=1,
+        technical_section="Technical 05 §23 Case B",
+        creates_monetary_journal=True,
+        permitted_account_codes=frozenset({"2070.PARTICIPANT_RELEASE_PAYABLE"})
+        | CONTROLLED_CASH_ACCOUNTS,
     ),
     ("PROGRAM_ATTRIBUTED_CAPITAL_RECYCLING", 1): PostingTemplateSpec(
         code="PROGRAM_ATTRIBUTED_CAPITAL_RECYCLING",
@@ -236,6 +283,7 @@ POSTING_TEMPLATES: dict[tuple[str, int], PostingTemplateSpec] = {
         technical_section="Technical 05 §26",
         creates_monetary_journal=True,
         permitted_account_codes=None,
+        dedicated_workflow_only=True,
     ),
 }
 
