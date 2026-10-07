@@ -900,6 +900,31 @@ async def test_correction_is_append_only_and_event_history_is_database_protected
 
 
 @pytest.mark.integration
+async def test_external_loan_db_rejects_outstanding_above_original_principal(
+    database,
+    clean_sprint13_lender_tables,
+) -> None:
+    _, provider, _ = await _seed_context(database)
+
+    async with database.session_factory() as session:
+        with pytest.raises(DBAPIError):
+            async with session.begin():
+                session.add(
+                    ExternalLoanMirror(
+                        guarantee_case_id=None,
+                        provider_id=provider.id,
+                        external_loan_id="loan-invalid-principal-bound",
+                        state="PENDING",
+                        original_principal=Decimal("100"),
+                        outstanding_principal=Decimal("101"),
+                        currency="IRR",
+                        version=1,
+                    )
+                )
+                await session.flush()
+
+
+@pytest.mark.integration
 async def test_external_loan_query_is_provider_scoped_and_no_generic_mutation_api_exists(
     settings: Settings,
     database,
