@@ -368,7 +368,6 @@ async def _post_journal(
     return entry
 
 
-
 async def post_journal(
     session: AsyncSession,
     *,
@@ -413,6 +412,7 @@ async def post_journal(
         material_event_type="JournalPosted",
         approval_request_id=None,
     )
+
 
 def reversal_approval_payload(original: JournalEntry, reason: str) -> dict[str, Any]:
     return {
@@ -474,7 +474,6 @@ async def _assert_governance_checker_is_active(
         )
 
 
-
 async def reverse_journal(
     session: AsyncSession,
     *,
@@ -492,6 +491,7 @@ async def reverse_journal(
         "JOURNAL_REVERSAL_APPROVAL_REQUIRED",
         "Journal reversal must execute through the approved maker-checker path",
     )
+
 
 async def _reverse_journal_after_approval(
     session: AsyncSession,
