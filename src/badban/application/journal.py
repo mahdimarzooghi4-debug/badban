@@ -477,9 +477,7 @@ async def reverse_journal_with_approval(
         raise JournalError("JOURNAL_REVERSAL_REASON_REQUIRED", "Reversal reason is required")
 
     approval = await session.scalar(
-        select(ApprovalRequest)
-        .where(ApprovalRequest.id == approval_request_id)
-        .with_for_update()
+        select(ApprovalRequest).where(ApprovalRequest.id == approval_request_id).with_for_update()
     )
     if approval is None:
         raise JournalError(

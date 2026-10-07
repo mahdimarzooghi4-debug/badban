@@ -163,11 +163,13 @@ async def test_decimal_storage_boundary_and_atomic_rollback(
         outbox = await session.scalar(
             select(func.count())
             .select_from(OutboxMessage)
-            .where(OutboxMessage.aggregate_id.in_(
-                select(JournalEntry.id.cast(str)).where(
-                    JournalEntry.business_event_id == "rollback-1"
+            .where(
+                OutboxMessage.aggregate_id.in_(
+                    select(JournalEntry.id.cast(str)).where(
+                        JournalEntry.business_event_id == "rollback-1"
+                    )
                 )
-            ))
+            )
         )
     assert journals == 0
     assert audits == 0
