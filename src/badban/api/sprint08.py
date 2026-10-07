@@ -123,6 +123,8 @@ async def _authorize(
 def _raise_journal_error(exc: JournalError) -> None:
     if exc.code == "JOURNAL_NOT_FOUND":
         raise ApiError(404, exc.code, str(exc)) from exc
+    if exc.code == "JOURNAL_REVERSAL_INITIATOR_NOT_AUTHORIZED":
+        raise ApiError(403, exc.code, str(exc)) from exc
     if exc.code in {
         "JOURNAL_ALREADY_REVERSED",
         "JOURNAL_IDEMPOTENCY_CONFLICT",
