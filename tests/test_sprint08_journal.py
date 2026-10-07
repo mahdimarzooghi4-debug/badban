@@ -529,6 +529,7 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
         reversal_body = reversed_response.json()
         reversal_id = reversal_body["id"]
         assert reversal_body["reversal_of_entry_id"] == str(original_id)
+        assert reversal_body["posting_template_reference"] == "REVERSAL@1"
         reversal_postings = {
             posting["account_code"]: posting for posting in reversal_body["postings"]
         }
