@@ -526,8 +526,16 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
             },
         )
         assert reversed_response.status_code == 201
-        reversal_id = reversed_response.json()["id"]
-        assert reversed_response.json()["reversal_of_entry_id"] == str(original_id)
+        reversal_body = reversed_response.json()
+        reversal_id = reversal_body["id"]
+        assert reversal_body["reversal_of_entry_id"] == str(original_id)
+        reversal_postings = {
+            posting["account_code"]: posting for posting in reversal_body["postings"]
+        }
+        assert reversal_postings["1000"]["debit_amount"] == "0E-18"
+        assert reversal_postings["1000"]["credit_amount"] == "25.500000000000000000"
+        assert reversal_postings["2000"]["debit_amount"] == "25.500000000000000000"
+        assert reversal_postings["2000"]["credit_amount"] == "0E-18"
 
         replay = await client.post(
             f"/api/v1/finance/journals/{original_id}/reverse",
@@ -539,6 +547,17 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
         )
         assert replay.status_code == 201
         assert replay.json()["id"] == reversal_id
+
+        second_reversal = await client.post(
+            f"/api/v1/finance/journals/{original_id}/reverse",
+            headers=_headers("finance", "reversal-second-key"),
+            json={
+                "approval_request_id": approval_id,
+                "reason": "correct posting",
+            },
+        )
+        assert second_reversal.status_code == 409
+        assert second_reversal.json()["error"]["code"] == "JOURNAL_ALREADY_REVERSED"
 
     async with database.session_factory() as session:
         posted_events = (
