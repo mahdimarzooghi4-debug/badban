@@ -78,12 +78,8 @@ async def test_migration_seeds_exact_product_taxonomy_without_statutory_mappings
     assert mapping_count == 0
 
     monetary = {row.account_code for row in rows if row.ledger_layer == "MONETARY"}
-    memorandum = {
-        row.account_code for row in rows if row.ledger_layer == "MEMORANDUM_CONTROL"
-    }
-    external_mirror = {
-        row.account_code for row in rows if row.ledger_layer == "EXTERNAL_MIRROR"
-    }
+    memorandum = {row.account_code for row in rows if row.ledger_layer == "MEMORANDUM_CONTROL"}
+    external_mirror = {row.account_code for row in rows if row.ledger_layer == "EXTERNAL_MIRROR"}
     assert not monetary.intersection(memorandum | external_mirror)
     assert external_mirror == {
         "9050.EXTERNAL_LOAN_PRINCIPAL_MIRROR_MEMO",
@@ -181,9 +177,7 @@ async def test_legal_entity_mapping_resolution_is_version_coherent_and_fail_clos
             },
             effective_at=now,
         )
-        reference = account_mapping_reference(
-            mappings["3000.RECOGNIZED_RETURN_CLEARING"]
-        )
+        reference = account_mapping_reference(mappings["3000.RECOGNIZED_RETURN_CLEARING"])
 
     assert reference == f"{entity.id}@7"
 
@@ -273,9 +267,7 @@ async def test_journal_keeps_explicit_template_and_mapping_references_after_late
                 },
                 effective_at=now,
             )
-            mapping_ref = account_mapping_reference(
-                mappings["3000.RECOGNIZED_RETURN_CLEARING"]
-            )
+            mapping_ref = account_mapping_reference(mappings["3000.RECOGNIZED_RETURN_CLEARING"])
             template_ref = resolve_posting_template("RETURN_ALLOCATION", 1).reference
             entry = await post_journal(
                 session,
