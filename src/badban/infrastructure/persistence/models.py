@@ -349,6 +349,12 @@ class AuditEvent(Base):
 
 class EvidenceReference(Base):
     __tablename__ = "evidence_references"
+    __table_args__ = (
+        Index(
+            "ix_evidence_references_source_legal_entity",
+            "source_legal_entity_id",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     evidence_type: Mapped[str] = mapped_column(String(80), nullable=False)
