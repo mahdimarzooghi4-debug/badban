@@ -447,8 +447,18 @@ async def post_governed_journal(
 ) -> JournalEntry:
     effective = effective_at or datetime.now(UTC)
     account_codes = {line.account_code for line in lines}
+    if policy_version_reference is None or not policy_version_reference.strip():
+        raise JournalError(
+            "POLICY_VERSION_REFERENCE_REQUIRED",
+            "Governed monetary posting requires an explicit policy version reference",
+        )
     try:
         template = resolve_posting_template(template_code, template_version)
+        if template.dedicated_workflow_only:
+            raise AccountingConfigurationError(
+                "POSTING_TEMPLATE_DEDICATED_WORKFLOW_REQUIRED",
+                f"{template.reference} may execute only through its dedicated workflow",
+            )
         validate_template_accounts(template, account_codes=account_codes)
         for account_code in sorted(account_codes):
             account = await resolve_product_account(
@@ -667,7 +677,7 @@ async def _reverse_journal_after_approval(
         effective_at=None,
         causation_id=original.correlation_id,
         policy_version_reference=original.policy_version_reference,
-        posting_template_reference=original.posting_template_reference,
+        posting_template_reference="REVERSAL@1",
         account_mapping_reference=original.account_mapping_reference,
         evidence_reference=original.evidence_reference,
         settlement_reference=original.settlement_reference,
