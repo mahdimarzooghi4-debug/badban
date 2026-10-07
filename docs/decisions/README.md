@@ -68,3 +68,11 @@ Each decision should include:
 - [0033 — Stage, QA, and Release Approval Gates Reactivated](./0033-stage-qa-release-gates-reactivated.md) — **Accepted**
 
 - [0034 — Sprint 09 Portfolio Risk Snapshot and Gate; Code Authorization](./0034-sprint-09-portfolio-risk-gate-code-authorization.md) — **Accepted**
+
+- [0035 — Sprint 10 Product Account Taxonomy and Posting Templates; Code Authorization](./0035-sprint-10-product-account-taxonomy-posting-templates-code-authorization.md) — **Accepted**
+
+- [0036 — Sprint 11 Transactional Outbox / Inbox; Code Authorization](./0036-sprint-11-transactional-outbox-inbox-code-authorization.md) — **Accepted**
+
+- [0037 — Sprint 12 Audit and Evidence Trace; Code Authorization](./0037-sprint-12-audit-evidence-trace-code-authorization.md) — **Accepted**
+
+- [0038 — Sprint 13 Lender Adapter Baseline and External Loan Mirror; Code Authorization](./0038-sprint-13-lender-adapter-external-loan-mirror-code-authorization.md) — **Accepted**
