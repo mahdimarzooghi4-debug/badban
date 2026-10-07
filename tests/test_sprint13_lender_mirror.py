@@ -988,6 +988,36 @@ async def test_external_loan_query_is_provider_scoped_and_no_generic_mutation_ap
     assert set(schema["paths"]["/api/v1/external-loans/{loan_id}"]) == {"get"}
 
 
+def test_reconciliation_snapshot_contract_rejects_naive_time_and_precision_drift() -> None:
+    provider_id = uuid4()
+    with pytest.raises(ValidationError):
+        LenderReconciliationLoan(
+            external_loan_id="loan-1",
+            original_principal="100000000000000000000",
+            outstanding_principal="1",
+            currency="IRR",
+            provider_state="ACTIVE",
+            observed_at=datetime.now(UTC),
+        )
+    with pytest.raises(ValidationError):
+        LenderReconciliationLoan(
+            external_loan_id="loan-1",
+            original_principal="1.0000000000000000001",
+            outstanding_principal="1",
+            currency="IRR",
+            provider_state="ACTIVE",
+            observed_at=datetime.now(UTC),
+        )
+    with pytest.raises(ValidationError):
+        LenderReconciliationSnapshot(
+            provider_id=provider_id,
+            snapshot_at=datetime(2026, 10, 7, 12, 0, 0),
+            source_reference="statement-1",
+            evidence_references=[],
+            loans=[],
+        )
+
+
 @pytest.mark.integration
 async def test_reconciliation_snapshot_contract_is_provider_scoped(
     database,
