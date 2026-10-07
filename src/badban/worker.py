@@ -91,10 +91,7 @@ async def run_worker(settings: Settings) -> None:
                     failed=outbox_result.failed,
                 )
 
-            if (
-                inbox_result.claimed == 0
-                and outbox_result.claimed == 0
-            ) or inbox_result.failed:
+            if (inbox_result.claimed == 0 and outbox_result.claimed == 0) or inbox_result.failed:
                 await _wait_or_stop(stop, OUTBOX_IDLE_POLL_SECONDS)
     finally:
         await transport.close()
