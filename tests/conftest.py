@@ -63,7 +63,8 @@ async def clean_sprint03_tables(database: Database):
         await connection.execute(
             text(
                 "TRUNCATE "
-                "journal_postings, journal_entries, valuation_observations, approval_requests, outbox_messages, "
+                "journal_postings, journal_entries, valuation_observations, approval_requests, "
+                "outbox_messages, "
                 "asset_positions, participation_episodes, role_grants, audit_events, "
                 "evidence_references, asset_types, programs, participants, identities, "
                 "idempotency_records "
