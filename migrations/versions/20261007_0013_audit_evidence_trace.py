@@ -83,9 +83,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_evidence_references_append_only ON evidence_references"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_evidence_references_append_only ON evidence_references")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_evidence_reference_mutation")
     op.execute("DROP TRIGGER IF EXISTS trg_audit_events_append_only ON audit_events")
     op.execute("DROP FUNCTION IF EXISTS badban_reject_audit_event_mutation")
