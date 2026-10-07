@@ -413,8 +413,7 @@ async def test_state_change_event_compares_only_previous_snapshot_in_same_scope(
     async with database.session_factory() as session:
         changed = (
             await session.scalars(
-                select(OutboxMessage)
-                .where(OutboxMessage.event_type == "PortfolioRiskStateChanged")
+                select(OutboxMessage).where(OutboxMessage.event_type == "PortfolioRiskStateChanged")
             )
         ).all()
 
