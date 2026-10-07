@@ -222,7 +222,7 @@ def _append_material_trace(
     )
 
 
-async def post_journal(
+async def _post_journal(
     session: AsyncSession,
     *,
     business_event_type: str,
@@ -368,6 +368,52 @@ async def post_journal(
     return entry
 
 
+
+async def post_journal(
+    session: AsyncSession,
+    *,
+    business_event_type: str,
+    business_event_id: str,
+    legal_entity_id: UUID,
+    currency: str,
+    idempotency_key: str,
+    actor_reference: UUID,
+    correlation_id: UUID,
+    lines: list[JournalLine],
+    effective_at: datetime | None = None,
+    causation_id: UUID | None = None,
+    policy_version_reference: str | None = None,
+    posting_template_reference: str | None = None,
+    account_mapping_reference: str | None = None,
+    evidence_reference: str | None = None,
+    settlement_reference: str | None = None,
+    reason: str | None = None,
+    actor_type: str = "SYSTEM",
+) -> JournalEntry:
+    return await _post_journal(
+        session,
+        business_event_type=business_event_type,
+        business_event_id=business_event_id,
+        legal_entity_id=legal_entity_id,
+        currency=currency,
+        idempotency_key=idempotency_key,
+        actor_reference=actor_reference,
+        correlation_id=correlation_id,
+        lines=lines,
+        effective_at=effective_at,
+        causation_id=causation_id,
+        policy_version_reference=policy_version_reference,
+        posting_template_reference=posting_template_reference,
+        account_mapping_reference=account_mapping_reference,
+        evidence_reference=evidence_reference,
+        settlement_reference=settlement_reference,
+        reversal_of_entry_id=None,
+        reason=reason,
+        actor_type=actor_type,
+        material_event_type="JournalPosted",
+        approval_request_id=None,
+    )
+
 def reversal_approval_payload(original: JournalEntry, reason: str) -> dict[str, Any]:
     return {
         "action": "JOURNAL_REVERSAL",
@@ -428,7 +474,26 @@ async def _assert_governance_checker_is_active(
         )
 
 
+
 async def reverse_journal(
+    session: AsyncSession,
+    *,
+    original_entry_id: UUID,
+    idempotency_key: str,
+    actor_reference: UUID,
+    correlation_id: UUID,
+    reason: str,
+    actor_type: str = "SYSTEM",
+    approval_request_id: UUID | None = None,
+) -> JournalEntry:
+    del session, original_entry_id, idempotency_key, actor_reference
+    del correlation_id, reason, actor_type, approval_request_id
+    raise JournalError(
+        "JOURNAL_REVERSAL_APPROVAL_REQUIRED",
+        "Journal reversal must execute through the approved maker-checker path",
+    )
+
+async def _reverse_journal_after_approval(
     session: AsyncSession,
     *,
     original_entry_id: UUID,
@@ -473,7 +538,7 @@ async def reverse_journal(
         )
         for p in postings
     ]
-    return await post_journal(
+    return await _post_journal(
         session,
         business_event_type="REVERSAL",
         business_event_id=str(original.id),
@@ -488,6 +553,8 @@ async def reverse_journal(
         policy_version_reference=original.policy_version_reference,
         posting_template_reference=original.posting_template_reference,
         account_mapping_reference=original.account_mapping_reference,
+        evidence_reference=original.evidence_reference,
+        settlement_reference=original.settlement_reference,
         reversal_of_entry_id=original.id,
         reason=reason,
         actor_type=actor_type,
@@ -549,7 +616,7 @@ async def reverse_journal_with_approval(
         current_target_version=None,
     )
 
-    return await reverse_journal(
+    return await _reverse_journal_after_approval(
         session,
         original_entry_id=original.id,
         idempotency_key=idempotency_key,
