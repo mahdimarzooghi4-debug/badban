@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
 from badban.api.errors import ApiError
 from badban.application.external_loan import accept_lender_inbound_request
+from badban.application.integration_events import IntegrationEventError
 from badban.application.lender_adapter import LenderAdapterError
 from badban.infrastructure.persistence.models import CreditProvider, ExternalLoanMirror
 from badban.security.authorization import (
@@ -78,6 +79,14 @@ def _raise_adapter_error(exc: LenderAdapterError) -> NoReturn:
     raise ApiError(422, exc.code, str(exc)) from exc
 
 
+def _raise_integration_event_error(exc: IntegrationEventError) -> NoReturn:
+    if exc.code == "EVENT_DUPLICATE_PAYLOAD_MISMATCH":
+        raise ApiError(409, exc.code, str(exc)) from exc
+    if exc.code == "EVENT_PROCESSING_RETRYABLE":
+        raise ApiError(503, exc.code, str(exc)) from exc
+    raise ApiError(422, exc.code, str(exc)) from exc
+
+
 async def _authorize_read(
     session: AsyncSession,
     *,
@@ -126,6 +135,8 @@ async def ingest_lender_event(
         )
     except LenderAdapterError as exc:
         _raise_adapter_error(exc)
+    except IntegrationEventError as exc:
+        _raise_integration_event_error(exc)
 
     return LenderInboundAcceptedView(
         status="ACCEPTED" if accepted.created else "DUPLICATE",
