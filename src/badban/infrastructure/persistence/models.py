@@ -349,6 +349,12 @@ class AuditEvent(Base):
 
 class EvidenceReference(Base):
     __tablename__ = "evidence_references"
+    __table_args__ = (
+        Index(
+            "ix_evidence_references_source_legal_entity",
+            "source_legal_entity_id",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     evidence_type: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -357,6 +363,13 @@ class EvidenceReference(Base):
     external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     media_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source_legal_entity_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("legal_entities.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    verified_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

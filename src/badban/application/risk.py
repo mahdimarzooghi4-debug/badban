@@ -529,6 +529,7 @@ async def evaluate_and_snapshot_portfolio_risk(
         actor_id=actor_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
+        policy_pack_id=snapshot.policy_pack_id,
         new_state=payload,
         scope=resolved_risk.scope_definition,
     )

@@ -463,7 +463,6 @@ async def suspend_provider(
         actor_id=actor_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
-        reason_code=reason,
         scope={"scope_type": SCOPE_PROVIDER, "scope_id": str(provider.id)},
     )
     await session.flush()
