@@ -324,8 +324,65 @@ def upgrade() -> None:
         unique=False,
     )
 
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION badban_protect_journal_account_taxonomy()
+        RETURNS trigger AS $
+        BEGIN
+            IF TG_OP = 'DELETE' THEN
+                RAISE EXCEPTION 'journal_account_taxonomy definitions cannot be deleted';
+            END IF;
+            IF NEW.account_code IS DISTINCT FROM OLD.account_code
+                OR NEW.name IS DISTINCT FROM OLD.name
+                OR NEW.account_class IS DISTINCT FROM OLD.account_class
+                OR NEW.normal_balance IS DISTINCT FROM OLD.normal_balance
+                OR NEW.ledger_layer IS DISTINCT FROM OLD.ledger_layer
+            THEN
+                RAISE EXCEPTION 'journal_account_taxonomy definitions are immutable';
+            END IF;
+            RETURN NEW;
+        END;
+        $ LANGUAGE plpgsql
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_journal_account_taxonomy_immutable
+        BEFORE UPDATE OR DELETE ON journal_account_taxonomy
+        FOR EACH ROW EXECUTE FUNCTION badban_protect_journal_account_taxonomy()
+        """
+    )
+
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION badban_reject_legal_entity_account_mapping_mutation()
+        RETURNS trigger AS $
+        BEGIN
+            RAISE EXCEPTION 'legal_entity_account_mappings are append-only';
+        END;
+        $ LANGUAGE plpgsql
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_legal_entity_account_mappings_append_only
+        BEFORE UPDATE OR DELETE ON legal_entity_account_mappings
+        FOR EACH ROW EXECUTE FUNCTION badban_reject_legal_entity_account_mapping_mutation()
+        """
+    )
+
 
 def downgrade() -> None:
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_legal_entity_account_mappings_append_only "
+        "ON legal_entity_account_mappings"
+    )
+    op.execute("DROP FUNCTION IF EXISTS badban_reject_legal_entity_account_mapping_mutation")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_journal_account_taxonomy_immutable "
+        "ON journal_account_taxonomy"
+    )
+    op.execute("DROP FUNCTION IF EXISTS badban_protect_journal_account_taxonomy")
     op.drop_index(
         "ix_legal_entity_account_mapping_lookup",
         table_name="legal_entity_account_mappings",
