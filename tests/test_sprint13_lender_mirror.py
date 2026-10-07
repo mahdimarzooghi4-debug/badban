@@ -128,9 +128,7 @@ class TestLenderAdapter:
             inbound_normalization_version="normalize-test-v1",
             provider_event_sequence=raw.get("sequence"),
             guarantee_case_id=(
-                UUID(raw["guarantee_case_id"])
-                if raw.get("guarantee_case_id") is not None
-                else None
+                UUID(raw["guarantee_case_id"]) if raw.get("guarantee_case_id") is not None else None
             ),
         )
 
@@ -613,7 +611,9 @@ async def test_disbursement_updates_only_lender_mirror_not_guarantee_or_journal(
                 ExternalLoanMirror.external_loan_id == "loan-1",
             )
         )
-        journal_count = int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0)
+        journal_count = int(
+            await session.scalar(select(func.count()).select_from(JournalEntry)) or 0
+        )
 
     assert stored_guarantee is not None
     assert stored_guarantee.state == "ISSUED"
@@ -724,7 +724,9 @@ async def test_repayment_and_delinquency_are_mirror_only_and_stale_event_does_no
                 .order_by(ExternalLoanEvent.created_at, ExternalLoanEvent.id)
             )
         ).all()
-        journal_count = int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0)
+        journal_count = int(
+            await session.scalar(select(func.count()).select_from(JournalEntry)) or 0
+        )
 
     assert mirror is not None
     assert mirror.state == "DELINQUENT"
