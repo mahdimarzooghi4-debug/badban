@@ -159,8 +159,13 @@ async def _identity(database, *, subject: str, identity_type: str, role: str) ->
     return identity
 
 
-async def _policies(database) -> tuple[PolicyVersion, PolicyVersion]:
-    scope = {"pilot_scope": "bounded-pilot"}
+async def _policies(
+    database,
+    *,
+    scope: dict[str, str] | None = None,
+    code_suffix: str = "",
+) -> tuple[PolicyVersion, PolicyVersion]:
+    scope = scope or {"pilot_scope": "bounded-pilot"}
     risk_payload = {
         "approved_portfolio_limit": "1000",
         "committed_exposure_mode": "ACTIVE_PLUS_RESERVED",
@@ -173,7 +178,7 @@ async def _policies(database) -> tuple[PolicyVersion, PolicyVersion]:
     }
     risk = PolicyVersion(
         policy_type="RISK_APPETITE_POLICY",
-        policy_code="PILOT_RISK",
+        policy_code=f"PILOT_RISK{code_suffix}",
         version_number=1,
         lifecycle_status="ACTIVE",
         scope_definition=scope,
@@ -191,7 +196,7 @@ async def _policies(database) -> tuple[PolicyVersion, PolicyVersion]:
             pack_payload = {"component_version_ids": [str(risk.id)]}
             pack = PolicyVersion(
                 policy_type="PILOT_POLICY_PACK",
-                policy_code="BOUNDED_PILOT",
+                policy_code=f"BOUNDED_PILOT{code_suffix}",
                 version_number=1,
                 lifecycle_status="ACTIVE",
                 scope_definition=scope,
@@ -337,6 +342,86 @@ async def test_risk_api_creates_immutable_policy_bound_snapshot_and_state_change
                 )
 
     assert risk_identity.id is not None
+
+
+@pytest.mark.integration
+async def test_state_change_event_compares_only_previous_snapshot_in_same_scope(
+    settings,
+    database,
+    clean_sprint09_risk_tables,
+) -> None:
+    await _identity(database, subject="risk", identity_type="STAFF", role="RISK")
+    await _policies(database)
+    other_scope = {"pilot_scope": "other-pilot"}
+    await _policies(database, scope=other_scope, code_suffix="_OTHER")
+
+    base_payload = {
+        "reserve_requirement": "100",
+        "reserve_available": "125",
+        "reserve_metrics_reference": "reserve-ledger:snapshot:1",
+        "concentration_state": "GREEN",
+        "concentration_metrics_reference": "concentration:snapshot:1",
+        "authoritative_input_references": ["portfolio-source:1"],
+    }
+
+    async with await _client(settings) as client:
+        first_scope = await client.post(
+            "/api/v1/risk/portfolio/evaluate",
+            headers=_headers("risk", "scope-one-green"),
+            json={
+                **base_payload,
+                "scope_definition": {"pilot_scope": "bounded-pilot"},
+            },
+        )
+        assert first_scope.status_code == 201, first_scope.text
+        assert first_scope.json()["risk_state"] == "GREEN"
+
+        other_red = await client.post(
+            "/api/v1/risk/portfolio/evaluate",
+            headers=_headers("risk", "scope-two-red"),
+            json={
+                **base_payload,
+                "scope_definition": other_scope,
+                "concentration_state": "RED",
+                "concentration_metrics_reference": "concentration:other:red",
+            },
+        )
+        assert other_red.status_code == 201, other_red.text
+        assert other_red.json()["risk_state"] == "RED"
+
+        async with database.session_factory() as session:
+            changed_after_first_per_scope = await session.scalar(
+                select(func.count())
+                .select_from(OutboxMessage)
+                .where(OutboxMessage.event_type == "PortfolioRiskStateChanged")
+            )
+        assert changed_after_first_per_scope == 0
+
+        other_green = await client.post(
+            "/api/v1/risk/portfolio/evaluate",
+            headers=_headers("risk", "scope-two-green"),
+            json={
+                **base_payload,
+                "scope_definition": other_scope,
+                "concentration_state": "GREEN",
+                "concentration_metrics_reference": "concentration:other:green",
+            },
+        )
+        assert other_green.status_code == 201, other_green.text
+        assert other_green.json()["risk_state"] == "GREEN"
+
+    async with database.session_factory() as session:
+        changed = (
+            await session.scalars(
+                select(OutboxMessage)
+                .where(OutboxMessage.event_type == "PortfolioRiskStateChanged")
+            )
+        ).all()
+
+    assert len(changed) == 1
+    assert changed[0].payload["previous_snapshot_id"] == other_red.json()["id"]
+    assert changed[0].payload["previous_state"] == "RED"
+    assert changed[0].payload["risk_state"] == "GREEN"
 
 
 @pytest.mark.integration
