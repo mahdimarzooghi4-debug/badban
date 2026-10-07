@@ -415,7 +415,8 @@ Additionally:
 **Priority:** P1  
 **Type:** Financial-Control Capability  
 **Depends on:** BL-015, BL-019, BL-004  
-**Traceability:** Technical 03, 04, 07
+**Traceability:** Technical 03, 04, 07  
+**Delivery Status:** Code deferred by Decision 0032 until BL-032 provides the required authoritative portfolio-risk PASS gate; no implicit/synthetic GREEN or PASS permitted
 
 **Acceptance Criteria**
 
@@ -613,7 +614,8 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Priority:** P1  
 **Type:** Financial Platform Capability  
 **Depends on:** BL-004, BL-007  
-**Traceability:** Decision 0015; Technical 05
+**Traceability:** Decision 0015; Technical 05  
+**Delivery Status:** Selected for Sprint 08; Code authorized by Decision 0032; existing Sprint 03 journal foundation to be hardened/completed; Stage deferred by Decision 0023
 
 **Acceptance Criteria**
 
