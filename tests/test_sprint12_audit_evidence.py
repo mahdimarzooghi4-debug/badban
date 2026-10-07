@@ -121,6 +121,37 @@ async def test_unsafe_nested_audit_payload_fails_before_persistence(
 
 
 @pytest.mark.integration
+async def test_audit_reason_code_rejects_free_text(
+    database,
+    clean_sprint12_audit_evidence_tables,
+) -> None:
+    unsafe_reason = "operator entered free text instead of a stable code"
+
+    async with database.session_factory() as session:
+        with pytest.raises(AuditPayloadRejected) as exc:
+            async with session.begin():
+                append_audit(
+                    session,
+                    aggregate_type="TestAggregate",
+                    aggregate_id="aggregate-reason",
+                    aggregate_version=1,
+                    action="TEST_REASON",
+                    actor_type="STAFF",
+                    actor_id=uuid4(),
+                    correlation_id=uuid4(),
+                    outcome="DENIED",
+                    reason_code=unsafe_reason,
+                )
+
+    assert exc.value.code == "AUDIT_PAYLOAD_UNSAFE"
+    assert unsafe_reason not in str(exc.value)
+
+    async with database.session_factory() as session:
+        count = await session.scalar(select(func.count()).select_from(AuditEvent))
+    assert count == 0
+
+
+@pytest.mark.integration
 async def test_evidence_registration_stores_metadata_only_and_history_is_append_only(
     database,
     clean_sprint12_audit_evidence_tables,
