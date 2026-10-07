@@ -1,6 +1,7 @@
 # Decision 0023 — Stage Deferred; Iterative Sprint Development Continues
 
-- **Status:** Accepted
+- **Status:** Superseded
+- **Superseded by:** Decision 0033 — Stage, QA, and Release Approval Gates Reactivated
 - **Date:** 2026-10-05
 - **Scope:** Delivery Process / Pre-Stage Development
 - **Depends on:** Decision 0022
