@@ -142,10 +142,7 @@ async def test_accounting_configuration_history_is_database_protected(
             async with session.begin():
                 await session.execute(
                     update(JournalAccountTaxonomy)
-                    .where(
-                        JournalAccountTaxonomy.account_code
-                        == "3000.RECOGNIZED_RETURN_CLEARING"
-                    )
+                    .where(JournalAccountTaxonomy.account_code == "3000.RECOGNIZED_RETURN_CLEARING")
                     .values(account_class="CONTROLLED_ASSET")
                 )
 
