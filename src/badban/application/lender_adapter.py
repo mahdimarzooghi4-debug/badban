@@ -166,9 +166,7 @@ class NormalizedLenderEvent(BaseModel):
             original = Decimal(self.original_principal)
             outstanding = Decimal(self.outstanding_principal)
             disbursed = (
-                Decimal(self.disbursed_principal)
-                if self.disbursed_principal is not None
-                else None
+                Decimal(self.disbursed_principal) if self.disbursed_principal is not None else None
             )
         except InvalidOperation as exc:
             raise ValueError("lender monetary fields must be decimal strings") from exc
