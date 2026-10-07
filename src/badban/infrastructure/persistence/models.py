@@ -31,7 +31,22 @@ class VersionedMixin:
 
 class OutboxMessage(Base):
     __tablename__ = "outbox_messages"
-    __table_args__ = (Index("ix_outbox_unpublished_created", "published_at", "created_at"),)
+    __table_args__ = (
+        CheckConstraint("publish_attempts >= 0", name="ck_outbox_publish_attempts_nonnegative"),
+        CheckConstraint("replay_count >= 0", name="ck_outbox_replay_count_nonnegative"),
+        CheckConstraint(
+            "NOT (published_at IS NOT NULL AND dead_lettered_at IS NOT NULL)",
+            name="ck_outbox_not_published_and_dead_lettered",
+        ),
+        Index("ix_outbox_unpublished_created", "published_at", "created_at"),
+        Index(
+            "ix_outbox_delivery_due",
+            "published_at",
+            "dead_lettered_at",
+            "next_attempt_at",
+            "created_at",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     event_type: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -48,6 +63,13 @@ class OutboxMessage(Base):
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     publish_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dead_lettered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    dead_letter_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    replay_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class InboxMessage(Base):
