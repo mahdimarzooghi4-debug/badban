@@ -398,7 +398,7 @@ Additionally:
 **Type:** Domain Capability  
 **Depends on:** BL-009, BL-017, BL-018  
 **Traceability:** Technical 02, 03, 07  
-**Delivery Status:** Selected for Sprint 07; Code authorized by Decision 0031; Stage deferred by Decision 0023
+**Delivery Status:** Code + Code Review complete in Sprint 07; merged to `main`; Stage deferred by Decision 0023
 
 **Acceptance Criteria**
 

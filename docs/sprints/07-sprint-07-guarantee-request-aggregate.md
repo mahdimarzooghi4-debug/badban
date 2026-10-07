@@ -1,8 +1,8 @@
 # Sprint 07 — Guarantee Request Aggregate Path
 
-- **Status:** Accepted
+- **Status:** Completed through Code Review; Merged to main
 - **Date:** 2026-10-06
-- **Stage:** Sprint Planning
+- **Stage:** Deferred by Decision 0023
 - **Scope:** bounded external-lender pilot
 - **Entry Gate:** Decision 0023; Sprint 06 Code + Code Review Complete
 - **Depends on:** BL-009, BL-017, BL-018 complete through Code Review
@@ -272,3 +272,35 @@ Sprint 07 does not implement:
 This Sprint 07 plan is Accepted.
 
 Decision 0031 grants Code authorization only for BL-019 under the boundaries above.
+
+
+## 16. Completion Record
+
+Sprint 07 completed its authorized Code and Code Review scope for BL-019.
+
+- Pull Request: #8 — `Sprint 07: guarantee request aggregate path`
+- Reviewed head: `f4b1f51cfdbe9fd6698f22836564b23ede29f473`
+- Reviewed-head CI: Run #193 — SUCCESS
+- Merge commit on `main`: `9dd8dbd1a3c7771356e43e7dbd3254866911baf6`
+- Merge-commit CI: Run #194 — SUCCESS
+- BL-019: Code + Code Review complete
+- Stage: Deferred under Decision 0023
+- QA/Testing gate completion: not claimed
+- Release Approval: not claimed
+- Production / real-money use: not authorized
+
+Review hardening included:
+
+- GuaranteeCase creation remains REQUESTED-only;
+- `policy_pack_id` remains NULL at REQUESTED;
+- requested principal is encoded as a decimal string and validated against the `NUMERIC(38,18)` storage boundary;
+- response monetary values remain decimal strings;
+- product/provider coherence and product min/max bounds are enforced;
+- provider/product ACTIVE state, legal authorization, valuation, risk, capacity, and backing checks remain reservation gates;
+- authorization is scoped to the ParticipationEpisode program;
+- auditor remains read-only;
+- idempotency is race-safe for concurrent first-time retries and changed-payload reuse remains rejected;
+- request creation is audited without inventing a new GuaranteeRequested event;
+- no BackingAllocation, DecisionSnapshot, capacity reservation, risk evaluation, journal posting, provider call, legal issuance, external loan, or guarantee exposure is created.
+
+No BL-016, BL-020, BL-021, BL-022 through BL-026, BL-030, BL-032, capacity reservation/release, policy capture at REQUESTED, provider/lender/Guarantee Issuer integration, Direct Lending, Stage, QA gate completion, Release Approval, Production, or real-money behavior is authorized by this completion record.
