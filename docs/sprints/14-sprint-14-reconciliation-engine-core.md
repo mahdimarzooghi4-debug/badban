@@ -103,3 +103,39 @@ lending, journal/history mutation, backing change, guessed thresholds, real
 provider/credentials, UI, Stage, QA gate, Release and Production. PR #9 untouched.
 After green CI and review, leave the Sprint PR Draft/Open for explicit merge
 instruction. Next roadmap item is BL-022 only after explicit Merge and green main.
+
+## Multi-source continuation — Decision 0040
+
+The later Product Owner continuation authorizes strict read-only ports for all
+six accepted types within Sprint 14. Decision 0040 supersedes the lender-only
+acquisition boundary above. Lender requests remain backward compatible. Legal
+sources use current actual legal-role authorization and exact legal/role Pack
+binding; LEDGER uses actual Program/legal-entity binding and POSTED journal truth.
+No runtime source implementation is fabricated; registries start empty.
+
+Additive migration 0016 makes provider identity nullable, adds exclusive typed
+legal/program identity with real foreign keys and a constraint, and permits a
+missing internal cutoff. Published 0015 is unchanged. No history is rewritten.
+
+**Remaining acceptance blockers:** real internal settlement acquisition lacks
+source/cash/reference/state/value-date mapping; collateral acquisition lacks
+legal registration/backing identity. Both report SOURCE_UNAVAILABLE and retain
+external-only discrepancies through executable canonical ports. Neither may
+produce MATCHED until the owning domain supplies accepted internal contracts.
+Issuer issue timestamp and custody controls not present in current rows remain
+missing comparison evidence. Ledger MEMO directional balance semantics are not
+defined; configured MEMO scope fails closed. These gaps are not provider credentials
+or a requirement to implement BL-022 in this Sprint. BL-042 remains not Done.
+
+## Multi-source local verification
+
+355 tests passed (208 prior tests preserved, 147 added), Ruff format/lint and
+Pyright passed, dependency audit found no known vulnerabilities. Migration
+upgrade/downgrade/upgrade and drift checks passed on a separate scratch database;
+a populated multi-source downgrade refusal is also tested. Integration validation
+uses an isolated local PostgreSQL test database and the existing NATS service.
+Reconciliation does not bypass history guards or mutate journal/domain rows.
+The shared algorithm is version 2; historical version-1 runs are unchanged.
+Final exact-HEAD CI/review evidence is recorded on PR #16 after completion.
+The two internal acquisition contract gaps above remain backlog acceptance
+blockers; neither the entire BL-042 item nor real-provider readiness is Done.

@@ -1247,11 +1247,27 @@ class ReconciliationRun(Base):
             name="ck_recon_run_versions",
         ),
         Index("ix_recon_runs_provider_started", "provider_id", "started_at"),
+        CheckConstraint(
+            "(reconciliation_type = 'LENDER' AND provider_id IS NOT NULL AND "
+            "source_legal_entity_id IS NULL AND program_id IS NULL) OR "
+            "(reconciliation_type IN ('GUARANTEE_ISSUER','CUSTODY','SETTLEMENT',"
+            "'COLLATERAL_REGISTRY') AND provider_id IS NULL AND "
+            "source_legal_entity_id IS NOT NULL AND program_id IS NULL) OR "
+            "(reconciliation_type = 'LEDGER' AND provider_id IS NULL AND "
+            "source_legal_entity_id IS NULL AND program_id IS NOT NULL)",
+            name="ck_recon_run_target",
+        ),
     )
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     reconciliation_type: Mapped[str] = mapped_column(String(80), nullable=False)
-    provider_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("credit_providers.id", ondelete="RESTRICT"), nullable=False
+    provider_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("credit_providers.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_legal_entity_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("legal_entities.id", ondelete="RESTRICT"), nullable=True
+    )
+    program_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("programs.id", ondelete="RESTRICT"), nullable=True
     )
     scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     source_identity: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -1268,7 +1284,7 @@ class ReconciliationRun(Base):
     rule_schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
     algorithm_code: Mapped[str] = mapped_column(String(80), nullable=False)
     algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
-    internal_cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    internal_cutoff: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     external_cutoff: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     source_snapshot_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

@@ -145,7 +145,8 @@ async def recon_context(database):
         await connection.execute(
             text(
                 "TRUNCATE reconciliation_observations, reconciliation_blocks, "
-                "reconciliation_cases, reconciliation_runs, external_loan_events, "
+                "reconciliation_cases, reconciliation_runs, journal_postings, journal_entries, "
+                "asset_positions, asset_types, legal_authorizations, external_loan_events, "
                 "external_loan_mirrors, guarantee_cases, credit_product_versions, "
                 "credit_providers, legal_entities, participation_episodes, programs, "
                 "participants, identities, role_grants, audit_events, outbox_messages, "

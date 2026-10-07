@@ -78,3 +78,5 @@ Each decision should include:
 - [0038 — Sprint 13 Lender Adapter Baseline and External Loan Mirror; Code Authorization](./0038-sprint-13-lender-adapter-external-loan-mirror-code-authorization.md) — **Accepted**
 
 - [0039 — Reconciliation Policy Runtime Binding and Sprint 14 BL-042 Code Authorization](./0039-reconciliation-policy-runtime-binding-sprint-14-code-authorization.md) — **Accepted; implementation conditional on DoR**
+
+- [0040 — Sprint 14 Multi-Source Reconciliation Completion Authorization](0040-sprint-14-multi-source-reconciliation-completion-authorization.md)

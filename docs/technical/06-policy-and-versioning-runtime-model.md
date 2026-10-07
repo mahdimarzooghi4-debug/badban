@@ -479,3 +479,13 @@ Next:
 3. provider adapter contracts;
 4. reconciliation engine contract;
 5. identity/RBAC and maker-checker contract.
+
+### Multi-source reconciliation binding (Decision 0040)
+
+Legal-source packs bind exactly pilot_scope/legal_entity_id/role_code; Ledger
+packs bind pilot_scope/program_id/legal_entity_id derived from actual Program.
+Components add reconciliation_type. No caller policy scope or global fallback.
+Approved reconciliation content and exact pin/hash/approval proof remain unchanged.
+An optional strict custody-only transient-lag classification implements Technical
+10's existing conditional missing-position invariant; no production exemption,
+tolerance, freshness or materiality number is defined or seeded.

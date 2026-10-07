@@ -18,6 +18,7 @@ from badban.api.sprint13 import router as sprint13_router
 from badban.api.sprint14 import router as sprint14_router
 from badban.api.v1 import router as v1_router
 from badban.application.lender_adapter import LenderAdapterRegistry
+from badban.application.reconciliation_sources import ReconciliationSourceRegistry
 from badban.config import Settings, get_settings
 from badban.infrastructure.persistence.database import Database
 from badban.observability import configure_logging, configure_tracing
@@ -43,6 +44,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.database = database
     app.state.token_verifier = token_verifier
     app.state.lender_adapter_registry = lender_adapter_registry
+    app.state.reconciliation_source_registry = ReconciliationSourceRegistry()
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_middleware(CorrelationIdMiddleware)
     app.include_router(health_router)

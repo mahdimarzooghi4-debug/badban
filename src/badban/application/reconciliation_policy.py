@@ -32,11 +32,54 @@ FIELDS = {
         "currency",
         "state",
         "beneficiary",
+        "issued_at",
     },
-    "CUSTODY": {"asset_type", "quantity", "custody_reference", "state"},
-    "SETTLEMENT": {"settlement_reference", "amount", "currency", "state", "value_date"},
-    "COLLATERAL_REGISTRY": {"registration_id", "secured_amount", "state"},
-    "LEDGER": {"account_code", "balance", "currency"},
+    "CUSTODY": {
+        "asset_type",
+        "quantity",
+        "custody_reference",
+        "state",
+        "asset_position_id",
+        "unit_code",
+        "ownership_reference",
+        "control_reference",
+        "restriction_state",
+        "release_realization_state",
+    },
+    "SETTLEMENT": {
+        "settlement_reference",
+        "amount",
+        "currency",
+        "state",
+        "value_date",
+        "payer_role",
+        "payee_role",
+        "reversal_reference",
+        "correction_reference",
+    },
+    "COLLATERAL_REGISTRY": {
+        "registration_id",
+        "secured_amount",
+        "state",
+        "collateral_reference",
+        "release_enforcement_state",
+    },
+    "LEDGER": {
+        "account_code",
+        "balance",
+        "currency",
+        "economic_owner_type",
+        "economic_owner_id",
+        "participant_id",
+        "program_id",
+        "provider_id",
+        "asset_position_id",
+        "guarantee_case_id",
+        "claim_id",
+        "reserve_account_id",
+        "ledger_layer",
+        "normal_balance",
+    },
 }
 DECIMAL_FIELDS = frozenset(
     {
@@ -120,11 +163,17 @@ class ReconciliationRules(StrictModel):
     cutoff_mismatch_materiality: Literal["INFO", "WARNING", "MATERIAL", "CRITICAL"]
     cutoff_mismatch_blocked_commands: tuple[str, ...]
     principal_invariant_blocked_commands: tuple[str, ...]
+    custody_missing_external_transient_lag: bool | None = Field(default=None, strict=True)
 
     @model_validator(mode="after")
     def validate_contract(self) -> ReconciliationRules:
         if self.reconciliation_type not in RECON_TYPES:
             raise ValueError("unsupported reconciliation type")
+        if (
+            self.custody_missing_external_transient_lag is not None
+            and self.reconciliation_type != "CUSTODY"
+        ):
+            raise ValueError("custody lag classification only applies to custody")
         codes = [r.rule_code for r in self.rules]
         fields = [r.field_code for r in self.rules]
         if len(set(codes)) != len(codes) or len(set(fields)) != len(fields):

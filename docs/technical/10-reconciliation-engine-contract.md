@@ -832,3 +832,24 @@ Next:
 2. Security and Secrets Contract;
 3. Observability and Operational Readiness Contract;
 4. Deployment / Runtime Topology and Non-Functional Requirements.
+
+## Sprint 14 multi-source execution (Decision 0040)
+
+Read-only `ReconciliationSourcePort` exposes typed capability and a strict per-type
+canonical snapshot, not arbitrary raw payload. The versioned/hash-checked envelope
+preserves source/scope, observed and received timestamps, optional interval and
+watermark, schema/contract/mapping versions and evidence. Registry defaults are
+empty; unimplemented source acquisition is explicitly unavailable. Source errors
+are normalized without exposing credentials or raw exceptions.
+
+Non-lenders require current LegalAuthorization for their actual source LegalEntity.
+Exact Pack bindings and internal mappings/gaps are recorded in Decision 0040.
+API POST has a strict discriminator and typed source identity, with legacy lender
+provider_id-only parsing. GET cases accepts the same typed target query identity.
+No caller-selected policy, scope, snapshot, result or comparison parameters.
+
+Journal truth uses only POSTED rows, full implemented dimensions and existing
+account normal-balance taxonomy. No absent projection becomes a synthetic zero.
+Settlement references alone do not prove external settlement; absent legal registry
+models cannot become fictitious encumbrances. Multi-source API/persistence support
+does not close those internal acquisition contract gaps or certify real providers.

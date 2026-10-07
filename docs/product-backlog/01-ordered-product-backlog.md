@@ -829,7 +829,7 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Type:** Control Capability  
 **Depends on:** BL-024, BL-025, BL-030, BL-041  
 **Traceability:** Technical 10
-**Delivery Status:** Selected for Sprint 14; Decision 0039; Code/CI/Review pending
+**Delivery Status:** Sprint 14 multi-source core/ports implemented under Decisions 0039/0040; final CI/Review pending. Not complete: internal settlement and legal collateral-registration acquisition contracts remain blocked (see Sprint 14).
 
 **Acceptance Criteria**
 
