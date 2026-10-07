@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import pytest
@@ -289,17 +289,32 @@ async def seed_source(
                     ]
     now = datetime.now(UTC)
     if kind == "LEDGER":
-        async with database.session_factory() as session:
-            internal = await build_internal_snapshot(session, target, legal_entity_id=legal_id)
-            records = [
-                LedgerRecord.model_validate(
-                    {
-                        **{k: (None if v == "null" else v) for k, v in r.fields.items()},
-                        "observed_at": now,
-                    }
-                )
-                for r in internal.records
-            ]
+        # Independent projection expectations from the posted fixture inputs,
+        # not a copy of the engine's journal snapshot or calculated balances.
+        projected_accounts: list[tuple[str, Literal["DEBIT", "CREDIT"]]] = [
+            ("1010.PROGRAM_CASH_CONTROL", "DEBIT"),
+            ("2030.PROGRAM_CAPITAL_BALANCE", "CREDIT"),
+        ]
+        records = [
+            LedgerRecord(
+                account_code=code,
+                currency="IRR",
+                economic_owner_type="PROGRAM",
+                economic_owner_id=None,
+                participant_id=None,
+                program_id=target.identity,
+                provider_id=None,
+                asset_position_id=None,
+                guarantee_case_id=None,
+                claim_id=None,
+                reserve_account_id=None,
+                ledger_layer="MONETARY",
+                normal_balance=normal,
+                balance="100",
+                observed_at=now,
+            )
+            for code, normal in projected_accounts
+        ]
     scope = {"pilot_scope": "test-only-pilot", **binding}
     policy_scope = {**scope, "reconciliation_type": kind}
     data = payload()
