@@ -221,9 +221,7 @@ async def test_two_publishers_do_not_claim_same_outbox_row_concurrently(
     await _insert_outbox(database)
     publisher = BlockingPublisher()
 
-    first_task = asyncio.create_task(
-        publish_outbox_batch(database, publisher, batch_size=1)
-    )
+    first_task = asyncio.create_task(publish_outbox_batch(database, publisher, batch_size=1))
     await publisher.started.wait()
 
     second = await publish_outbox_batch(
