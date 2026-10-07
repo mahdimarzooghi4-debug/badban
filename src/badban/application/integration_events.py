@@ -133,7 +133,7 @@ async def publish_outbox_batch(
                         serialize_outbox_event(event),
                     )
                 except Exception as exc:
-                    event.last_error = f"{type(exc).__name__}: {exc}"[:1000]
+                    event.last_error = type(exc).__name__
                     event.next_attempt_at = effective_now + timedelta(
                         seconds=max(1, event.publish_attempts)
                     )
