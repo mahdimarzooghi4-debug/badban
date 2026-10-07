@@ -89,7 +89,9 @@ def _parse_decimal(value: object, *, field: str, positive: bool = False) -> Deci
     try:
         parsed = Decimal(value)
     except Exception as exc:
-        raise RiskEvaluationError(\n            "RISK_POLICY_INVALID", f"{field} must be a decimal string"\n        ) from exc
+        raise RiskEvaluationError(
+            "RISK_POLICY_INVALID", f"{field} must be a decimal string"
+        ) from exc
     if not parsed.is_finite() or parsed < 0 or (positive and parsed <= 0):
         qualifier = "positive" if positive else "non-negative"
         raise RiskEvaluationError("RISK_POLICY_INVALID", f"{field} must be finite and {qualifier}")
@@ -98,7 +100,9 @@ def _parse_decimal(value: object, *, field: str, positive: bool = False) -> Deci
 
 def _storage_decimal(value: Decimal, *, field: str) -> Decimal:
     if not isinstance(value, Decimal) or not value.is_finite() or value < 0:
-        raise RiskEvaluationError(\n            "RISK_INPUT_INVALID", f"{field} must be a finite non-negative Decimal"\n        )
+        raise RiskEvaluationError(
+            "RISK_INPUT_INVALID", f"{field} must be a finite non-negative Decimal"
+        )
     sign, digits, exponent = value.as_tuple()
     del sign
     scale = max(0, -exponent)
