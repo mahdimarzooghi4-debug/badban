@@ -111,9 +111,7 @@ def test_reserve_and_stress_gates_fail_closed_without_defaults() -> None:
     assert reserve_red.risk_state == "RED"
     assert reserve_red.gate_states["reserve"] == "RED"
 
-    required_stress = RiskPolicyRules(
-        **{**_rules().__dict__, "require_stress_result": True}
-    )
+    required_stress = RiskPolicyRules(**{**_rules().__dict__, "require_stress_result": True})
     with pytest.raises(RiskEvaluationError) as exc:
         calculate_portfolio_risk(rules=required_stress, inputs=_inputs())
     assert exc.value.code == "RISK_INPUT_INVALID"

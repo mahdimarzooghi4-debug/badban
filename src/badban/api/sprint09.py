@@ -236,7 +236,9 @@ async def evaluate_portfolio_risk(
             evaluated_at=evaluated_at,
         )
     except RiskEvaluationError as exc:
-        status_code = 409 if exc.code in {"RISK_POLICY_INVALID", "RISK_EXPOSURE_SOURCE_INVALID"} else 422
+        status_code = (
+            409 if exc.code in {"RISK_POLICY_INVALID", "RISK_EXPOSURE_SOURCE_INVALID"} else 422
+        )
         raise ApiError(status_code, exc.code, str(exc)) from exc
 
     await session.refresh(snapshot)

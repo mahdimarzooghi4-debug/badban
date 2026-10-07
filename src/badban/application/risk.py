@@ -89,7 +89,7 @@ def _parse_decimal(value: object, *, field: str, positive: bool = False) -> Deci
     try:
         parsed = Decimal(value)
     except Exception as exc:
-        raise RiskEvaluationError("RISK_POLICY_INVALID", f"{field} must be a decimal string") from exc
+        raise RiskEvaluationError(\n            "RISK_POLICY_INVALID", f"{field} must be a decimal string"\n        ) from exc
     if not parsed.is_finite() or parsed < 0 or (positive and parsed <= 0):
         qualifier = "positive" if positive else "non-negative"
         raise RiskEvaluationError("RISK_POLICY_INVALID", f"{field} must be finite and {qualifier}")
@@ -98,7 +98,7 @@ def _parse_decimal(value: object, *, field: str, positive: bool = False) -> Deci
 
 def _storage_decimal(value: Decimal, *, field: str) -> Decimal:
     if not isinstance(value, Decimal) or not value.is_finite() or value < 0:
-        raise RiskEvaluationError("RISK_INPUT_INVALID", f"{field} must be a finite non-negative Decimal")
+        raise RiskEvaluationError(\n            "RISK_INPUT_INVALID", f"{field} must be a finite non-negative Decimal"\n        )
     sign, digits, exponent = value.as_tuple()
     del sign
     scale = max(0, -exponent)
@@ -232,11 +232,7 @@ def calculate_portfolio_risk(
         else "GREEN"
     )
 
-    committed = (
-        active
-        if rules.committed_exposure_mode == "ACTIVE_ONLY"
-        else active + reserved
-    )
+    committed = active if rules.committed_exposure_mode == "ACTIVE_ONLY" else active + reserved
     _storage_decimal(committed, field="committed_exposure")
     utilization = committed / rules.approved_portfolio_limit
 
