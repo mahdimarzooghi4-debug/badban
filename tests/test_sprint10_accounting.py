@@ -94,7 +94,7 @@ def test_posting_template_registry_preserves_no_monetary_boundaries() -> None:
         "GUARANTEED_LOAN_ACTIVATION",
         "EXTERNAL_LENDER_REPAYMENT",
         "CLAIM_APPROVAL",
-        "PARTICIPANT_OWNED_ASSET_RELEASE",
+        "PARTICIPANT_COLLATERAL_RESTRICTION_RELEASE",
     }:
         template = resolve_posting_template(code, 1)
         assert template.reference == f"{code}@1"
@@ -269,6 +269,7 @@ async def test_journal_keeps_explicit_template_and_mapping_references_after_late
                 idempotency_key=f"sprint10-{uuid4()}",
                 actor_reference=actor_id,
                 correlation_id=uuid4(),
+                policy_version_reference="policy:test:v1",
                 require_account_mapping=True,
                 lines=[
                     JournalLine(
@@ -312,6 +313,7 @@ async def test_journal_keeps_explicit_template_and_mapping_references_after_late
         stored = await session.get(JournalEntry, entry_id)
 
     assert stored is not None
+    assert stored.policy_version_reference == "policy:test:v1"
     assert stored.posting_template_reference == "RETURN_ALLOCATION@1"
     assert stored.account_mapping_reference == f"{entity.id}@1"
 
@@ -335,6 +337,7 @@ async def test_governed_journal_fails_closed_for_non_monetary_template(
                     idempotency_key=f"sprint10-no-post-{uuid4()}",
                     actor_reference=uuid4(),
                     correlation_id=uuid4(),
+                    policy_version_reference="policy:test:v1",
                     lines=[
                         JournalLine(
                             account_code="1000.SETTLEMENT_CASH_CONTROL",
@@ -349,6 +352,46 @@ async def test_governed_journal_fails_closed_for_non_monetary_template(
                     ],
                 )
     assert exc.value.code == "POSTING_TEMPLATE_NO_MONETARY_JOURNAL"
+
+    async with database.session_factory() as session:
+        count = await session.scalar(select(func.count()).select_from(JournalEntry))
+    assert count == 0
+
+
+@pytest.mark.integration
+async def test_governed_reversal_template_cannot_bypass_dedicated_workflow(
+    database,
+    clean_sprint10_accounting_tables,
+) -> None:
+    async with database.session_factory() as session:
+        with pytest.raises(JournalError) as exc:
+            async with session.begin():
+                await post_governed_journal(
+                    session,
+                    template_code="REVERSAL",
+                    template_version=1,
+                    business_event_type="REVERSAL",
+                    business_event_id=str(uuid4()),
+                    legal_entity_id=uuid4(),
+                    currency="IRR",
+                    idempotency_key=f"sprint10-reversal-bypass-{uuid4()}",
+                    actor_reference=uuid4(),
+                    correlation_id=uuid4(),
+                    policy_version_reference="policy:test:v1",
+                    lines=[
+                        JournalLine(
+                            account_code="1000.SETTLEMENT_CASH_CONTROL",
+                            economic_owner_type="PROGRAM",
+                            debit_amount=Decimal("1"),
+                        ),
+                        JournalLine(
+                            account_code="3000.RECOGNIZED_RETURN_CLEARING",
+                            economic_owner_type="PROGRAM",
+                            credit_amount=Decimal("1"),
+                        ),
+                    ],
+                )
+    assert exc.value.code == "POSTING_TEMPLATE_DEDICATED_WORKFLOW_REQUIRED"
 
     async with database.session_factory() as session:
         count = await session.scalar(select(func.count()).select_from(JournalEntry))
