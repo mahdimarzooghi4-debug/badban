@@ -4,6 +4,7 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID, uuid4
 
 import pytest
@@ -55,7 +56,17 @@ class FakeVerifier:
 
 
 class TestLenderAdapter:
-    _STATUS_MAP = {
+    _STATUS_MAP: dict[
+        str,
+        Literal[
+            "LOAN_APPROVED",
+            "LOAN_DISBURSED",
+            "REPAYMENT_RECEIVED",
+            "LOAN_DELINQUENT",
+            "LOAN_SETTLED",
+            "LOAN_CORRECTED",
+        ],
+    ] = {
         "approved": "LOAN_APPROVED",
         "funded": "LOAN_DISBURSED",
         "paid": "REPAYMENT_RECEIVED",
