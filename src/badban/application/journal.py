@@ -9,6 +9,14 @@ from uuid import UUID
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from badban.application.accounting import (
+    AccountingConfigurationError,
+    account_mapping_reference,
+    resolve_legal_entity_account_mapping_set,
+    resolve_posting_template,
+    resolve_product_account,
+    validate_template_accounts,
+)
 from badban.application.approval import assert_approval_execution_eligible
 from badban.application.idempotency import canonical_request_hash
 from badban.infrastructure.persistence.models import (
@@ -405,6 +413,83 @@ async def post_journal(
         policy_version_reference=policy_version_reference,
         posting_template_reference=posting_template_reference,
         account_mapping_reference=account_mapping_reference,
+        evidence_reference=evidence_reference,
+        settlement_reference=settlement_reference,
+        reversal_of_entry_id=None,
+        reason=reason,
+        actor_type=actor_type,
+        material_event_type="JournalPosted",
+        approval_request_id=None,
+    )
+
+
+async def post_governed_journal(
+    session: AsyncSession,
+    *,
+    template_code: str,
+    template_version: int,
+    business_event_type: str,
+    business_event_id: str,
+    legal_entity_id: UUID,
+    currency: str,
+    idempotency_key: str,
+    actor_reference: UUID,
+    correlation_id: UUID,
+    lines: list[JournalLine],
+    effective_at: datetime | None = None,
+    causation_id: UUID | None = None,
+    policy_version_reference: str | None = None,
+    require_account_mapping: bool = False,
+    evidence_reference: str | None = None,
+    settlement_reference: str | None = None,
+    reason: str | None = None,
+    actor_type: str = "SYSTEM",
+) -> JournalEntry:
+    effective = effective_at or datetime.now(UTC)
+    account_codes = {line.account_code for line in lines}
+    try:
+        template = resolve_posting_template(template_code, template_version)
+        validate_template_accounts(template, account_codes=account_codes)
+        for account_code in sorted(account_codes):
+            account = await resolve_product_account(
+                session,
+                account_code=account_code,
+                require_active=True,
+            )
+            if account.ledger_layer != "MONETARY":
+                raise AccountingConfigurationError(
+                    "PRODUCT_ACCOUNT_LAYER_INVALID",
+                    f"Monetary journal cannot post to {account.ledger_layer}: {account_code}",
+                )
+
+        mapping_reference: str | None = None
+        if require_account_mapping:
+            mappings = await resolve_legal_entity_account_mapping_set(
+                session,
+                legal_entity_id=legal_entity_id,
+                product_account_codes=account_codes,
+                effective_at=effective,
+            )
+            first_mapping = mappings[sorted(account_codes)[0]]
+            mapping_reference = account_mapping_reference(first_mapping)
+    except AccountingConfigurationError as exc:
+        raise JournalError(exc.code, str(exc)) from exc
+
+    return await _post_journal(
+        session,
+        business_event_type=business_event_type,
+        business_event_id=business_event_id,
+        legal_entity_id=legal_entity_id,
+        currency=currency,
+        idempotency_key=idempotency_key,
+        actor_reference=actor_reference,
+        correlation_id=correlation_id,
+        lines=lines,
+        effective_at=effective,
+        causation_id=causation_id,
+        policy_version_reference=policy_version_reference,
+        posting_template_reference=template.reference,
+        account_mapping_reference=mapping_reference,
         evidence_reference=evidence_reference,
         settlement_reference=settlement_reference,
         reversal_of_entry_id=None,
