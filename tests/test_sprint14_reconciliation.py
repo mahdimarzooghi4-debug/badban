@@ -592,6 +592,16 @@ async def test_changed_guarantee_fact_creates_new_immutable_comparison(database,
 
 
 @pytest.mark.integration
+async def test_same_snapshot_crossing_freshness_boundary_creates_stale_run(database, recon_context):
+    _, provider, _, _, _, _, now = recon_context
+    adapter = SnapshotAdapter(provider, now)
+    fresh = await execute(database, recon_context, adapter)
+    stale = await execute(database, recon_context, adapter, at=now + timedelta(seconds=601))
+    assert fresh.counts["MATCHED"] == 1
+    assert stale.id != fresh.id and stale.counts["MATCHED"] == 0 and stale.counts["STALE"] == 1
+
+
+@pytest.mark.integration
 async def test_missing_linked_guarantee_amount_cannot_match(database, recon_context):
     _, provider, guarantee, _, _, _, now = recon_context
     async with database.session_factory() as session:

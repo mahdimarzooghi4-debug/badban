@@ -110,6 +110,10 @@ def _record_fields(mirror: ExternalLoanMirror) -> dict[str, str]:
     }
 
 
+def _is_fresh(observed_at: datetime | None, at: datetime, max_age: int) -> bool:
+    return observed_at is not None and 0 <= (at - observed_at).total_seconds() <= max_age
+
+
 async def run_lender_reconciliation(
     session: AsyncSession,
     *,
@@ -223,6 +227,34 @@ async def run_lender_reconciliation(
             "adapter_versions": adapter_versions,
             "external_ref": external_ref,
             "external_cutoff": snapshot.snapshot_at if snapshot else None,
+            # The same evidence can cross an explicit policy freshness boundary.
+            # Deduplicate equal evaluations, never reuse a formerly MATCHED run as fresh.
+            "freshness_evaluation": {
+                "internal": {
+                    m.external_loan_id: _is_fresh(
+                        m.last_provider_event_at,
+                        timestamp,
+                        rules.freshness.internal_max_age_seconds,
+                    )
+                    for m in mirrors
+                },
+                "snapshot": _is_fresh(
+                    snapshot.snapshot_at if snapshot else None,
+                    timestamp,
+                    rules.freshness.external_max_age_seconds,
+                ),
+                "external_rows": sorted(
+                    (
+                        loan.external_loan_id,
+                        _is_fresh(
+                            loan.observed_at, timestamp, rules.freshness.external_max_age_seconds
+                        ),
+                    )
+                    for loan in snapshot.loans
+                )
+                if snapshot
+                else [],
+            },
             "outage": outage,
             "outage_at": timestamp if outage else None,
         }

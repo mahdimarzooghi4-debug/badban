@@ -69,6 +69,10 @@ incompatible-cutoff discrepancy, never a match. Future snapshot timestamps are
 not trusted as fresh. Empty provider silence is not MATCHED.
 Missing issued-amount evidence on a linked guarantee also cannot match; its
 classification and blocks use the explicit missing-record policy mapping.
+Run identity includes the freshness classification at evaluation time, so an
+unchanged snapshot crossing its configured freshness boundary produces a new
+STALE evaluation instead of reusing a formerly MATCHED result. An explicit
+Idempotency-Key replay still returns the original request's historical result.
 
 ## APIs
 
