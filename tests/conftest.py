@@ -139,3 +139,17 @@ async def clean_sprint10_accounting_tables(database: Database):
             )
         )
     yield
+
+
+@pytest.fixture
+async def clean_sprint11_event_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE "
+                "outbox_messages, inbox_messages, audit_events, "
+                "idempotency_records, identities "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
+    yield
