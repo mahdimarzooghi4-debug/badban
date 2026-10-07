@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.errors import ApiError
@@ -30,6 +31,23 @@ async def acquire_idempotency(
     payload: Any,
 ) -> tuple[IdempotencyRecord, dict[str, Any] | None]:
     request_hash = canonical_request_hash(payload)
+    inserted_id = await session.scalar(
+        pg_insert(IdempotencyRecord)
+        .values(
+            scope=scope,
+            idempotency_key=key,
+            request_hash=request_hash,
+            outcome_status="PENDING",
+        )
+        .on_conflict_do_nothing(constraint="uq_idempotency_scope_key")
+        .returning(IdempotencyRecord.id)
+    )
+    if inserted_id is not None:
+        record = await session.get(IdempotencyRecord, inserted_id)
+        if record is None:
+            raise RuntimeError("Inserted idempotency record was not readable")
+        return record, None
+
     existing = await session.scalar(
         select(IdempotencyRecord)
         .where(
@@ -38,26 +56,17 @@ async def acquire_idempotency(
         )
         .with_for_update()
     )
-    if existing is not None:
-        if existing.request_hash != request_hash:
-            raise ApiError(
-                409,
-                "IDEMPOTENCY_CONFLICT",
-                "Idempotency key was already used with a different request",
-            )
-        if existing.outcome_status == "COMPLETED" and existing.response_payload is not None:
-            return existing, existing.response_payload
-        raise ApiError(409, "IDEMPOTENCY_IN_PROGRESS", "Command is already in progress")
-
-    record = IdempotencyRecord(
-        scope=scope,
-        idempotency_key=key,
-        request_hash=request_hash,
-        outcome_status="PENDING",
-    )
-    session.add(record)
-    await session.flush()
-    return record, None
+    if existing is None:
+        raise RuntimeError("Conflicting idempotency record was not readable")
+    if existing.request_hash != request_hash:
+        raise ApiError(
+            409,
+            "IDEMPOTENCY_CONFLICT",
+            "Idempotency key was already used with a different request",
+        )
+    if existing.outcome_status == "COMPLETED" and existing.response_payload is not None:
+        return existing, existing.response_payload
+    raise ApiError(409, "IDEMPOTENCY_IN_PROGRESS", "Command is already in progress")
 
 
 def complete_idempotency(

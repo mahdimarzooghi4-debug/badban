@@ -91,3 +91,21 @@ async def clean_sprint06_registry_tables(database: Database):
             )
         )
     yield
+
+
+@pytest.fixture
+async def clean_sprint07_guarantee_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE "
+                "guarantee_cases, credit_product_versions, credit_providers, "
+                "legal_authorizations, legal_entities, journal_postings, journal_entries, "
+                "decision_snapshots, policy_versions, valuation_observations, asset_positions, "
+                "participation_episodes, role_grants, audit_events, evidence_references, "
+                "asset_types, programs, participants, identities, idempotency_records, "
+                "outbox_messages, inbox_messages "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
+    yield
