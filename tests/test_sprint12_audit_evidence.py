@@ -74,9 +74,7 @@ async def test_audit_event_persists_safe_lineage_and_is_append_only(
         with pytest.raises(DBAPIError):
             async with session.begin():
                 await session.execute(
-                    update(AuditEvent)
-                    .where(AuditEvent.id == audit_id)
-                    .values(outcome="MUTATED")
+                    update(AuditEvent).where(AuditEvent.id == audit_id).values(outcome="MUTATED")
                 )
 
     async with database.session_factory() as session:
