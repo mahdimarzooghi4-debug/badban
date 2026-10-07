@@ -96,8 +96,6 @@ def _validate_lines(lines: list[JournalLine]) -> None:
             )
         debit_total += debit
         credit_total += credit
-    _validate_decimal_storage(debit_total)
-    _validate_decimal_storage(credit_total)
     if debit_total <= 0 or debit_total != credit_total:
         raise JournalError(
             "JOURNAL_UNBALANCED",
@@ -116,6 +114,11 @@ def _request_payload(
     reason: str | None,
     actor_reference: UUID,
     causation_id: UUID | None,
+    policy_version_reference: str | None,
+    posting_template_reference: str | None,
+    account_mapping_reference: str | None,
+    evidence_reference: str | None,
+    settlement_reference: str | None,
     lines: list[JournalLine],
 ) -> dict[str, Any]:
     return {
@@ -128,6 +131,11 @@ def _request_payload(
         "reason": reason,
         "actor_reference": str(actor_reference),
         "causation_id": str(causation_id) if causation_id else None,
+        "policy_version_reference": policy_version_reference,
+        "posting_template_reference": posting_template_reference,
+        "account_mapping_reference": account_mapping_reference,
+        "evidence_reference": evidence_reference,
+        "settlement_reference": settlement_reference,
         "lines": [asdict(line) for line in lines],
     }
 
@@ -142,6 +150,7 @@ async def _lock_idempotency_key(session: AsyncSession, idempotency_key: str) -> 
 def _material_payload(
     entry: JournalEntry,
     *,
+    actor_type: str,
     approval_request_id: UUID | None,
 ) -> dict[str, Any]:
     return {
@@ -150,11 +159,21 @@ def _material_payload(
         "business_event_id": entry.business_event_id,
         "legal_entity_id": str(entry.legal_entity_id),
         "currency": entry.currency,
+        "effective_at": entry.effective_at.isoformat(),
         "posted_at": entry.posted_at.isoformat() if entry.posted_at is not None else None,
         "reversal_of_entry_id": (
             str(entry.reversal_of_entry_id) if entry.reversal_of_entry_id is not None else None
         ),
         "actor_reference": str(entry.actor_reference),
+        "actor_type": actor_type,
+        "correlation_id": str(entry.correlation_id),
+        "causation_id": str(entry.causation_id) if entry.causation_id is not None else None,
+        "policy_version_reference": entry.policy_version_reference,
+        "posting_template_reference": entry.posting_template_reference,
+        "account_mapping_reference": entry.account_mapping_reference,
+        "evidence_reference": entry.evidence_reference,
+        "settlement_reference": entry.settlement_reference,
+        "reason": entry.reason,
         "approval_request_id": (
             str(approval_request_id) if approval_request_id is not None else None
         ),
@@ -169,7 +188,11 @@ def _append_material_trace(
     event_type: str,
     approval_request_id: UUID | None,
 ) -> None:
-    payload = _material_payload(entry, approval_request_id=approval_request_id)
+    payload = _material_payload(
+        entry,
+        actor_type=actor_type,
+        approval_request_id=approval_request_id,
+    )
     action = "JOURNAL_REVERSED" if event_type == "JournalReversed" else "JOURNAL_POSTED"
     append_audit(
         session,
@@ -212,6 +235,11 @@ async def post_journal(
     lines: list[JournalLine],
     effective_at: datetime | None = None,
     causation_id: UUID | None = None,
+    policy_version_reference: str | None = None,
+    posting_template_reference: str | None = None,
+    account_mapping_reference: str | None = None,
+    evidence_reference: str | None = None,
+    settlement_reference: str | None = None,
     reversal_of_entry_id: UUID | None = None,
     reason: str | None = None,
     actor_type: str = "SYSTEM",
@@ -243,6 +271,11 @@ async def post_journal(
         reason=reason,
         actor_reference=actor_reference,
         causation_id=causation_id,
+        policy_version_reference=policy_version_reference,
+        posting_template_reference=posting_template_reference,
+        account_mapping_reference=account_mapping_reference,
+        evidence_reference=evidence_reference,
+        settlement_reference=settlement_reference,
         lines=lines,
     )
     request_hash = canonical_request_hash(payload)
@@ -288,6 +321,11 @@ async def post_journal(
         actor_reference=actor_reference,
         correlation_id=correlation_id,
         causation_id=causation_id,
+        policy_version_reference=policy_version_reference,
+        posting_template_reference=posting_template_reference,
+        account_mapping_reference=account_mapping_reference,
+        evidence_reference=evidence_reference,
+        settlement_reference=settlement_reference,
         reason=reason,
     )
     session.add(entry)
@@ -447,6 +485,9 @@ async def reverse_journal(
         lines=lines,
         effective_at=None,
         causation_id=original.correlation_id,
+        policy_version_reference=original.policy_version_reference,
+        posting_template_reference=original.posting_template_reference,
+        account_mapping_reference=original.account_mapping_reference,
         reversal_of_entry_id=original.id,
         reason=reason,
         actor_type=actor_type,

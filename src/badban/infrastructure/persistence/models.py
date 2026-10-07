@@ -450,6 +450,11 @@ class JournalEntry(Base):
     actor_reference: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     causation_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    policy_version_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    posting_template_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    account_mapping_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    settlement_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

@@ -171,6 +171,116 @@ async def test_decimal_storage_boundary_and_atomic_rollback(
 
 
 @pytest.mark.integration
+async def test_lineage_is_preserved_without_invented_aggregate_amount_limit(
+    database,
+    clean_sprint07_guarantee_tables,
+) -> None:
+    legal_entity_id = uuid4()
+    actor_id = uuid4()
+    effective_at = datetime.now(UTC)
+    amount = Decimal("90000000000000000000")
+    lines = [
+        JournalLine(
+            account_code="1000-A",
+            economic_owner_type="PROGRAM",
+            debit_amount=amount,
+        ),
+        JournalLine(
+            account_code="1000-B",
+            economic_owner_type="PROGRAM",
+            debit_amount=amount,
+        ),
+        JournalLine(
+            account_code="2000-A",
+            economic_owner_type="PROGRAM",
+            credit_amount=amount,
+        ),
+        JournalLine(
+            account_code="2000-B",
+            economic_owner_type="PROGRAM",
+            credit_amount=amount,
+        ),
+    ]
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            entry = await post_journal(
+                session,
+                business_event_type="LINEAGE_TEST",
+                business_event_id="lineage-1",
+                legal_entity_id=legal_entity_id,
+                currency="IRR",
+                idempotency_key="lineage-1",
+                actor_reference=actor_id,
+                actor_type="SYSTEM",
+                correlation_id=uuid4(),
+                effective_at=effective_at,
+                policy_version_reference="policy-v1",
+                posting_template_reference="template:v1",
+                account_mapping_reference="mapping:v1",
+                evidence_reference="evidence:1",
+                settlement_reference="settlement:1",
+                lines=lines,
+            )
+            entry_id = entry.id
+
+    async with database.session_factory() as session:
+        stored = await session.get(JournalEntry, entry_id)
+        event = await session.scalar(
+            select(OutboxMessage).where(
+                OutboxMessage.aggregate_id == str(entry_id),
+                OutboxMessage.event_type == "JournalPosted",
+            )
+        )
+        totals = (
+            await session.execute(
+                select(
+                    func.sum(JournalPosting.debit_amount),
+                    func.sum(JournalPosting.credit_amount),
+                ).where(JournalPosting.journal_entry_id == entry_id)
+            )
+        ).one()
+
+    assert stored is not None
+    assert stored.policy_version_reference == "policy-v1"
+    assert stored.posting_template_reference == "template:v1"
+    assert stored.account_mapping_reference == "mapping:v1"
+    assert stored.evidence_reference == "evidence:1"
+    assert stored.settlement_reference == "settlement:1"
+    assert totals[0] == Decimal("180000000000000000000")
+    assert totals[1] == Decimal("180000000000000000000")
+    assert event is not None
+    assert event.payload["policy_version_reference"] == "policy-v1"
+    assert event.payload["posting_template_reference"] == "template:v1"
+    assert event.payload["account_mapping_reference"] == "mapping:v1"
+    assert event.payload["evidence_reference"] == "evidence:1"
+    assert event.payload["settlement_reference"] == "settlement:1"
+    assert event.payload["actor_type"] == "SYSTEM"
+
+    async with database.session_factory() as session:
+        with pytest.raises(JournalError) as changed:
+            async with session.begin():
+                await post_journal(
+                    session,
+                    business_event_type="LINEAGE_TEST",
+                    business_event_id="lineage-1",
+                    legal_entity_id=legal_entity_id,
+                    currency="IRR",
+                    idempotency_key="lineage-1",
+                    actor_reference=actor_id,
+                    correlation_id=uuid4(),
+                    effective_at=effective_at,
+                    policy_version_reference="policy-v2",
+                    posting_template_reference="template:v1",
+                    account_mapping_reference="mapping:v1",
+                    evidence_reference="evidence:1",
+                    settlement_reference="settlement:1",
+                    lines=lines,
+                )
+    assert changed.value.code == "JOURNAL_IDEMPOTENCY_CONFLICT"
+
+
+@pytest.mark.integration
 async def test_concurrent_same_key_is_single_effect(
     database,
     clean_sprint07_guarantee_tables,
@@ -287,6 +397,21 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
         role="AUDITOR",
         legal_entity_id=legal_entity_id,
     )
+    other_legal_entity_id = uuid4()
+    await _identity(
+        database,
+        subject="other-auditor",
+        identity_type="AUDITOR",
+        role="AUDITOR",
+        legal_entity_id=other_legal_entity_id,
+    )
+    await _identity(
+        database,
+        subject="other-finance",
+        identity_type="STAFF",
+        role="FINANCE_RECONCILIATION",
+        legal_entity_id=other_legal_entity_id,
+    )
 
     async with database.session_factory() as session:
         async with session.begin():
@@ -314,11 +439,23 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
         assert listed.status_code == 200
         assert len(listed.json()) == 1
 
+        cross_scope_list = await client.get(
+            "/api/v1/finance/journals",
+            params={"legal_entity_id": str(legal_entity_id)},
+            headers=_headers("other-auditor"),
+        )
+        assert cross_scope_list.status_code == 403
+
         detail = await client.get(
             f"/api/v1/finance/journals/{original_id}",
             headers=_headers("auditor"),
         )
         assert detail.status_code == 200
+        cross_scope_detail = await client.get(
+            f"/api/v1/finance/journals/{original_id}",
+            headers=_headers("other-auditor"),
+        )
+        assert cross_scope_detail.status_code == 403
         assert detail.json()["postings"][0]["debit_amount"] in {
             "25.500000000000000000",
             "0.000000000000000000",
@@ -348,6 +485,16 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
             json={"reason": "checked"},
         )
         assert approved.status_code == 200
+
+        cross_scope_finance_denied = await client.post(
+            f"/api/v1/finance/journals/{original_id}/reverse",
+            headers=_headers("other-finance", "cross-scope-reversal"),
+            json={
+                "approval_request_id": approval_id,
+                "reason": "correct posting",
+            },
+        )
+        assert cross_scope_finance_denied.status_code == 403
 
         auditor_denied = await client.post(
             f"/api/v1/finance/journals/{original_id}/reverse",
@@ -399,6 +546,12 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
                 select(OutboxMessage.event_type).order_by(OutboxMessage.created_at)
             )
         ).all()
+        reversal_event = await session.scalar(
+            select(OutboxMessage).where(
+                OutboxMessage.aggregate_id == str(reversal_id),
+                OutboxMessage.event_type == "JournalReversed",
+            )
+        )
         reversal_audit_count = await session.scalar(
             select(func.count())
             .select_from(AuditEvent)
@@ -410,6 +563,9 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
         )
     assert posted_events.count("JournalPosted") == 1
     assert posted_events.count("JournalReversed") == 1
+    assert reversal_event is not None
+    assert reversal_event.payload["reason"] == "correct posting"
+    assert reversal_event.payload["approval_request_id"] == approval_id
     assert reversal_audit_count == 1
 
 
@@ -425,3 +581,11 @@ def test_openapi_exposes_only_accepted_finance_journal_mutation(settings) -> Non
     assert "/api/v1/finance/journals/{journal_id}/reverse" in paths
     assert set(paths["/api/v1/finance/journals/{journal_id}/reverse"]) == {"post"}
     assert "/api/v1/finance/journals/create" not in paths
+
+    detail_schema = schema["components"]["schemas"]["JournalDetailView"]["properties"]
+    assert detail_schema["effective_at"]["format"] == "date-time"
+    assert "policy_version_reference" in detail_schema
+    assert "posting_template_reference" in detail_schema
+    assert "account_mapping_reference" in detail_schema
+    assert "evidence_reference" in detail_schema
+    assert "settlement_reference" in detail_schema

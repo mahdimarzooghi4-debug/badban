@@ -8,6 +8,7 @@ Create Date: 2026-10-07
 from collections.abc import Sequence
 
 from alembic import op
+import sqlalchemy as sa
 
 revision: str = "20261007_0009"
 down_revision: str | None = "20261006_0008"
@@ -16,6 +17,27 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    op.add_column(
+        "journal_entries",
+        sa.Column("policy_version_reference", sa.String(length=200), nullable=True),
+    )
+    op.add_column(
+        "journal_entries",
+        sa.Column("posting_template_reference", sa.String(length=200), nullable=True),
+    )
+    op.add_column(
+        "journal_entries",
+        sa.Column("account_mapping_reference", sa.String(length=200), nullable=True),
+    )
+    op.add_column(
+        "journal_entries",
+        sa.Column("evidence_reference", sa.String(length=500), nullable=True),
+    )
+    op.add_column(
+        "journal_entries",
+        sa.Column("settlement_reference", sa.String(length=500), nullable=True),
+    )
+
     op.execute(
         """
         DROP TRIGGER IF EXISTS trg_journal_entries_posted_append_only ON journal_entries
@@ -204,3 +226,9 @@ def downgrade() -> None:
         FOR EACH ROW EXECUTE FUNCTION badban_reject_journal_posting_mutation()
         """
     )
+
+    op.drop_column("journal_entries", "settlement_reference")
+    op.drop_column("journal_entries", "evidence_reference")
+    op.drop_column("journal_entries", "account_mapping_reference")
+    op.drop_column("journal_entries", "posting_template_reference")
+    op.drop_column("journal_entries", "policy_version_reference")

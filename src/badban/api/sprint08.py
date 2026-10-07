@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -44,12 +45,17 @@ class JournalSummaryView(OrmModel):
     legal_entity_id: UUID
     currency: str
     state: str
-    effective_at: object
-    posted_at: object | None
+    effective_at: datetime
+    posted_at: datetime | None
     reversal_of_entry_id: UUID | None
     actor_reference: UUID
     correlation_id: UUID
     causation_id: UUID | None
+    policy_version_reference: str | None
+    posting_template_reference: str | None
+    account_mapping_reference: str | None
+    evidence_reference: str | None
+    settlement_reference: str | None
     reason: str | None
 
 
