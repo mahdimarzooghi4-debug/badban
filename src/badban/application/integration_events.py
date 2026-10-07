@@ -223,9 +223,7 @@ async def process_inbox_message_once(
     async with database.session_factory() as session:
         async with session.begin():
             message = await session.scalar(
-                select(InboxMessage)
-                .where(InboxMessage.id == message_id)
-                .with_for_update()
+                select(InboxMessage).where(InboxMessage.id == message_id).with_for_update()
             )
             if message is None:
                 raise IntegrationEventError(
@@ -270,9 +268,7 @@ async def dead_letter_outbox_message(
     async with database.session_factory() as session:
         async with session.begin():
             event = await session.scalar(
-                select(OutboxMessage)
-                .where(OutboxMessage.id == message_id)
-                .with_for_update()
+                select(OutboxMessage).where(OutboxMessage.id == message_id).with_for_update()
             )
             if event is None:
                 raise IntegrationEventError(
@@ -344,9 +340,7 @@ async def replay_dead_lettered_outbox_message(
     async with database.session_factory() as session:
         async with session.begin():
             event = await session.scalar(
-                select(OutboxMessage)
-                .where(OutboxMessage.id == message_id)
-                .with_for_update()
+                select(OutboxMessage).where(OutboxMessage.id == message_id).with_for_update()
             )
             if event is None:
                 raise IntegrationEventError(
