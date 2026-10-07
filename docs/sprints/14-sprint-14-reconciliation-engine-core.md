@@ -129,7 +129,7 @@ or a requirement to implement BL-022 in this Sprint. BL-042 remains not Done.
 
 ## Multi-source local verification
 
-355 tests passed (208 prior tests preserved, 147 added), Ruff format/lint and
+357 tests passed (208 prior tests preserved, 149 added), Ruff format/lint and
 Pyright passed, dependency audit found no known vulnerabilities. Migration
 upgrade/downgrade/upgrade and drift checks passed on a separate scratch database;
 a populated multi-source downgrade refusal is also tested. Integration validation

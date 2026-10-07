@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from badban.application.idempotency import canonical_request_hash
+from badban.application.lender_adapter import LenderReconciliationLoan
 
 type SourceType = Literal[
     "LENDER", "GUARANTEE_ISSUER", "CUSTODY", "SETTLEMENT", "COLLATERAL_REGISTRY", "LEDGER"
@@ -58,11 +59,23 @@ class Record(CanonicalModel):
 
 
 class LenderRecord(Record):
-    external_loan_id: Text
-    original_principal: Amount
-    outstanding_principal: Amount
-    currency: Text
+    external_loan_id: str = Field(min_length=1, max_length=255)
+    original_principal: str = Field(pattern=r"^\d+(?:\.\d+)?$", max_length=80)
+    outstanding_principal: str = Field(pattern=r"^\d+(?:\.\d+)?$", max_length=80)
+    currency: str = Field(min_length=1, max_length=16)
     state: Literal["PENDING", "ACTIVE", "DELINQUENT", "SETTLED", "REPLACED"]
+
+    @model_validator(mode="after")
+    def lender_contract(self) -> LenderRecord:
+        LenderReconciliationLoan(
+            external_loan_id=self.external_loan_id,
+            original_principal=self.original_principal,
+            outstanding_principal=self.outstanding_principal,
+            currency=self.currency,
+            provider_state=self.state,
+            observed_at=self.observed_at,
+        )
+        return self
 
 
 class IssuerRecord(Record):

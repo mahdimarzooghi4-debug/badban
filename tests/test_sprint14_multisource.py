@@ -30,6 +30,7 @@ from badban.application.reconciliation_sources import (
     CustodyRecord,
     IssuerRecord,
     LedgerRecord,
+    LenderRecord,
     ReconciliationSourceRegistry,
     RegistryRecord,
     SettlementRecord,
@@ -934,3 +935,16 @@ async def test_unblocked_canonical_comparison_contracts(database, recon_context,
         update={field: "99" if field in {"amount", "secured_amount"} else "DIFFERENT"}
     )
     assert compare_fields(original, canonical_fields(changed), rules).status == "MISMATCH"
+
+
+@pytest.mark.parametrize("original,outstanding", [("0", "0"), ("100", "101")])
+def test_generic_lender_model_preserves_existing_monetary_contract(original, outstanding):
+    with pytest.raises(ValidationError):
+        LenderRecord(
+            external_loan_id="test-only:loan",
+            original_principal=original,
+            outstanding_principal=outstanding,
+            currency="IRR",
+            state="ACTIVE",
+            observed_at=datetime.now(UTC),
+        )
