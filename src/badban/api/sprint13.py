@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, status
@@ -10,10 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
 from badban.api.errors import ApiError
-from badban.application.external_loan import (
-    ExternalLoanError,
-    accept_lender_inbound_request,
-)
+from badban.application.external_loan import accept_lender_inbound_request
 from badban.application.lender_adapter import LenderAdapterError
 from badban.infrastructure.persistence.models import CreditProvider, ExternalLoanMirror
 from badban.security.authorization import (
@@ -60,7 +57,7 @@ class ExternalLoanView(BaseModel):
     updated_at: datetime
 
 
-def _raise_adapter_error(exc: LenderAdapterError) -> None:
+def _raise_adapter_error(exc: LenderAdapterError) -> NoReturn:
     if exc.code == "PROVIDER_NOT_FOUND":
         raise ApiError(404, exc.code, str(exc)) from exc
     if exc.code in {
@@ -129,7 +126,6 @@ async def ingest_lender_event(
         )
     except LenderAdapterError as exc:
         _raise_adapter_error(exc)
-        raise AssertionError("unreachable")
 
     return LenderInboundAcceptedView(
         status="ACCEPTED" if accepted.created else "DUPLICATE",
