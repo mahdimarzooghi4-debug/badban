@@ -633,7 +633,8 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Priority:** P2  
 **Type:** Financial Platform Capability  
 **Depends on:** BL-030  
-**Traceability:** Technical 05
+**Traceability:** Technical 05  
+**Delivery Status:** Code + Code Review complete in Sprint 10; merged to `main` as PR #12; post-merge CI #249 green
 
 **Acceptance Criteria**
 
@@ -651,7 +652,7 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Type:** Risk Capability  
 **Depends on:** BL-013, BL-015, BL-030  
 **Traceability:** Decision 0010; Technical 02, 04, 07  
-**Delivery Status:** Selected for Sprint 09; Code authorized by Decision 0034
+**Delivery Status:** Code + Code Review complete in Sprint 09; merged to `main` as PR #11; post-merge CI #232 green
 
 **Acceptance Criteria**
 
@@ -807,7 +808,8 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Priority:** P1  
 **Type:** Integration Platform Capability  
 **Depends on:** BL-004  
-**Traceability:** Technical 08
+**Traceability:** Technical 08  
+**Delivery Status:** Selected for Sprint 11; Code authorized by Decision 0036
 
 **Acceptance Criteria**
 
