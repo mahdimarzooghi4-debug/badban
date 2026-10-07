@@ -6,11 +6,24 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from badban.application.approval import assert_approval_execution_eligible
 from badban.application.idempotency import canonical_request_hash
-from badban.infrastructure.persistence.models import JournalEntry, JournalPosting
+from badban.infrastructure.persistence.models import (
+    ApprovalRequest,
+    JournalEntry,
+    JournalPosting,
+    OutboxMessage,
+    RoleGrant,
+)
+from badban.security.audit import append_audit
+from badban.security.authorization import (
+    ROLE_GOVERNANCE_APPROVER,
+    SCOPE_GLOBAL,
+    SCOPE_LEGAL_ENTITY,
+)
 
 
 class JournalError(RuntimeError):
@@ -35,6 +48,27 @@ class JournalLine:
     reserve_account_id: UUID | None = None
 
 
+def _validate_decimal_storage(amount: Decimal) -> None:
+    if not amount.is_finite():
+        raise JournalError(
+            "JOURNAL_AMOUNT_PRECISION_INVALID",
+            "Journal amounts must be finite decimal values",
+        )
+    exponent = amount.as_tuple().exponent
+    if not isinstance(exponent, int):
+        raise JournalError(
+            "JOURNAL_AMOUNT_PRECISION_INVALID",
+            "Journal amounts must use finite decimal exponents",
+        )
+    fractional_digits = max(-exponent, 0)
+    integer_digits = max(len(amount.as_tuple().digits) + exponent, 0)
+    if fractional_digits > 18 or integer_digits > 20:
+        raise JournalError(
+            "JOURNAL_AMOUNT_PRECISION_INVALID",
+            "Journal amount exceeds NUMERIC(38,18) storage boundary",
+        )
+
+
 def _validate_lines(lines: list[JournalLine]) -> None:
     if len(lines) < 2:
         raise JournalError("JOURNAL_LINES_INVALID", "A journal requires at least two postings")
@@ -48,6 +82,8 @@ def _validate_lines(lines: list[JournalLine]) -> None:
             )
         debit = line.debit_amount
         credit = line.credit_amount
+        _validate_decimal_storage(debit)
+        _validate_decimal_storage(credit)
         if debit < 0 or credit < 0:
             raise JournalError(
                 "JOURNAL_LINES_INVALID",
@@ -60,6 +96,8 @@ def _validate_lines(lines: list[JournalLine]) -> None:
             )
         debit_total += debit
         credit_total += credit
+    _validate_decimal_storage(debit_total)
+    _validate_decimal_storage(credit_total)
     if debit_total <= 0 or debit_total != credit_total:
         raise JournalError(
             "JOURNAL_UNBALANCED",
@@ -76,6 +114,8 @@ def _request_payload(
     effective_at: datetime | None,
     reversal_of_entry_id: UUID | None,
     reason: str | None,
+    actor_reference: UUID,
+    causation_id: UUID | None,
     lines: list[JournalLine],
 ) -> dict[str, Any]:
     return {
@@ -86,8 +126,77 @@ def _request_payload(
         "effective_at": effective_at.isoformat() if effective_at is not None else None,
         "reversal_of_entry_id": str(reversal_of_entry_id) if reversal_of_entry_id else None,
         "reason": reason,
+        "actor_reference": str(actor_reference),
+        "causation_id": str(causation_id) if causation_id else None,
         "lines": [asdict(line) for line in lines],
     }
+
+
+async def _lock_idempotency_key(session: AsyncSession, idempotency_key: str) -> None:
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"journal:{idempotency_key}"},
+    )
+
+
+def _material_payload(
+    entry: JournalEntry,
+    *,
+    approval_request_id: UUID | None,
+) -> dict[str, Any]:
+    return {
+        "journal_entry_id": str(entry.id),
+        "business_event_type": entry.business_event_type,
+        "business_event_id": entry.business_event_id,
+        "legal_entity_id": str(entry.legal_entity_id),
+        "currency": entry.currency,
+        "posted_at": entry.posted_at.isoformat() if entry.posted_at is not None else None,
+        "reversal_of_entry_id": (
+            str(entry.reversal_of_entry_id) if entry.reversal_of_entry_id is not None else None
+        ),
+        "actor_reference": str(entry.actor_reference),
+        "approval_request_id": (
+            str(approval_request_id) if approval_request_id is not None else None
+        ),
+    }
+
+
+def _append_material_trace(
+    session: AsyncSession,
+    *,
+    entry: JournalEntry,
+    actor_type: str,
+    event_type: str,
+    approval_request_id: UUID | None,
+) -> None:
+    payload = _material_payload(entry, approval_request_id=approval_request_id)
+    action = "JOURNAL_REVERSED" if event_type == "JournalReversed" else "JOURNAL_POSTED"
+    append_audit(
+        session,
+        aggregate_type="JournalEntry",
+        aggregate_id=str(entry.id),
+        aggregate_version=None,
+        action=action,
+        actor_type=actor_type,
+        actor_id=entry.actor_reference,
+        correlation_id=entry.correlation_id,
+        outcome="SUCCESS",
+        new_state=payload,
+        scope={"scope_type": SCOPE_LEGAL_ENTITY, "scope_id": str(entry.legal_entity_id)},
+    )
+    session.add(
+        OutboxMessage(
+            event_type=event_type,
+            event_version=1,
+            aggregate_type="JournalEntry",
+            aggregate_id=str(entry.id),
+            aggregate_version=1,
+            payload=payload,
+            correlation_id=entry.correlation_id,
+            causation_id=entry.causation_id,
+            occurred_at=entry.posted_at or datetime.now(UTC),
+        )
+    )
 
 
 async def post_journal(
@@ -105,10 +214,24 @@ async def post_journal(
     causation_id: UUID | None = None,
     reversal_of_entry_id: UUID | None = None,
     reason: str | None = None,
+    actor_type: str = "SYSTEM",
+    material_event_type: str = "JournalPosted",
+    approval_request_id: UUID | None = None,
 ) -> JournalEntry:
     _validate_lines(lines)
+    if not business_event_type.strip() or not business_event_id.strip():
+        raise JournalError(
+            "JOURNAL_EVENT_INVALID",
+            "Business event type and id are required",
+        )
     if not currency.strip():
         raise JournalError("JOURNAL_CURRENCY_INVALID", "Journal currency is required")
+    if not idempotency_key.strip():
+        raise JournalError("JOURNAL_IDEMPOTENCY_KEY_INVALID", "Journal idempotency key is required")
+    if reversal_of_entry_id is not None and (reason is None or not reason.strip()):
+        raise JournalError("JOURNAL_REVERSAL_REASON_REQUIRED", "Reversal reason is required")
+    if material_event_type not in {"JournalPosted", "JournalReversed"}:
+        raise JournalError("JOURNAL_EVENT_INVALID", "Unsupported journal material event")
 
     payload = _request_payload(
         business_event_type=business_event_type,
@@ -118,9 +241,12 @@ async def post_journal(
         effective_at=effective_at,
         reversal_of_entry_id=reversal_of_entry_id,
         reason=reason,
+        actor_reference=actor_reference,
+        causation_id=causation_id,
         lines=lines,
     )
     request_hash = canonical_request_hash(payload)
+    await _lock_idempotency_key(session, idempotency_key)
     existing = await session.scalar(
         select(JournalEntry)
         .where(JournalEntry.idempotency_key == idempotency_key)
@@ -136,7 +262,9 @@ async def post_journal(
 
     if reversal_of_entry_id is not None:
         prior_reversal = await session.scalar(
-            select(JournalEntry).where(JournalEntry.reversal_of_entry_id == reversal_of_entry_id)
+            select(JournalEntry)
+            .where(JournalEntry.reversal_of_entry_id == reversal_of_entry_id)
+            .with_for_update()
         )
         if prior_reversal is not None:
             raise JournalError(
@@ -191,7 +319,75 @@ async def post_journal(
     entry.state = "POSTED"
     entry.posted_at = now
     await session.flush()
+    _append_material_trace(
+        session,
+        entry=entry,
+        actor_type=actor_type,
+        event_type=material_event_type,
+        approval_request_id=approval_request_id,
+    )
+    await session.flush()
     return entry
+
+
+def reversal_approval_payload(original: JournalEntry, reason: str) -> dict[str, Any]:
+    return {
+        "action": "JOURNAL_REVERSAL",
+        "target": {
+            "type": "JournalEntry",
+            "id": str(original.id),
+        },
+        "reason": reason,
+        "expected": {
+            "state": original.state,
+            "legal_entity_id": str(original.legal_entity_id),
+            "currency": original.currency,
+            "posted_at": (
+                original.posted_at.isoformat() if original.posted_at is not None else None
+            ),
+            "reversal_of_entry_id": (
+                str(original.reversal_of_entry_id)
+                if original.reversal_of_entry_id is not None
+                else None
+            ),
+        },
+    }
+
+
+async def _assert_governance_checker_is_active(
+    session: AsyncSession,
+    *,
+    request: ApprovalRequest,
+    legal_entity_id: UUID,
+) -> None:
+    checker_id = request.checker_identity_id
+    if checker_id is None or checker_id == request.maker_identity_id:
+        raise JournalError(
+            "JOURNAL_REVERSAL_APPROVAL_BINDING_INVALID",
+            "Journal reversal approval requires a distinct checker",
+        )
+    now = datetime.now(UTC)
+    grant = await session.scalar(
+        select(RoleGrant)
+        .where(
+            RoleGrant.identity_id == checker_id,
+            RoleGrant.role_code == ROLE_GOVERNANCE_APPROVER,
+            RoleGrant.status == "ACTIVE",
+            RoleGrant.valid_from <= now,
+            or_(RoleGrant.valid_until.is_(None), RoleGrant.valid_until > now),
+            or_(
+                (RoleGrant.scope_type == SCOPE_LEGAL_ENTITY)
+                & (RoleGrant.scope_id == legal_entity_id),
+                (RoleGrant.scope_type == SCOPE_GLOBAL) & (RoleGrant.scope_id.is_(None)),
+            ),
+        )
+        .limit(1)
+    )
+    if grant is None:
+        raise JournalError(
+            "JOURNAL_REVERSAL_CHECKER_NOT_AUTHORIZED",
+            "Journal reversal checker no longer has an active governance approval grant",
+        )
 
 
 async def reverse_journal(
@@ -202,7 +398,11 @@ async def reverse_journal(
     actor_reference: UUID,
     correlation_id: UUID,
     reason: str,
+    actor_type: str = "SYSTEM",
+    approval_request_id: UUID | None = None,
 ) -> JournalEntry:
+    if not reason.strip():
+        raise JournalError("JOURNAL_REVERSAL_REASON_REQUIRED", "Reversal reason is required")
     original = await session.scalar(
         select(JournalEntry).where(JournalEntry.id == original_entry_id).with_for_update()
     )
@@ -249,6 +449,76 @@ async def reverse_journal(
         causation_id=original.correlation_id,
         reversal_of_entry_id=original.id,
         reason=reason,
+        actor_type=actor_type,
+        material_event_type="JournalReversed",
+        approval_request_id=approval_request_id,
+    )
+
+
+async def reverse_journal_with_approval(
+    session: AsyncSession,
+    *,
+    original_entry_id: UUID,
+    approval_request_id: UUID,
+    idempotency_key: str,
+    actor_reference: UUID,
+    actor_type: str,
+    correlation_id: UUID,
+    reason: str,
+) -> JournalEntry:
+    original = await session.scalar(
+        select(JournalEntry).where(JournalEntry.id == original_entry_id).with_for_update()
+    )
+    if original is None:
+        raise JournalError("JOURNAL_NOT_FOUND", "Original journal entry was not found")
+    if original.state != "POSTED":
+        raise JournalError("JOURNAL_NOT_POSTED", "Only POSTED journals can be reversed")
+    if not reason.strip():
+        raise JournalError("JOURNAL_REVERSAL_REASON_REQUIRED", "Reversal reason is required")
+
+    approval = await session.scalar(
+        select(ApprovalRequest)
+        .where(ApprovalRequest.id == approval_request_id)
+        .with_for_update()
+    )
+    if approval is None:
+        raise JournalError(
+            "JOURNAL_REVERSAL_APPROVAL_NOT_FOUND",
+            "Journal reversal approval request was not found",
+        )
+    if (
+        approval.action_type != "JOURNAL_REVERSAL"
+        or approval.target_type != "JournalEntry"
+        or approval.target_id != str(original.id)
+        or approval.maker_identity_id != actor_reference
+        or approval.required_checker_role != ROLE_GOVERNANCE_APPROVER
+        or approval.scope_type != SCOPE_LEGAL_ENTITY
+        or approval.scope_id != original.legal_entity_id
+    ):
+        raise JournalError(
+            "JOURNAL_REVERSAL_APPROVAL_BINDING_INVALID",
+            "Approval is not bound to this exact journal reversal",
+        )
+    await _assert_governance_checker_is_active(
+        session,
+        request=approval,
+        legal_entity_id=original.legal_entity_id,
+    )
+    assert_approval_execution_eligible(
+        approval,
+        payload=reversal_approval_payload(original, reason),
+        current_target_version=None,
+    )
+
+    return await reverse_journal(
+        session,
+        original_entry_id=original.id,
+        idempotency_key=idempotency_key,
+        actor_reference=actor_reference,
+        actor_type=actor_type,
+        correlation_id=correlation_id,
+        reason=reason,
+        approval_request_id=approval.id,
     )
 
 
