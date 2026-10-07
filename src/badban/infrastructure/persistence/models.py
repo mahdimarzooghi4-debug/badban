@@ -357,6 +357,13 @@ class EvidenceReference(Base):
     external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     media_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source_legal_entity_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("legal_entities.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    verified_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
