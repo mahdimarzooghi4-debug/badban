@@ -233,6 +233,6 @@ async def reverse_journal(
         )
     except JournalError as exc:
         _raise_journal_error(exc)
-        raise AssertionError("unreachable")
+        raise AssertionError("unreachable") from exc
     await session.commit()
     return await _detail(session, reversal)
