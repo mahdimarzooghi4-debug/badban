@@ -327,7 +327,7 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE OR REPLACE FUNCTION badban_protect_journal_account_taxonomy()
-        RETURNS trigger AS $
+        RETURNS trigger AS $taxonomy$
         BEGIN
             IF TG_OP = 'DELETE' THEN
                 RAISE EXCEPTION 'journal_account_taxonomy definitions cannot be deleted';
@@ -342,7 +342,7 @@ def upgrade() -> None:
             END IF;
             RETURN NEW;
         END;
-        $ LANGUAGE plpgsql
+        $taxonomy$ LANGUAGE plpgsql
         """
     )
     op.execute(
@@ -356,11 +356,11 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE OR REPLACE FUNCTION badban_reject_legal_entity_account_mapping_mutation()
-        RETURNS trigger AS $
+        RETURNS trigger AS $mapping$
         BEGIN
             RAISE EXCEPTION 'legal_entity_account_mappings are append-only';
         END;
-        $ LANGUAGE plpgsql
+        $mapping$ LANGUAGE plpgsql
         """
     )
     op.execute(
