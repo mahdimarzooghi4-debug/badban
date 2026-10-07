@@ -247,10 +247,24 @@ class LenderProviderState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider_id: UUID
-    external_loan_id: str
-    provider_state: str
+    external_loan_id: str = Field(min_length=1, max_length=255)
+    provider_state: str = Field(min_length=1, max_length=120)
     observed_at: datetime
     evidence_references: list[str] = Field(default_factory=list)
+
+    @field_validator("observed_at")
+    @classmethod
+    def observed_at_is_timezone_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("lender provider-state timestamp must be timezone-aware")
+        return value
+
+    @field_validator("evidence_references")
+    @classmethod
+    def provider_state_evidence_references_are_nonblank(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() for item in value):
+            raise ValueError("evidence references must not contain blank values")
+        return value
 
 
 class LenderReconciliationScope(BaseModel):
@@ -263,12 +277,37 @@ class LenderReconciliationScope(BaseModel):
 class LenderReconciliationLoan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    external_loan_id: str
-    original_principal: str
-    outstanding_principal: str
-    currency: str
-    provider_state: str
+    external_loan_id: str = Field(min_length=1, max_length=255)
+    original_principal: str = Field(pattern=r"^\d+(?:\.\d+)?$", max_length=80)
+    outstanding_principal: str = Field(pattern=r"^\d+(?:\.\d+)?$", max_length=80)
+    currency: str = Field(min_length=1, max_length=16)
+    provider_state: str = Field(min_length=1, max_length=120)
     observed_at: datetime
+
+    @field_validator("observed_at")
+    @classmethod
+    def observed_at_is_timezone_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("reconciliation loan timestamp must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def validate_reconciliation_money(self) -> LenderReconciliationLoan:
+        try:
+            original = Decimal(self.original_principal)
+            outstanding = Decimal(self.outstanding_principal)
+        except InvalidOperation as exc:
+            raise ValueError("reconciliation monetary fields must be decimal strings") from exc
+
+        if not original.is_finite() or original <= 0:
+            raise ValueError("original_principal must be finite and positive")
+        if not outstanding.is_finite() or outstanding < 0:
+            raise ValueError("outstanding_principal must be finite and non-negative")
+        _validate_decimal_storage_boundary("original_principal", original)
+        _validate_decimal_storage_boundary("outstanding_principal", outstanding)
+        if outstanding > original:
+            raise ValueError("outstanding_principal cannot exceed original_principal")
+        return self
 
 
 class LenderReconciliationSnapshot(BaseModel):
@@ -276,9 +315,23 @@ class LenderReconciliationSnapshot(BaseModel):
 
     provider_id: UUID
     snapshot_at: datetime
-    source_reference: str | None = None
+    source_reference: str | None = Field(default=None, min_length=1, max_length=500)
     evidence_references: list[str] = Field(default_factory=list)
     loans: list[LenderReconciliationLoan]
+
+    @field_validator("snapshot_at")
+    @classmethod
+    def snapshot_at_is_timezone_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("reconciliation snapshot timestamp must be timezone-aware")
+        return value
+
+    @field_validator("evidence_references")
+    @classmethod
+    def reconciliation_evidence_references_are_nonblank(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() for item in value):
+            raise ValueError("evidence references must not contain blank values")
+        return value
 
 
 class TranslatedProviderError(BaseModel):
