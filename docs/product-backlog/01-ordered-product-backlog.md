@@ -495,7 +495,8 @@ Failure leaves no partial reservation/control effect.
 **Priority:** P1  
 **Type:** Integration Capability  
 **Depends on:** BL-001, BL-003, BL-017, BL-018  
-**Traceability:** Technical 09 §18
+**Traceability:** Technical 09 §18  
+**Delivery Status:** Selected for Sprint 13; Code authorized by Decision 0038
 
 **Acceptance Criteria**
 
@@ -512,7 +513,8 @@ Failure leaves no partial reservation/control effect.
 **Priority:** P1  
 **Type:** Domain Capability  
 **Depends on:** BL-024, BL-004  
-**Traceability:** Technical 02, 03, 04
+**Traceability:** Technical 02, 03, 04  
+**Delivery Status:** Selected for Sprint 13 after BL-024 within the same authorized Sprint
 
 **Acceptance Criteria**
 
@@ -861,7 +863,7 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Type:** Control Capability  
 **Depends on:** BL-004, BL-006  
 **Traceability:** Technical 01, 04, 12  
-**Delivery Status:** Selected for Sprint 12; Code authorized by Decision 0037
+**Delivery Status:** Code + Code Review complete in Sprint 12; merged to `main` as PR #14; post-merge CI #271 green
 
 **Acceptance Criteria**
 
