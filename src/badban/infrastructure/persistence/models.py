@@ -948,6 +948,10 @@ class ExternalLoanMirror(VersionedMixin, Base):
             name="ck_external_loan_outstanding_nonnegative",
         ),
         CheckConstraint(
+            "outstanding_principal <= original_principal",
+            name="ck_external_loan_outstanding_not_above_original",
+        ),
+        CheckConstraint(
             "last_provider_event_sequence IS NULL OR last_provider_event_sequence >= 0",
             name="ck_external_loan_sequence_nonnegative",
         ),
