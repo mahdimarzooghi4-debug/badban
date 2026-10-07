@@ -933,7 +933,7 @@ async def test_external_loan_query_is_provider_scoped_and_no_generic_mutation_ap
     assert denied.status_code == 403
 
     schema = app.openapi()
-    assert set(schema["paths"][f"/api/v1/external-loans/{{loan_id}}"]) == {"get"}
+    assert set(schema["paths"]["/api/v1/external-loans/{loan_id}"]) == {"get"}
 
 
 @pytest.mark.integration
