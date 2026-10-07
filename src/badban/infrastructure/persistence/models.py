@@ -905,7 +905,9 @@ class GuaranteeCase(VersionedMixin, Base):
         nullable=True,
     )
     external_loan_mirror_id: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), nullable=True
+        PGUUID(as_uuid=True),
+        ForeignKey("external_loan_mirrors.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     risk_snapshot_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -919,6 +921,132 @@ class GuaranteeCase(VersionedMixin, Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ExternalLoanMirror(VersionedMixin, Base):
+    __tablename__ = "external_loan_mirrors"
+    __table_args__ = (
+        UniqueConstraint(
+            "provider_id",
+            "external_loan_id",
+            name="uq_external_loan_provider_external_id",
+        ),
+        UniqueConstraint(
+            "guarantee_case_id",
+            name="uq_external_loan_guarantee_case",
+        ),
+        CheckConstraint(
+            "state IN ('PENDING','ACTIVE','DELINQUENT','SETTLED','REPLACED')",
+            name="ck_external_loan_state",
+        ),
+        CheckConstraint(
+            "original_principal > 0",
+            name="ck_external_loan_original_principal_positive",
+        ),
+        CheckConstraint(
+            "outstanding_principal >= 0",
+            name="ck_external_loan_outstanding_nonnegative",
+        ),
+        CheckConstraint(
+            "last_provider_event_sequence IS NULL OR last_provider_event_sequence >= 0",
+            name="ck_external_loan_sequence_nonnegative",
+        ),
+        Index("ix_external_loan_provider", "provider_id"),
+        Index("ix_external_loan_state", "state"),
+        Index("ix_external_loan_last_provider_event", "last_provider_event_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    guarantee_case_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("guarantee_cases.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    provider_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("credit_providers.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    external_loan_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(40), nullable=False, default="PENDING")
+    original_principal: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    outstanding_principal: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delinquency_state: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    last_provider_event_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_provider_event_sequence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reconciliation_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ExternalLoanEvent(Base):
+    __tablename__ = "external_loan_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "external_loan_mirror_id",
+            "provider_event_id",
+            name="uq_external_loan_event_provider_event",
+        ),
+        CheckConstraint(
+            "event_type IN ("
+            "'LOAN_APPROVED','LOAN_DISBURSED','REPAYMENT_RECEIVED',"
+            "'LOAN_DELINQUENT','LOAN_SETTLED','LOAN_CORRECTED'"
+            ")",
+            name="ck_external_loan_event_type",
+        ),
+        CheckConstraint(
+            "outstanding_principal_reported IS NULL OR outstanding_principal_reported >= 0",
+            name="ck_external_loan_event_outstanding_nonnegative",
+        ),
+        CheckConstraint(
+            "provider_event_sequence IS NULL OR provider_event_sequence >= 0",
+            name="ck_external_loan_event_sequence_nonnegative",
+        ),
+        CheckConstraint(
+            "processed_status IN ('APPLIED','STALE','HISTORY_ONLY','CORRECTED')",
+            name="ck_external_loan_event_processed_status",
+        ),
+        Index(
+            "ix_external_loan_events_mirror_time",
+            "external_loan_mirror_id",
+            "provider_event_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    external_loan_mirror_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("external_loan_mirrors.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    provider_event_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    principal_delta: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
+    outstanding_principal_reported: Mapped[Decimal | None] = mapped_column(
+        Numeric(38, 18), nullable=True
+    )
+    provider_event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    evidence_references: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    payload_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    processed_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    provider_contract_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    adapter_mapping_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    inbound_normalization_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    provider_event_sequence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class PolicyVersion(VersionedMixin, Base):
