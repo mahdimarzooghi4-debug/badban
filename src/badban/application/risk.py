@@ -479,6 +479,10 @@ async def evaluate_and_snapshot_portfolio_risk(
     }
     previous = await session.scalar(
         select(PortfolioRiskSnapshot)
+        .where(
+            PortfolioRiskSnapshot.evaluated_inputs["scope_definition"]
+            == resolved_risk.scope_definition
+        )
         .order_by(
             PortfolioRiskSnapshot.evaluated_at.desc(),
             PortfolioRiskSnapshot.created_at.desc(),
