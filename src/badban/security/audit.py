@@ -12,10 +12,6 @@ from badban.infrastructure.persistence.models import AuditEvent
 _FORBIDDEN_AUDIT_KEYS = frozenset(
     {
         "credentials",
-        "payload",
-        "document",
-        "content",
-        "raw",
         "password",
         "passphrase",
         "access_token",
