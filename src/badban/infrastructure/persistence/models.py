@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -1067,7 +1068,7 @@ class PolicyVersion(VersionedMixin, Base):
             "('ASSET_TYPE_POLICY','OWNERSHIP_FUNDING_POLICY',"
             "'PROVIDER_PRODUCT_POLICY','RISK_APPETITE_POLICY',"
             "'RETURN_ALLOCATION_POLICY','LEGAL_AUTHORIZATION_POLICY',"
-            "'POSTING_ACCOUNTING_MAPPING_POLICY','PILOT_POLICY_PACK')",
+            "'POSTING_ACCOUNTING_MAPPING_POLICY','RECONCILIATION_POLICY','PILOT_POLICY_PACK')",
             name="ck_policy_version_type",
         ),
         CheckConstraint(
@@ -1234,3 +1235,112 @@ class DecisionSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class ReconciliationRun(Base):
+    __tablename__ = "reconciliation_runs"
+    __table_args__ = (
+        UniqueConstraint("source_identity", name="uq_recon_run_source_identity"),
+        CheckConstraint("status IN ('COMPLETED','SOURCE_UNAVAILABLE')", name="ck_recon_run_status"),
+        CheckConstraint(
+            "policy_pack_version > 0 AND reconciliation_policy_version_number > 0",
+            name="ck_recon_run_versions",
+        ),
+        Index("ix_recon_runs_provider_started", "provider_id", "started_at"),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    provider_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("credit_providers.id", ondelete="RESTRICT"), nullable=False
+    )
+    scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    source_identity: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_pack_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("policy_versions.id", ondelete="RESTRICT"), nullable=False
+    )
+    policy_pack_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    reconciliation_policy_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("policy_versions.id", ondelete="RESTRICT"), nullable=False
+    )
+    reconciliation_policy_version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    reconciliation_policy_payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    rule_schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    algorithm_code: Mapped[str] = mapped_column(String(80), nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    internal_cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    external_cutoff: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source_snapshot_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    counts: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+
+
+class ReconciliationCase(VersionedMixin, Base):
+    __tablename__ = "reconciliation_cases"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PENDING','MATCHED','MISMATCH','STALE','DISPUTED','RESOLVED')",
+            name="ck_recon_case_status",
+        ),
+        CheckConstraint(
+            "materiality IN ('INFO','WARNING','MATERIAL','CRITICAL')",
+            name="ck_recon_case_materiality",
+        ),
+        Index("ix_recon_cases_run_status", "run_id", "status"),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_runs.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    internal_entity_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    internal_entity_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    materiality: Mapped[str] = mapped_column(String(20), nullable=False)
+    mismatch_reason_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    compared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolution_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class ReconciliationObservation(Base):
+    __tablename__ = "reconciliation_observations"
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    internal_value_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    external_value_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    difference_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    evidence_references: Mapped[list[Any]] = mapped_column(JSONB, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReconciliationBlock(Base):
+    __tablename__ = "reconciliation_blocks"
+    __table_args__ = (
+        UniqueConstraint(
+            "reconciliation_case_id", "blocked_command_type", name="uq_recon_block_case_command"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    blocked_command_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    resource_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cleared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

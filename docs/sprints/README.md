@@ -90,3 +90,5 @@ Proposed Sprint 04 scope:
 Decision 0028 — Sprint 04 Code Authorization — **Proposed**
 
 Sprint 04 Code is not yet authorized.
+
+- [Sprint 14 — Reconciliation Engine Core](./14-sprint-14-reconciliation-engine-core.md) — **Code in progress; Decision 0039**

@@ -32,6 +32,7 @@ The runtime model supports explicit versions for:
 - Return Allocation Policy;
 - Legal/Authorization Policy;
 - Posting/Accounting Mapping Policy;
+- Reconciliation Policy (`RECONCILIATION_POLICY`, Decision 0039);
 - Pilot Policy Pack.
 
 ## 3. Pilot Policy Pack
@@ -52,6 +53,30 @@ PilotPolicyPack v7
 ```
 
 The pack stores version IDs, not mutable "latest" pointers.
+
+### Reconciliation component binding (Decision 0039)
+
+Reconciliation rules belong to a distinct `RECONCILIATION_POLICY` PolicyVersion,
+not to risk/provider configuration or run request data. Resolve an ACTIVE Pilot
+Policy Pack using exact scope and effective time, then select exactly one matching
+reconciliation component from its pinned `component_version_ids`. No latest,
+code/date fallback, global default or dynamic substitution is permitted.
+
+Reconciliation scope includes `pilot_scope` and `reconciliation_type`. Derive it
+from authenticated/domain context; arbitrary caller-supplied scope must not select
+a more permissive policy. Additional dimensions need an accepted domain/provider
+contract. Zero or multiple matching pinned versions fail closed distinctly.
+
+Pack approval and activation must verify reconciliation-component approval proof
+(`approved_at`, `approved_by`, an approved immutable state) and canonical payload
+hash integrity. DRAFT/REVIEWED components cannot authorize runtime. Do not change
+unrelated legacy component semantics. A pinned version remains authoritative for
+its pack even when another version is created, activated or superseded.
+
+Historical runs capture exact pack/component IDs and versions, component payload
+hash, rule schema/version and algorithm code/version. No production rule values
+are seeded by this extension. See Decision 0039 and Technical 10 for payload,
+freshness, materiality, blocking and hard-invariant requirements.
 
 ## 4. Lifecycle
 

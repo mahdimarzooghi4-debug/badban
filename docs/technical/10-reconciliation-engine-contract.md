@@ -172,6 +172,37 @@ Examples may include provider rounding/statement presentation differences.
 
 No tolerance value is invented by code.
 
+### Policy Runtime binding (Decision 0039)
+
+Comparison, materiality, blocking and freshness configuration belongs to the
+distinct `RECONCILIATION_POLICY` PolicyVersion category. An ACTIVE Pilot Policy
+Pack pins the exact reconciliation version through `component_version_ids`.
+Resolve that pack first by existing exact-scope/effective-time rules, then require
+exactly one matching reconciliation component among those pinned IDs. No latest,
+policy-code/date fallback or default is permitted.
+
+Required scope includes `pilot_scope` and `reconciliation_type`, derived from
+authenticated/domain context. The caller must not arbitrarily select a more
+permissive scope. Additional dimensions require accepted domain/provider
+contracts. Pack approval/activation validates component approval proof,
+immutability and canonical payload hash. DRAFT/REVIEWED components cannot
+authorize runtime. Later component versions never rewrite an ACTIVE pack.
+
+Use a strict schema with allowlisted canonical fields, stable rule codes,
+EXACT/DECIMAL_EXACT/TOLERANCE_BASED/INFORMATIONAL modes, explicit materiality,
+reason codes and explicit blocked-command mappings. Only TOLERANCE_BASED accepts
+an explicit decimal-string tolerance; missing/invalid/float tolerance fails.
+Other modes must not silently apply tolerance. No executable expression language.
+
+Source freshness is explicit deterministic policy data with no default duration.
+Required missing freshness or required missing blocking configuration fails
+closed. No numeric materiality thresholds or production values are invented.
+The loan/guarantee principal invariant remains code-enforced CRITICAL and cannot
+be downgraded by policy. Every run captures pack/component IDs and versions,
+payload hash, rule schema/version, and algorithm code/version alongside source
+cutoffs/evidence. Decision 0039 authorizes only BL-042 and the minimal binding
+extension after DoR; full human resolution remains BL-043.
+
 ### Informational
 
 Differences recorded but not blocking.

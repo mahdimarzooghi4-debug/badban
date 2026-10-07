@@ -13,6 +13,10 @@ from badban.application.approval import (
     get_approval_for_update,
 )
 from badban.application.idempotency import canonical_request_hash
+from badban.application.reconciliation_policy import (
+    validate_pack_reconciliation_components,
+    validate_reconciliation_component,
+)
 from badban.infrastructure.persistence.models import (
     ApprovalRequest,
     OutboxMessage,
@@ -61,7 +65,9 @@ def assert_policy_transition_allowed(current_status: str, target_status: str) ->
 
 
 def assert_policy_payload_mutable(policy: PolicyVersion) -> None:
-    if policy.lifecycle_status in IMMUTABLE_POLICY_STATES:
+    if policy.lifecycle_status in IMMUTABLE_POLICY_STATES or (
+        policy.policy_type == "RECONCILIATION_POLICY" and policy.lifecycle_status == "APPROVED"
+    ):
         raise ApiError(
             409,
             "POLICY_VALIDATION_FAILED",
@@ -380,6 +386,9 @@ async def approve_policy(
     assert approval.checker_identity_id is not None
     await assert_policy_pack_components_exist(session, policy)
     await assert_policy_pack_component_types_compatible(session, policy)
+    await validate_pack_reconciliation_components(session, policy)
+    if policy.policy_type == "RECONCILIATION_POLICY":
+        validate_reconciliation_component(policy, governed=False)
 
     policy.lifecycle_status = "APPROVED"
     policy.payload_hash = canonical_request_hash(policy.payload)
@@ -426,6 +435,9 @@ async def activate_policy(
     )
     await assert_policy_pack_components_exist(session, policy)
     await assert_policy_pack_component_types_compatible(session, policy)
+    await validate_pack_reconciliation_components(session, policy)
+    if policy.policy_type == "RECONCILIATION_POLICY":
+        validate_reconciliation_component(policy, governed=False)
 
     if policy.payload_hash is None or policy.payload_hash != canonical_request_hash(policy.payload):
         raise ApiError(
