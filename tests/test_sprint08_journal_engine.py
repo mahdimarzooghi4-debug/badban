@@ -252,31 +252,32 @@ async def test_finance_read_and_maker_checker_reversal_are_scoped_and_idempotent
     finance, checker, auditor = await _seed_roles(database, legal_entity_id)
     entry_id = await _post_foundation_journal(database, legal_entity_id, finance.id)
     async with database.session_factory() as session:
-        original = await session.get(JournalEntry, entry_id)
-        assert original is not None
-        reason = "reverse sprint08 test"
-        approval = ApprovalRequest(
-            action_type="JOURNAL_REVERSAL",
-            target_type="JournalEntry",
-            target_id=str(original.id),
-            target_aggregate_version=None,
-            maker_identity_id=finance.id,
-            checker_identity_id=checker.id,
-            required_checker_role=ROLE_GOVERNANCE_APPROVER,
-            scope_type=SCOPE_LEGAL_ENTITY,
-            scope_id=legal_entity_id,
-            payload_hash=approval_payload_hash(
-                journal_reversal_approval_payload(original, reason=reason)
-            ),
-            reason=reason,
-            evidence_refs=[],
-            status="APPROVED",
-            approved_at=datetime.now(UTC),
-            version=2,
-        )
         async with session.begin():
+            original = await session.get(JournalEntry, entry_id)
+            assert original is not None
+            reason = "reverse sprint08 test"
+            approval = ApprovalRequest(
+                action_type="JOURNAL_REVERSAL",
+                target_type="JournalEntry",
+                target_id=str(original.id),
+                target_aggregate_version=None,
+                maker_identity_id=finance.id,
+                checker_identity_id=checker.id,
+                required_checker_role=ROLE_GOVERNANCE_APPROVER,
+                scope_type=SCOPE_LEGAL_ENTITY,
+                scope_id=legal_entity_id,
+                payload_hash=approval_payload_hash(
+                    journal_reversal_approval_payload(original, reason=reason)
+                ),
+                reason=reason,
+                evidence_refs=[],
+                status="APPROVED",
+                approved_at=datetime.now(UTC),
+                version=2,
+            )
             session.add(approval)
-        approval_id = approval.id
+            await session.flush()
+            approval_id = approval.id
 
     async with await _client(settings) as client:
         read = await client.get(
@@ -342,30 +343,31 @@ async def test_reversal_rejects_changed_approval_payload_without_side_effect(
     finance, checker, _ = await _seed_roles(database, legal_entity_id)
     entry_id = await _post_foundation_journal(database, legal_entity_id, finance.id, "changed")
     async with database.session_factory() as session:
-        original = await session.get(JournalEntry, entry_id)
-        assert original is not None
-        approval = ApprovalRequest(
-            action_type="JOURNAL_REVERSAL",
-            target_type="JournalEntry",
-            target_id=str(original.id),
-            target_aggregate_version=None,
-            maker_identity_id=finance.id,
-            checker_identity_id=checker.id,
-            required_checker_role=ROLE_GOVERNANCE_APPROVER,
-            scope_type=SCOPE_LEGAL_ENTITY,
-            scope_id=legal_entity_id,
-            payload_hash=approval_payload_hash(
-                journal_reversal_approval_payload(original, reason="approved reason")
-            ),
-            reason="approved reason",
-            evidence_refs=[],
-            status="APPROVED",
-            approved_at=datetime.now(UTC),
-            version=2,
-        )
         async with session.begin():
+            original = await session.get(JournalEntry, entry_id)
+            assert original is not None
+            approval = ApprovalRequest(
+                action_type="JOURNAL_REVERSAL",
+                target_type="JournalEntry",
+                target_id=str(original.id),
+                target_aggregate_version=None,
+                maker_identity_id=finance.id,
+                checker_identity_id=checker.id,
+                required_checker_role=ROLE_GOVERNANCE_APPROVER,
+                scope_type=SCOPE_LEGAL_ENTITY,
+                scope_id=legal_entity_id,
+                payload_hash=approval_payload_hash(
+                    journal_reversal_approval_payload(original, reason="approved reason")
+                ),
+                reason="approved reason",
+                evidence_refs=[],
+                status="APPROVED",
+                approved_at=datetime.now(UTC),
+                version=2,
+            )
             session.add(approval)
-        approval_id = approval.id
+            await session.flush()
+            approval_id = approval.id
 
     async with await _client(settings) as client:
         response = await client.post(
