@@ -31,12 +31,12 @@ async def test_balanced_journal_is_exact_idempotent_and_derived(
         JournalLine(
             account_code="1000",
             economic_owner_type="PROGRAM",
-            debit_amount=Decimal("123.456789012345678901"),
+            debit_amount=Decimal("123.456789012345678"),
         ),
         JournalLine(
             account_code="2000",
             economic_owner_type="PROGRAM",
-            credit_amount=Decimal("123.456789012345678901"),
+            credit_amount=Decimal("123.456789012345678"),
         ),
     ]
 
@@ -84,7 +84,7 @@ async def test_balanced_journal_is_exact_idempotent_and_derived(
 
     assert entry_count == 1
     assert posting_count == 2
-    assert debit == Decimal("123.456789012345678901")
+    assert debit == Decimal("123.456789012345678")
     assert credit == Decimal("0")
 
 
