@@ -328,5 +328,36 @@ async def resolve_legal_entity_account_mapping(
     return matches[0]
 
 
+async def resolve_legal_entity_account_mapping_set(
+    session: AsyncSession,
+    *,
+    legal_entity_id: UUID,
+    product_account_codes: set[str],
+    effective_at: datetime,
+) -> dict[str, LegalEntityAccountMapping]:
+    if not product_account_codes:
+        raise AccountingConfigurationError(
+            "ACCOUNT_MAPPING_SET_EMPTY",
+            "At least one product account is required to resolve an account mapping set",
+        )
+
+    mappings: dict[str, LegalEntityAccountMapping] = {}
+    for account_code in sorted(product_account_codes):
+        mappings[account_code] = await resolve_legal_entity_account_mapping(
+            session,
+            legal_entity_id=legal_entity_id,
+            product_account_code=account_code,
+            effective_at=effective_at,
+        )
+
+    versions = {mapping.mapping_version for mapping in mappings.values()}
+    if len(versions) != 1:
+        raise AccountingConfigurationError(
+            "ACCOUNT_MAPPING_VERSION_MISMATCH",
+            "All product accounts in one journal must resolve to one legal-entity mapping version",
+        )
+    return mappings
+
+
 def account_mapping_reference(mapping: LegalEntityAccountMapping) -> str:
-    return f"{mapping.id}@{mapping.mapping_version}"
+    return f"{mapping.legal_entity_id}@{mapping.mapping_version}"
