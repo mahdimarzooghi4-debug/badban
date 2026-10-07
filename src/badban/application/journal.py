@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from badban.api.errors import ApiError
 from badban.application.approval import (
     assert_approval_execution_eligible,
     get_approval_for_update,
@@ -401,10 +402,8 @@ async def assert_journal_reversal_approval(
             current_target_version=None,
             now=now,
         )
-    except Exception as exc:
-        if hasattr(exc, "code"):
-            raise JournalError(getattr(exc, "code"), str(exc)) from exc
-        raise
+    except ApiError as exc:
+        raise JournalError(exc.code, str(exc)) from exc
     return approval
 
 
