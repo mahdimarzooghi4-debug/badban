@@ -14,7 +14,9 @@ from badban.api.sprint06 import router as sprint06_router
 from badban.api.sprint07 import router as sprint07_router
 from badban.api.sprint08 import router as sprint08_router
 from badban.api.sprint09 import router as sprint09_router
+from badban.api.sprint13 import router as sprint13_router
 from badban.api.v1 import router as v1_router
+from badban.application.lender_adapter import LenderAdapterRegistry
 from badban.config import Settings, get_settings
 from badban.infrastructure.persistence.database import Database
 from badban.observability import configure_logging, configure_tracing
@@ -26,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(resolved)
     database = Database(resolved.database_url)
     token_verifier = OidcTokenVerifier(resolved)
+    lender_adapter_registry = LenderAdapterRegistry()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -38,6 +41,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = resolved
     app.state.database = database
     app.state.token_verifier = token_verifier
+    app.state.lender_adapter_registry = lender_adapter_registry
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_middleware(CorrelationIdMiddleware)
     app.include_router(health_router)
@@ -48,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sprint07_router)
     app.include_router(sprint08_router)
     app.include_router(sprint09_router)
+    app.include_router(sprint13_router)
     configure_tracing(app, resolved)
     return app
 
