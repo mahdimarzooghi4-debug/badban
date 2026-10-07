@@ -532,10 +532,10 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
         reversal_postings = {
             posting["account_code"]: posting for posting in reversal_body["postings"]
         }
-        assert reversal_postings["1000"]["debit_amount"] == "0E-18"
+        assert reversal_postings["1000"]["debit_amount"] == "0.000000000000000000"
         assert reversal_postings["1000"]["credit_amount"] == "25.500000000000000000"
         assert reversal_postings["2000"]["debit_amount"] == "25.500000000000000000"
-        assert reversal_postings["2000"]["credit_amount"] == "0E-18"
+        assert reversal_postings["2000"]["credit_amount"] == "0.000000000000000000"
 
         replay = await client.post(
             f"/api/v1/finance/journals/{original_id}/reverse",
