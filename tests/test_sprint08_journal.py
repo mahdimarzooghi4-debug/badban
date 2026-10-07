@@ -325,7 +325,10 @@ async def test_finance_api_reversal_requires_exact_governance_approval(
             headers=_headers("auditor"),
         )
         assert detail.status_code == 200
-        assert detail.json()["postings"][0]["debit_amount"] in {"25.500000000000000000", "0.000000000000000000"}
+        assert detail.json()["postings"][0]["debit_amount"] in {
+            "25.500000000000000000",
+            "0.000000000000000000",
+        }
 
         approval = await client.post(
             "/api/v1/approval-requests",
