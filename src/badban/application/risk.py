@@ -105,6 +105,11 @@ def _storage_decimal(value: Decimal, *, field: str) -> Decimal:
         )
     sign, digits, exponent = value.as_tuple()
     del sign
+    if not isinstance(exponent, int):
+        raise RiskEvaluationError(
+            "RISK_INPUT_INVALID",
+            f"{field} must have a finite decimal exponent",
+        )
     scale = max(0, -exponent)
     integer_digits = max(0, len(digits) - scale)
     if scale > 18 or integer_digits > 20:
@@ -521,9 +526,7 @@ async def evaluate_and_snapshot_portfolio_risk(
         correlation_id=correlation_id,
         outcome="SUCCESS",
         new_state=payload,
-        policy_pack_id=resolved_risk.policy_pack_id,
         scope=resolved_risk.scope_definition,
-        occurred_at=timestamp,
     )
     session.add(
         OutboxMessage(

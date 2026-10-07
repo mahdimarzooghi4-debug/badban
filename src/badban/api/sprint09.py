@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, status
@@ -106,7 +106,10 @@ def _view(snapshot: PortfolioRiskSnapshot) -> RiskSnapshotView:
         risk_policy_version_id=snapshot.risk_policy_version_id,
         risk_policy_code=snapshot.risk_policy_code,
         risk_policy_version_number=snapshot.risk_policy_version_number,
-        risk_state=snapshot.risk_state,
+        risk_state=cast(
+            Literal["GREEN", "AMBER", "RED"],
+            snapshot.risk_state,
+        ),
         total_active_exposure=format(snapshot.total_active_exposure, "f"),
         total_reserved_exposure=format(snapshot.total_reserved_exposure, "f"),
         committed_exposure=format(snapshot.committed_exposure, "f"),
