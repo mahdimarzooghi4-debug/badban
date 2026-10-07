@@ -379,8 +379,7 @@ def downgrade() -> None:
     )
     op.execute("DROP FUNCTION IF EXISTS badban_reject_legal_entity_account_mapping_mutation")
     op.execute(
-        "DROP TRIGGER IF EXISTS trg_journal_account_taxonomy_immutable "
-        "ON journal_account_taxonomy"
+        "DROP TRIGGER IF EXISTS trg_journal_account_taxonomy_immutable ON journal_account_taxonomy"
     )
     op.execute("DROP FUNCTION IF EXISTS badban_protect_journal_account_taxonomy")
     op.drop_index(
