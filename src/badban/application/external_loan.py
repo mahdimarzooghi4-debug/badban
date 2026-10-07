@@ -71,6 +71,13 @@ def _safe_event_payload(event: NormalizedLenderEvent) -> dict[str, object]:
     return event.model_dump(mode="json")
 
 
+def _dedupe_event_payload(event: NormalizedLenderEvent) -> dict[str, object]:
+    payload = event.model_dump(mode="json")
+    payload.pop("received_at", None)
+    payload.pop("correlation_id", None)
+    return payload
+
+
 def _event_state(event_type: str) -> str | None:
     return {
         "LOAN_APPROVED": "PENDING",
@@ -166,6 +173,7 @@ async def accept_lender_inbound_request(
         event_type=event.event_type,
         external_event_id=event.external_event_id,
         payload=_safe_event_payload(event),
+        dedupe_payload=_dedupe_event_payload(event),
     )
     return LenderInboundAcceptance(
         inbox_message_id=acceptance.message_id,
