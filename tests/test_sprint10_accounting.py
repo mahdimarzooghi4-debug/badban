@@ -5,7 +5,8 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import DBAPIError
 
 from badban.api.app import create_app
 from badban.application.accounting import (
@@ -85,6 +86,80 @@ async def test_migration_seeds_exact_product_taxonomy_without_statutory_mappings
         "9050.EXTERNAL_LOAN_PRINCIPAL_MIRROR_MEMO",
         "9060.EXTERNAL_LOAN_OUTSTANDING_MIRROR_MEMO",
     }
+
+
+@pytest.mark.integration
+async def test_accounting_configuration_history_is_database_protected(
+    database,
+    clean_sprint10_accounting_tables,
+) -> None:
+    entity = LegalEntity(
+        legal_name="Immutable Mapping Entity",
+        registration_identifier=f"IMMUTABLE-{uuid4()}",
+        entity_type="TEST",
+        status="ACTIVE",
+        created_by=uuid4(),
+        version=1,
+    )
+    effective_from = datetime.now(UTC) - timedelta(days=1)
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(entity)
+            await session.flush()
+            mapping = LegalEntityAccountMapping(
+                legal_entity_id=entity.id,
+                product_account_code="3000.RECOGNIZED_RETURN_CLEARING",
+                external_chart_account_code="EXT-3000-V1",
+                mapping_version=1,
+                effective_from=effective_from,
+                effective_to=None,
+            )
+            session.add(mapping)
+            await session.flush()
+            mapping_id = mapping.id
+
+    async with database.session_factory() as session:
+        with pytest.raises(DBAPIError):
+            async with session.begin():
+                await session.execute(
+                    update(LegalEntityAccountMapping)
+                    .where(LegalEntityAccountMapping.id == mapping_id)
+                    .values(external_chart_account_code="MUTATED")
+                )
+
+    async with database.session_factory() as session:
+        with pytest.raises(DBAPIError):
+            async with session.begin():
+                await session.execute(
+                    delete(LegalEntityAccountMapping).where(
+                        LegalEntityAccountMapping.id == mapping_id
+                    )
+                )
+
+    async with database.session_factory() as session:
+        with pytest.raises(DBAPIError):
+            async with session.begin():
+                await session.execute(
+                    update(JournalAccountTaxonomy)
+                    .where(
+                        JournalAccountTaxonomy.account_code
+                        == "3000.RECOGNIZED_RETURN_CLEARING"
+                    )
+                    .values(account_class="CONTROLLED_ASSET")
+                )
+
+    async with database.session_factory() as session:
+        stored = await session.get(LegalEntityAccountMapping, mapping_id)
+        account = await session.get(
+            JournalAccountTaxonomy,
+            "3000.RECOGNIZED_RETURN_CLEARING",
+        )
+
+    assert stored is not None
+    assert stored.external_chart_account_code == "EXT-3000-V1"
+    assert account is not None
+    assert account.account_class == "RETURN_OR_INCOME_CLEARING"
 
 
 def test_posting_template_registry_preserves_no_monetary_boundaries() -> None:
