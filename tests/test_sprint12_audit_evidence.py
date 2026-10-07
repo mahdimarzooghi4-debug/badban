@@ -84,6 +84,45 @@ async def test_audit_event_persists_safe_lineage_and_is_append_only(
 
 
 @pytest.mark.integration
+async def test_structured_business_payload_key_is_allowed_when_content_is_safe(
+    database,
+    clean_sprint12_audit_evidence_tables,
+) -> None:
+    async with database.session_factory() as session:
+        async with session.begin():
+            audit = append_audit(
+                session,
+                aggregate_type="PolicyVersion",
+                aggregate_id="policy-1",
+                aggregate_version=1,
+                action="POLICY_CREATED",
+                actor_type="GOVERNANCE",
+                actor_id=uuid4(),
+                correlation_id=uuid4(),
+                outcome="SUCCESS",
+                new_state={
+                    "payload": {
+                        "component_version_ids": [],
+                        "schema_version": "1",
+                    }
+                },
+            )
+            await session.flush()
+            audit_id = audit.id
+
+    async with database.session_factory() as session:
+        stored = await session.get(AuditEvent, audit_id)
+
+    assert stored is not None
+    assert stored.new_state == {
+        "payload": {
+            "component_version_ids": [],
+            "schema_version": "1",
+        }
+    }
+
+
+@pytest.mark.integration
 async def test_unsafe_nested_audit_payload_fails_before_persistence(
     database,
     clean_sprint12_audit_evidence_tables,
