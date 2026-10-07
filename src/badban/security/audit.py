@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import re
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,11 @@ from badban.infrastructure.persistence.models import AuditEvent
 
 _FORBIDDEN_AUDIT_KEYS = frozenset(
     {
+        "credentials",
+        "payload",
+        "document",
+        "content",
+        "raw",
         "password",
         "passphrase",
         "access_token",
@@ -33,6 +39,8 @@ _FORBIDDEN_AUDIT_KEYS = frozenset(
         "blob_content",
     }
 )
+_REASON_CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_.:-]{0,119}$")
+
 _FORBIDDEN_AUDIT_KEY_SUFFIXES = (
     "_password",
     "_passphrase",
@@ -93,6 +101,9 @@ def append_audit(
     causation_id: UUID | None = None,
     scope: dict[str, Any] | None = None,
 ) -> AuditEvent:
+    if reason_code is not None and _REASON_CODE_PATTERN.fullmatch(reason_code) is None:
+        raise AuditPayloadRejected("reason_code")
+
     for label, payload in (
         ("previous_state", previous_state),
         ("new_state", new_state),
