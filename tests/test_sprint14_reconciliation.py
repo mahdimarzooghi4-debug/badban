@@ -26,6 +26,10 @@ from badban.application.lender_adapter import (
     TranslatedProviderError,
 )
 from badban.application.reconciliation import ReconciliationError, execute_lender_reconciliation
+from badban.application.reconciliation_resolution import (
+    ReconciliationResolutionError,
+    assert_reconciliation_command_allowed,
+)
 from badban.config import Settings
 from badban.infrastructure.persistence.models import (
     AuditEvent,
@@ -41,12 +45,18 @@ from badban.infrastructure.persistence.models import (
     ParticipationEpisode,
     PolicyVersion,
     Program,
+    ReconciliationBlock,
     ReconciliationCase,
     ReconciliationObservation,
+    ReconciliationResolutionProposal,
     ReconciliationRun,
     RoleGrant,
 )
-from badban.security.authorization import ROLE_FINANCE_RECONCILIATION, SCOPE_PROVIDER
+from badban.security.authorization import (
+    ROLE_FINANCE_RECONCILIATION,
+    ROLE_GOVERNANCE_APPROVER,
+    SCOPE_PROVIDER,
+)
 
 
 class FakeVerifier:
@@ -120,6 +130,7 @@ async def clean_sprint14_reconciliation_tables(database):
         await connection.execute(
             text(
                 "TRUNCATE "
+                "reconciliation_blocks, reconciliation_resolution_proposals, "
                 "reconciliation_observations, reconciliation_cases, reconciliation_runs, "
                 "external_loan_events, external_loan_mirrors, guarantee_cases, "
                 "credit_product_versions, credit_providers, legal_authorizations, legal_entities, "
@@ -134,24 +145,31 @@ async def clean_sprint14_reconciliation_tables(database):
     yield
 
 
-def _rules(*, max_age: int = 300, materiality: str = "WARNING") -> dict[str, object]:
-    return {
-        "reconciliation_rules": {
-            "LENDER_EXTERNAL_LOAN": {
-                "max_source_age_seconds": max_age,
-                "materiality_by_reason": {
-                    "RECON_EXTERNAL_RECORD_MISSING": materiality,
-                    "RECON_INTERNAL_RECORD_MISSING": materiality,
-                    "RECON_AMOUNT_MISMATCH": materiality,
-                    "RECON_STATE_MISMATCH": materiality,
-                    "RECON_IDENTIFIER_MISMATCH": materiality,
-                    "RECON_DUPLICATE_EXTERNAL_RECORD": materiality,
-                    "RECON_SOURCE_STALE": materiality,
-                },
-                "decimal_tolerance_by_field": {},
-            }
-        }
+def _rules(
+    *,
+    max_age: int = 300,
+    materiality: str = "WARNING",
+    blocking_rules: list[dict[str, object]] | None = None,
+    resolution_governance: dict[str, object] | None = None,
+) -> dict[str, object]:
+    lender_rules: dict[str, object] = {
+        "max_source_age_seconds": max_age,
+        "materiality_by_reason": {
+            "RECON_EXTERNAL_RECORD_MISSING": materiality,
+            "RECON_INTERNAL_RECORD_MISSING": materiality,
+            "RECON_AMOUNT_MISMATCH": materiality,
+            "RECON_STATE_MISMATCH": materiality,
+            "RECON_IDENTIFIER_MISMATCH": materiality,
+            "RECON_DUPLICATE_EXTERNAL_RECORD": materiality,
+            "RECON_SOURCE_STALE": materiality,
+        },
+        "decimal_tolerance_by_field": {},
     }
+    if blocking_rules is not None:
+        lender_rules["blocking_rules"] = blocking_rules
+    if resolution_governance is not None:
+        lender_rules["resolution_governance"] = resolution_governance
+    return {"reconciliation_rules": {"LENDER_EXTERNAL_LOAN": lender_rules}}
 
 
 async def _seed(
@@ -160,6 +178,8 @@ async def _seed(
     include_reconciliation_policy: bool = True,
     materiality: str = "WARNING",
     max_age: int = 300,
+    blocking_rules: list[dict[str, object]] | None = None,
+    resolution_governance: dict[str, object] | None = None,
 ):
     now = datetime.now(UTC)
     operator = Identity(
@@ -298,7 +318,12 @@ async def _seed(
 
             policy_ids: list[str] = []
             if include_reconciliation_policy:
-                rules = _rules(max_age=max_age, materiality=materiality)
+                rules = _rules(
+                    max_age=max_age,
+                    materiality=materiality,
+                    blocking_rules=blocking_rules,
+                    resolution_governance=resolution_governance,
+                )
                 recon_policy = PolicyVersion(
                     policy_type="RECONCILIATION_POLICY",
                     policy_code="SPRINT14_RECON",
@@ -788,3 +813,420 @@ async def test_same_snapshot_different_scope_reference_creates_distinct_runs(
 
     assert len(runs) == 2
     assert runs[0].source_fingerprint != runs[1].source_fingerprint
+
+
+def _case_block_rule(reason_code: str, materiality: str) -> list[dict[str, object]]:
+    return [
+        {
+            "reason_code": reason_code,
+            "materiality": materiality,
+            "blocked_command_type": "TEST_HIGH_IMPACT_COMMAND",
+            "resource_source": "RECONCILIATION_CASE",
+            "resource_type": "ReconciliationCase",
+        }
+    ]
+
+
+def _resolution_governance(materiality: str, *, approval_required: bool) -> dict[str, object]:
+    governance: dict[str, object] = {
+        "approval_required_by_materiality": {materiality: approval_required},
+        "checker_role_by_materiality": {},
+    }
+    if approval_required:
+        governance["checker_role_by_materiality"] = {
+            materiality: ROLE_GOVERNANCE_APPROVER,
+        }
+    return governance
+
+
+@pytest.mark.integration
+async def test_explicit_policy_activates_block_and_unmapped_command_is_not_blocked(
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, _, provider, _, _ = await _seed(
+        database,
+        materiality="CRITICAL",
+        blocking_rules=_case_block_rule(
+            "RECON_GUARANTEE_LOAN_PRINCIPAL_MISMATCH",
+            "CRITICAL",
+        ),
+        resolution_governance=_resolution_governance(
+            "CRITICAL",
+            approval_required=True,
+        ),
+    )
+    adapter = SnapshotAdapter(
+        provider.id,
+        _snapshot(
+            provider.id,
+            loans=[
+                LenderReconciliationLoan(
+                    external_loan_id="loan-1",
+                    original_principal="90",
+                    outstanding_principal="75",
+                    currency="IRR",
+                    provider_state="ACTIVE",
+                    observed_at=datetime.now(UTC),
+                )
+            ],
+        ),
+    )
+    run_id = await _execute(database, provider, operator, adapter)
+
+    async with database.session_factory() as session:
+        case = await session.scalar(
+            select(ReconciliationCase).where(
+                ReconciliationCase.run_id == run_id,
+                ReconciliationCase.mismatch_reason_code
+                == "RECON_GUARANTEE_LOAN_PRINCIPAL_MISMATCH",
+            )
+        )
+        assert case is not None
+        block = await session.scalar(
+            select(ReconciliationBlock).where(
+                ReconciliationBlock.reconciliation_case_id == case.id,
+                ReconciliationBlock.active.is_(True),
+            )
+        )
+        assert block is not None
+        assert block.blocked_command_type == "TEST_HIGH_IMPACT_COMMAND"
+        assert block.resource_type == "ReconciliationCase"
+        assert block.resource_id == str(case.id)
+
+        with pytest.raises(ReconciliationResolutionError) as blocked:
+            await assert_reconciliation_command_allowed(
+                session,
+                case_id=case.id,
+                blocked_command_type="TEST_HIGH_IMPACT_COMMAND",
+                resource_type="ReconciliationCase",
+                resource_id=str(case.id),
+                require_mapping=True,
+            )
+        assert blocked.value.code == "RECONCILIATION_BLOCK"
+
+        await assert_reconciliation_command_allowed(
+            session,
+            case_id=case.id,
+            blocked_command_type="UNRELATED_COMMAND",
+            resource_type="ReconciliationCase",
+            resource_id=str(case.id),
+            require_mapping=False,
+        )
+
+
+@pytest.mark.integration
+async def test_resolution_maker_checker_is_stale_safe_and_clears_block_without_financial_mutation(
+    settings: Settings,
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, _, provider, guarantee, _ = await _seed(
+        database,
+        materiality="CRITICAL",
+        blocking_rules=_case_block_rule(
+            "RECON_GUARANTEE_LOAN_PRINCIPAL_MISMATCH",
+            "CRITICAL",
+        ),
+        resolution_governance=_resolution_governance(
+            "CRITICAL",
+            approval_required=True,
+        ),
+    )
+    checker = Identity(
+        identity_type="GOVERNANCE",
+        external_subject=f"sprint16-checker-{uuid4()}",
+        status="ACTIVE",
+    )
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(checker)
+            await session.flush()
+            session.add_all(
+                [
+                    RoleGrant(
+                        identity_id=checker.id,
+                        role_code=ROLE_GOVERNANCE_APPROVER,
+                        scope_type=SCOPE_PROVIDER,
+                        scope_id=provider.id,
+                        valid_from=datetime.now(UTC) - timedelta(minutes=1),
+                        valid_until=None,
+                        status="ACTIVE",
+                        granted_by=None,
+                        reason_ref="sprint16-checker",
+                        version=1,
+                    ),
+                    RoleGrant(
+                        identity_id=operator.id,
+                        role_code=ROLE_GOVERNANCE_APPROVER,
+                        scope_type=SCOPE_PROVIDER,
+                        scope_id=provider.id,
+                        valid_from=datetime.now(UTC) - timedelta(minutes=1),
+                        valid_until=None,
+                        status="ACTIVE",
+                        granted_by=None,
+                        reason_ref="sprint16-self-approval-test",
+                        version=1,
+                    ),
+                ]
+            )
+
+    run_id = await _execute(
+        database,
+        provider,
+        operator,
+        SnapshotAdapter(
+            provider.id,
+            _snapshot(
+                provider.id,
+                loans=[
+                    LenderReconciliationLoan(
+                        external_loan_id="loan-1",
+                        original_principal="90",
+                        outstanding_principal="75",
+                        currency="IRR",
+                        provider_state="ACTIVE",
+                        observed_at=datetime.now(UTC),
+                    )
+                ],
+            ),
+        ),
+    )
+    async with database.session_factory() as session:
+        case = await session.scalar(
+            select(ReconciliationCase).where(
+                ReconciliationCase.run_id == run_id,
+                ReconciliationCase.mismatch_reason_code
+                == "RECON_GUARANTEE_LOAN_PRINCIPAL_MISMATCH",
+            )
+        )
+        assert case is not None
+        case_id = case.id
+        observation_count_before = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(ReconciliationObservation)
+                .where(ReconciliationObservation.reconciliation_case_id == case.id)
+            )
+            or 0
+        )
+
+    app = create_app(settings)
+    app.state.token_verifier = FakeVerifier()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        proposal = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/propose-resolution",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={
+                "resolution_type": "ACCEPTED_DIFFERENCE",
+                "reason": "governed accepted difference",
+                "evidence_references": ["evidence:test:resolution"],
+                "correction_command_references": [],
+            },
+        )
+        assert proposal.status_code == 201
+        body = proposal.json()
+        proposal_id = body["id"]
+        assert body["approval_request_id"] is not None
+
+        duplicate = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/propose-resolution",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={
+                "resolution_type": "ACCEPTED_DIFFERENCE",
+                "reason": "governed accepted difference",
+                "evidence_references": ["evidence:test:resolution"],
+                "correction_command_references": [],
+            },
+        )
+        assert duplicate.status_code == 201
+        assert duplicate.json()["id"] == proposal_id
+
+        self_approval = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/approve-resolution",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={"proposal_id": proposal_id},
+        )
+        assert self_approval.status_code == 403
+        assert self_approval.json()["error"]["code"] == "APPROVAL_SELF_APPROVAL_FORBIDDEN"
+
+        approved = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/approve-resolution",
+            headers={"Authorization": f"Bearer {checker.external_subject}"},
+            json={"proposal_id": proposal_id},
+        )
+        assert approved.status_code == 200
+        assert approved.json()["status"] == "APPLIED"
+
+        replay = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/approve-resolution",
+            headers={"Authorization": f"Bearer {checker.external_subject}"},
+            json={"proposal_id": proposal_id},
+        )
+        assert replay.status_code == 200
+        assert replay.json()["status"] == "APPLIED"
+
+    async with database.session_factory() as session:
+        stored_case = await session.get(ReconciliationCase, case_id)
+        stored_guarantee = await session.get(GuaranteeCase, guarantee.id)
+        active_blocks = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(ReconciliationBlock)
+                .where(
+                    ReconciliationBlock.reconciliation_case_id == case_id,
+                    ReconciliationBlock.active.is_(True),
+                )
+            )
+            or 0
+        )
+        observation_count_after = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(ReconciliationObservation)
+                .where(ReconciliationObservation.reconciliation_case_id == case_id)
+            )
+            or 0
+        )
+        journal_count = int(
+            await session.scalar(select(func.count()).select_from(JournalEntry)) or 0
+        )
+        events = set((await session.scalars(select(OutboxMessage.event_type))).all())
+
+    assert stored_case is not None
+    assert stored_case.status == "RESOLVED"
+    assert stored_case.resolution_type == "ACCEPTED_DIFFERENCE"
+    assert active_blocks == 0
+    assert observation_count_after == observation_count_before
+    assert stored_guarantee is not None and stored_guarantee.state == "ISSUED"
+    assert journal_count == 0
+    assert "ReconciliationResolutionProposed" in events
+    assert "ReconciliationResolved" in events
+    assert "ReconciliationBlockActivated" in events
+    assert "ReconciliationBlockCleared" in events
+
+
+@pytest.mark.integration
+async def test_correction_resolution_requires_fresh_recheck_before_block_clears(
+    settings: Settings,
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, _, provider, guarantee, _ = await _seed(
+        database,
+        materiality="MATERIAL",
+        blocking_rules=_case_block_rule("RECON_AMOUNT_MISMATCH", "MATERIAL"),
+        resolution_governance=_resolution_governance(
+            "MATERIAL",
+            approval_required=False,
+        ),
+    )
+    mismatched = SnapshotAdapter(
+        provider.id,
+        _snapshot(
+            provider.id,
+            loans=[
+                LenderReconciliationLoan(
+                    external_loan_id="loan-1",
+                    original_principal="100",
+                    outstanding_principal="70",
+                    currency="IRR",
+                    provider_state="ACTIVE",
+                    observed_at=datetime.now(UTC),
+                )
+            ],
+        ),
+    )
+    run_id = await _execute(database, provider, operator, mismatched)
+    async with database.session_factory() as session:
+        case = await session.scalar(
+            select(ReconciliationCase).where(
+                ReconciliationCase.run_id == run_id,
+                ReconciliationCase.mismatch_reason_code == "RECON_AMOUNT_MISMATCH",
+            )
+        )
+        assert case is not None
+        case_id = case.id
+
+    app = create_app(settings)
+    app.state.token_verifier = FakeVerifier()
+    app.state.lender_adapter_registry.register(
+        provider.id,
+        SnapshotAdapter(provider.id, _snapshot(provider.id)),
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        proposal = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/propose-resolution",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={
+                "resolution_type": "EXTERNAL_CORRECTION",
+                "reason": "provider corrected authoritative statement",
+                "evidence_references": ["evidence:test:provider-correction"],
+                "correction_command_references": ["provider-correction:1"],
+            },
+        )
+        assert proposal.status_code == 201
+        proposal_id = proposal.json()["id"]
+        approved = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/approve-resolution",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={"proposal_id": proposal_id},
+        )
+        assert approved.status_code == 200
+        assert approved.json()["status"] == "APPROVED"
+
+        async with database.session_factory() as session:
+            pending_case = await session.get(ReconciliationCase, case_id)
+            assert pending_case is not None and pending_case.status == "DISPUTED"
+            active_block = await session.scalar(
+                select(ReconciliationBlock).where(
+                    ReconciliationBlock.reconciliation_case_id == case_id,
+                    ReconciliationBlock.active.is_(True),
+                )
+            )
+            assert active_block is not None
+
+        rechecked = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/recheck",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={},
+        )
+        assert rechecked.status_code == 200
+        assert rechecked.json()["resolved"] is True
+
+        replay = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/recheck",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={},
+        )
+        assert replay.status_code == 200
+        assert replay.json()["resolved"] is True
+
+    async with database.session_factory() as session:
+        stored_case = await session.get(ReconciliationCase, case_id)
+        stored_proposal = await session.scalar(
+            select(ReconciliationResolutionProposal).where(
+                ReconciliationResolutionProposal.reconciliation_case_id == case_id
+            )
+        )
+        stored_guarantee = await session.get(GuaranteeCase, guarantee.id)
+        active_blocks = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(ReconciliationBlock)
+                .where(
+                    ReconciliationBlock.reconciliation_case_id == case_id,
+                    ReconciliationBlock.active.is_(True),
+                )
+            )
+            or 0
+        )
+        journal_count = int(
+            await session.scalar(select(func.count()).select_from(JournalEntry)) or 0
+        )
+
+    assert stored_case is not None and stored_case.status == "RESOLVED"
+    assert stored_proposal is not None and stored_proposal.status == "APPLIED"
+    assert active_blocks == 0
+    assert stored_guarantee is not None and stored_guarantee.state == "ISSUED"
+    assert journal_count == 0
