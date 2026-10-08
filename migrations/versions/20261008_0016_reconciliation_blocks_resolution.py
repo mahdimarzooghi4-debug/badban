@@ -25,6 +25,10 @@ _RESOLUTION_TYPES = (
 
 def upgrade() -> None:
     op.add_column(
+        "reconciliation_runs",
+        sa.Column("scope_reference", sa.String(length=500), nullable=True),
+    )
+    op.add_column(
         "reconciliation_cases",
         sa.Column("resolution_type", sa.String(length=80), nullable=True),
     )
@@ -170,3 +174,4 @@ def downgrade() -> None:
         type_="check",
     )
     op.drop_column("reconciliation_cases", "resolution_type")
+    op.drop_column("reconciliation_runs", "scope_reference")
