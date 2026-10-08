@@ -749,7 +749,6 @@ async def recheck_lender_resolution(
     lender_adapter_registry: Any,
     *,
     case_id: UUID,
-    scope_reference: str | None,
     actor_type: str,
     actor_id: UUID,
     correlation_id: UUID,
@@ -789,6 +788,7 @@ async def recheck_lender_resolution(
             )
         provider_id = run.provider_id
         scope_definition = run.scope_definition
+        scope_reference = run.scope_reference
         internal_entity_id = case.internal_entity_id
         external_reference = case.external_reference
         proposal_id = proposal.id
