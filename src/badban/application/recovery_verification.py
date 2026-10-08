@@ -322,22 +322,22 @@ async def _reconciliation_check(session: AsyncSession) -> RecoveryCheck:
     runs = (await session.scalars(select(ReconciliationRun))).all()
     cases = (await session.scalars(select(ReconciliationCase))).all()
     blocks = (await session.scalars(select(ReconciliationBlock))).all()
+    unresolved_count = sum(
+        1 for case in cases if case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"}
+    )
+    active_block_count = sum(1 for block in blocks if block.active)
+    business_follow_up_required = unresolved_count > 0 or active_block_count > 0
     return RecoveryCheck(
         code="RECONCILIATION_STATE_READABILITY",
-        status="PASS",
+        status="FAIL" if business_follow_up_required else "PASS",
         details={
             "run_count": len(runs),
             "failed_run_count": sum(1 for run in runs if run.status == "FAILED"),
             "case_count": len(cases),
-            "unresolved_case_count": sum(
-                1 for case in cases if case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"}
-            ),
+            "unresolved_case_count": unresolved_count,
             "stale_case_count": sum(1 for case in cases if case.status == "STALE"),
-            "active_block_count": sum(1 for block in blocks if block.active),
-            "business_follow_up_required": any(
-                case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"} for case in cases
-            )
-            or any(block.active for block in blocks),
+            "active_block_count": active_block_count,
+            "business_follow_up_required": business_follow_up_required,
         },
     )
 
