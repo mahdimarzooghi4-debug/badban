@@ -43,14 +43,6 @@ A Reconciliation Policy may define per-reconciliation-type freshness rules, comp
 
 The hard one-to-one lender/guarantee principal invariant remains non-configurable and CRITICAL when violated.
 
-## 2.1 Reconciliation Policy
-
-Reconciliation comparison behavior is governed by versioned `RECONCILIATION_POLICY` records.
-
-A Reconciliation Policy may define per-reconciliation-type freshness rules, comparison modes, explicit tolerances where approved, and materiality classifications. No code default may substitute for a missing governed value. Every reconciliation run pins the exact Reconciliation Policy ID/version used.
-
-The hard one-to-one lender/guarantee principal invariant remains non-configurable and CRITICAL when violated.
-
 ## 3. Pilot Policy Pack
 
 A Pilot Policy Pack is an immutable manifest of exact component versions.
