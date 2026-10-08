@@ -1299,6 +1299,72 @@ class ReconciliationBlock(Base):
     )
 
 
+class OperationalStopControl(VersionedMixin, Base):
+    __tablename__ = "operational_stop_controls"
+    __table_args__ = (
+        CheckConstraint(
+            "control_type IN ("
+            "'STOP_NEW_GUARANTEE_RESERVATIONS','STOP_GUARANTEE_ACTIVATION',"
+            "'SUSPEND_PROVIDER_FOR_NEW_ACTIONS','SUSPEND_ASSET_TYPE_FOR_NEW_ACTIONS',"
+            "'STOP_CLAIM_SETTLEMENT','STOP_COLLATERAL_RELEASE'"
+            ")",
+            name="ck_operational_stop_control_type",
+        ),
+        CheckConstraint(
+            "scope_type IN ('GLOBAL','PROVIDER','ASSET_TYPE')",
+            name="ck_operational_stop_control_scope_type",
+        ),
+        CheckConstraint(
+            "("
+            "control_type IN ("
+            "'STOP_NEW_GUARANTEE_RESERVATIONS','STOP_GUARANTEE_ACTIVATION',"
+            "'STOP_CLAIM_SETTLEMENT','STOP_COLLATERAL_RELEASE'"
+            ") AND scope_type = 'GLOBAL' AND scope_id IS NULL"
+            ") OR ("
+            "control_type = 'SUSPEND_PROVIDER_FOR_NEW_ACTIONS' "
+            "AND scope_type = 'PROVIDER' AND scope_id IS NOT NULL"
+            ") OR ("
+            "control_type = 'SUSPEND_ASSET_TYPE_FOR_NEW_ACTIONS' "
+            "AND scope_type = 'ASSET_TYPE' AND scope_id IS NOT NULL"
+            ")",
+            name="ck_operational_stop_control_scope_pair",
+        ),
+        Index(
+            "ix_operational_stop_controls_active_scope",
+            "active",
+            "control_type",
+            "scope_type",
+            "scope_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    control_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    scope_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    scope_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    activated_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("identities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cleared_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("identities.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    cleared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class PolicyVersion(VersionedMixin, Base):
     __tablename__ = "policy_versions"
     __table_args__ = (
