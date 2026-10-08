@@ -131,9 +131,7 @@ async def _view(
     checks = (
         await session.scalars(
             select(RecoveryVerificationCheck)
-            .where(
-                RecoveryVerificationCheck.recovery_verification_id == verification.id
-            )
+            .where(RecoveryVerificationCheck.recovery_verification_id == verification.id)
             .order_by(
                 RecoveryVerificationCheck.check_code,
                 RecoveryVerificationCheck.id,
@@ -228,5 +226,7 @@ async def get_recovery_verification(
     )
     verification = await session.get(RecoveryVerification, verification_id)
     if verification is None:
-        raise ApiError(404, "RECOVERY_VERIFICATION_NOT_FOUND", "Recovery verification was not found")
+        raise ApiError(
+            404, "RECOVERY_VERIFICATION_NOT_FOUND", "Recovery verification was not found"
+        )
     return await _view(session, verification)
