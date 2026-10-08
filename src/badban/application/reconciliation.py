@@ -260,11 +260,16 @@ def _snapshot_fingerprint(
     snapshot: LenderReconciliationSnapshot,
     *,
     policy: ResolvedReconciliationPolicy,
+    scope_reference: str | None,
 ) -> str:
     payload = {
         "reconciliation_type": LENDER_RECONCILIATION_TYPE,
+        "policy_pack_id": str(policy.policy_pack_id),
+        "policy_pack_version": policy.policy_pack_version,
         "policy_version_id": str(policy.rule_policy_version_id),
         "policy_version_number": policy.rule_policy_version_number,
+        "scope_definition": policy.scope_definition,
+        "scope_reference": scope_reference,
         "snapshot": snapshot.model_dump(mode="json"),
     }
     return hashlib.sha256(
@@ -513,7 +518,11 @@ async def execute_lender_reconciliation(
             "RECONCILIATION_SOURCE_CUTOFF_INVALID",
             "Lender reconciliation snapshot cutoff is in the future",
         )
-    fingerprint = _snapshot_fingerprint(snapshot, policy=policy)
+    fingerprint = _snapshot_fingerprint(
+        snapshot,
+        policy=policy,
+        scope_reference=scope_reference,
+    )
     evidence_reference = (
         snapshot.evidence_references[0]
         if snapshot.evidence_references
