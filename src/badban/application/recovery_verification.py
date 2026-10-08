@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -12,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.idempotency import canonical_request_hash
 from badban.infrastructure.persistence.models import (
+    Base,
     CreditProvider,
     EvidenceReference,
     Identity,
@@ -92,8 +94,65 @@ async def _database_check(session: AsyncSession) -> RecoveryCheck:
     )
 
 
+async def _aggregate_version_check(session: AsyncSession) -> RecoveryCheck:
+    invalid_rows: dict[str, list[str]] = {}
+    checked_tables: list[str] = []
+
+    for table_name, table in sorted(Base.metadata.tables.items()):
+        if "version" not in table.c:
+            continue
+        checked_tables.append(table_name)
+        primary_key_columns = list(table.primary_key.columns)
+        rows = (
+            await session.execute(
+                select(*primary_key_columns, table.c.version).where(table.c.version < 1)
+            )
+        ).all()
+        if rows:
+            invalid_rows[table_name] = [
+                "|".join(str(row[index]) for index in range(len(primary_key_columns)))
+                for row in rows
+            ]
+
+    return RecoveryCheck(
+        code="AGGREGATE_VERSION_INTEGRITY",
+        status="PASS" if not invalid_rows else "FAIL",
+        details={
+            "checked_table_count": len(checked_tables),
+            "checked_tables": checked_tables,
+            "invalid_rows": invalid_rows,
+        },
+    )
+
+
+def _posting_signature(posting: JournalPosting, *, invert: bool = False) -> tuple[object, ...]:
+    debit_amount = posting.credit_amount if invert else posting.debit_amount
+    credit_amount = posting.debit_amount if invert else posting.credit_amount
+    return (
+        posting.account_code,
+        posting.legal_entity_id,
+        posting.economic_owner_type,
+        posting.economic_owner_id,
+        posting.participant_id,
+        posting.program_id,
+        posting.provider_id,
+        posting.asset_position_id,
+        posting.guarantee_case_id,
+        posting.claim_id,
+        posting.reserve_account_id,
+        debit_amount,
+        credit_amount,
+        posting.currency,
+    )
+
+
 async def _journal_check(session: AsyncSession) -> RecoveryCheck:
     entries = (await session.scalars(select(JournalEntry))).all()
+    postings = (await session.scalars(select(JournalPosting))).all()
+    postings_by_entry: dict[UUID, list[JournalPosting]] = defaultdict(list)
+    for posting in postings:
+        postings_by_entry[posting.journal_entry_id].append(posting)
+
     posting_rows = (
         await session.execute(
             select(
@@ -128,7 +187,24 @@ async def _journal_check(session: AsyncSession) -> RecoveryCheck:
             invalid_posted.append(str(entry.id))
         if entry.reversal_of_entry_id is not None:
             original = by_id.get(entry.reversal_of_entry_id)
-            if original is None or original.id == entry.id or original.state != "POSTED":
+            if (
+                original is None
+                or original.id == entry.id
+                or original.state != "POSTED"
+                or entry.business_event_type != "REVERSAL"
+                or entry.business_event_id != str(entry.reversal_of_entry_id)
+            ):
+                invalid_reversals.append(str(entry.id))
+                continue
+            expected_postings = Counter(
+                _posting_signature(posting, invert=True)
+                for posting in postings_by_entry.get(original.id, [])
+            )
+            actual_postings = Counter(
+                _posting_signature(posting)
+                for posting in postings_by_entry.get(entry.id, [])
+            )
+            if actual_postings != expected_postings:
                 invalid_reversals.append(str(entry.id))
 
     status: _CHECK_STATUS = (
@@ -413,6 +489,7 @@ async def execute_recovery_verification(
     started_at = datetime.now(UTC)
     checks = [
         await _database_check(session),
+        await _aggregate_version_check(session),
         await _journal_check(session),
         await _messaging_check(session),
         await _evidence_check(session),
