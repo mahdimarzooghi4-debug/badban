@@ -1365,6 +1365,80 @@ class OperationalStopControl(VersionedMixin, Base):
     )
 
 
+class RecoveryVerification(Base):
+    __tablename__ = "recovery_verifications"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PASSED','FAILED')",
+            name="ck_recovery_verification_status",
+        ),
+        CheckConstraint(
+            "check_count >= 0 AND failed_check_count >= 0 "
+            "AND not_verified_check_count >= 0",
+            name="ck_recovery_verification_counts_nonnegative",
+        ),
+        Index("ix_recovery_verifications_restore", "restore_reference", "created_at"),
+        Index("ix_recovery_verifications_status", "status", "completed_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    restore_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_backup_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_integrity_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    environment_reference: Mapped[str] = mapped_column(String(120), nullable=False)
+    verification_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    check_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    failed_check_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    not_verified_check_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("identities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class RecoveryVerificationCheck(Base):
+    __tablename__ = "recovery_verification_checks"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PASS','FAIL','NOT_VERIFIED')",
+            name="ck_recovery_verification_check_status",
+        ),
+        UniqueConstraint(
+            "recovery_verification_id",
+            "check_code",
+            name="uq_recovery_verification_check_code",
+        ),
+        Index(
+            "ix_recovery_verification_checks_verification",
+            "recovery_verification_id",
+            "status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    recovery_verification_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("recovery_verifications.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    check_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    details: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class PolicyVersion(VersionedMixin, Base):
     __tablename__ = "policy_versions"
     __table_args__ = (
