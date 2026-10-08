@@ -4,9 +4,9 @@
 - **Date:** 2026-10-08
 - **Scope:** BL-050 Recovery Verification Core
 - **PR:** #21
-- **Reviewed Head:** `6e84f1c777bc6cd0a136aad43139c8dea6f71a63`
+- **Reviewed Head:** `3609fd9ff788a141974b9b1e6cb614fe50501cf1`
 - **Base:** `sprint-17-business-readiness-stop-controls`
-- **CI Evidence:** #357 — SUCCESS
+- **CI Evidence:** #364 — SUCCESS
 
 ## Review Outcome
 
@@ -18,6 +18,8 @@ The reviewed implementation preserves the accepted boundaries:
 - verification evidence is append-only;
 - no backup vendor, restore engine, restore transport, RPO/RTO target, provider restart, message replay, or direct repair was introduced;
 - Journal integrity is checked against the existing JournalEntry/JournalPosting truth;
+- every modeled aggregate table with a `version` column is checked for invalid non-positive versions;
+- reversal journals must preserve exact line-level inversion of the original postings, not merely overall debit/credit balance;
 - PREPARED journals are not accepted as posted financial facts;
 - Outbox/Inbox verification does not publish, replay, or mutate delivery state;
 - EvidenceReference verification remains metadata/reference-only;
@@ -51,7 +53,9 @@ The following cannot become PASS by inference:
 - invalid active policy payload hash;
 - invalid active role-grant structure;
 - malformed evidence metadata;
-- incomplete journal state.
+- incomplete journal state;
+- non-positive aggregate versions;
+- balanced-but-noninverse journal reversals.
 
 A caller-supplied Boolean cannot promote external source integrity to PASS.
 
@@ -63,6 +67,8 @@ Tests cover:
 - missing external source verification;
 - rejection of caller self-attestation;
 - incomplete PREPARED restored journal without repair;
+- invalid aggregate version recovery state;
+- balanced but noninverse restored reversal detection;
 - stale reconciliation plus active reconciliation block;
 - preservation of active stop controls;
 - AUDITOR read-only behavior;
@@ -71,9 +77,9 @@ Tests cover:
 
 ## Verification
 
-At reviewed HEAD `6e84f1c777bc6cd0a136aad43139c8dea6f71a63`:
+At reviewed HEAD `3609fd9ff788a141974b9b1e6cb614fe50501cf1`:
 
-- CI #357 succeeded;
+- CI #364 succeeded;
 - Format, Lint, Type Check, migrations, migration drift, tests, dependency audit, container build, and secret scan passed;
 - PR #21 remains Draft/Open;
 - PR #21 remains stacked on Sprint 17;
