@@ -1,6 +1,6 @@
 # Sprint 16 — Reconciliation Blocks and Resolution Workflow Core
 
-- **Status:** Accepted / Code Authorized
+- **Status:** Code + Code Review Complete / Merge Pending Explicit Approval
 - **Date:** 2026-10-08
 - **Stage:** Sprint
 - **Scope:** backend-first / BL-043 core
