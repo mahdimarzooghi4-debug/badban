@@ -26,7 +26,6 @@ from badban.security.authorization import (
     ROLE_LEGAL_COMPLIANCE,
     ROLE_OPERATIONS,
     ROLE_RISK,
-    ROLE_SYSTEM_OPERATOR,
     SCOPE_GLOBAL,
     AuthorizationDenied,
     Principal,
@@ -35,11 +34,10 @@ from badban.security.authorization import (
 
 router = APIRouter(prefix="/api/v1", tags=["recovery-verification"])
 
-_EXECUTE_ROLES = {ROLE_OPERATIONS, ROLE_GOVERNANCE_APPROVER, ROLE_SYSTEM_OPERATOR}
+_EXECUTE_ROLES = {ROLE_OPERATIONS, ROLE_GOVERNANCE_APPROVER}
 _READ_ROLES = {
     ROLE_OPERATIONS,
     ROLE_GOVERNANCE_APPROVER,
-    ROLE_SYSTEM_OPERATOR,
     ROLE_AUDITOR,
     ROLE_RISK,
     ROLE_FINANCE_RECONCILIATION,
