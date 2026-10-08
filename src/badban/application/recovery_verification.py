@@ -201,8 +201,7 @@ async def _journal_check(session: AsyncSession) -> RecoveryCheck:
                 for posting in postings_by_entry.get(original.id, [])
             )
             actual_postings = Counter(
-                _posting_signature(posting)
-                for posting in postings_by_entry.get(entry.id, [])
+                _posting_signature(posting) for posting in postings_by_entry.get(entry.id, [])
             )
             if actual_postings != expected_postings:
                 invalid_reversals.append(str(entry.id))
