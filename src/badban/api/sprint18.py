@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal, NoReturn
+from typing import Any, Literal, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -147,7 +147,7 @@ async def _view(
         source_integrity_reference=verification.source_integrity_reference,
         environment_reference=verification.environment_reference,
         verification_version=verification.verification_version,
-        status=verification.status,
+        status=cast(Literal["PASSED", "FAILED"], verification.status),
         check_count=verification.check_count,
         failed_check_count=verification.failed_check_count,
         not_verified_check_count=verification.not_verified_check_count,
@@ -161,7 +161,7 @@ async def _view(
             RecoveryVerificationCheckView(
                 id=check.id,
                 check_code=check.check_code,
-                status=check.status,
+                status=cast(Literal["PASS", "FAIL", "NOT_VERIFIED"], check.status),
                 details=check.details,
                 evidence_reference=check.evidence_reference,
                 created_at=check.created_at,
