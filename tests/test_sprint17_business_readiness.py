@@ -518,8 +518,7 @@ async def test_concurrent_identical_stop_activation_has_one_business_effect(
                 select(func.count())
                 .select_from(OperationalStopControl)
                 .where(
-                    OperationalStopControl.control_type
-                    == "STOP_NEW_GUARANTEE_RESERVATIONS",
+                    OperationalStopControl.control_type == "STOP_NEW_GUARANTEE_RESERVATIONS",
                     OperationalStopControl.scope_type == "GLOBAL",
                     OperationalStopControl.scope_id.is_(None),
                     OperationalStopControl.active.is_(True),
