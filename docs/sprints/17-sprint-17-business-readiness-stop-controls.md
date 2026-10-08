@@ -1,6 +1,6 @@
 # Sprint 17 — Business Readiness and Stop Controls Core
 
-- **Status:** Accepted / Code Authorized
+- **Status:** Code + Code Review Complete / Merge Pending Explicit Approval
 - **Date:** 2026-10-08
 - **Stage:** Sprint
 - **Scope:** backend-first / BL-049 core
