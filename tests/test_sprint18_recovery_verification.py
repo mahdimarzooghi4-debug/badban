@@ -28,6 +28,7 @@ from badban.infrastructure.persistence.models import (
 from badban.security.authorization import (
     ROLE_AUDITOR,
     ROLE_OPERATIONS,
+    ROLE_SYSTEM_OPERATOR,
     SCOPE_GLOBAL,
 )
 
@@ -464,6 +465,32 @@ async def test_recovery_preserves_stale_reconciliation_and_active_stop(
     assert case is not None and case.status == "STALE"
     assert stop is not None and stop.active is True
     assert stop.cleared_at is None
+
+
+@pytest.mark.integration
+async def test_system_operator_role_cannot_execute_recovery_verification(
+    settings: Settings,
+    database,
+    clean_sprint18_tables,
+) -> None:
+    system_operator = await _identity_with_global_role(
+        database,
+        subject="sprint18-system-operator",
+        identity_type="STAFF",
+        role=ROLE_SYSTEM_OPERATOR,
+    )
+
+    async with await _client(settings) as client:
+        denied = await client.post(
+            "/api/v1/recovery-verifications",
+            headers={"Authorization": f"Bearer {system_operator.external_subject}"},
+            json={
+                "restore_reference": "restore-system-operator-denied",
+                "environment_reference": "stage-recovery-test",
+            },
+        )
+
+    assert denied.status_code == 403
 
 
 @pytest.mark.integration
