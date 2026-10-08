@@ -153,14 +153,6 @@ The governed rule version owns freshness, allowed comparison modes, explicit tol
 
 The one-to-one External Loan Principal / Issued Guarantee Amount invariant is always CRITICAL and cannot be downgraded by policy.
 
-## 7.1 Governed Rule Binding
-
-Every reconciliation run resolves one exact `RECONCILIATION_POLICY` version through the exact Pilot Policy Pack selected for the run scope.
-
-The governed rule version owns freshness, allowed comparison modes, explicit tolerances where any are permitted, and mismatch materiality classifications. Missing/invalid configuration fails closed; there is no implicit latest policy and no built-in production freshness/tolerance/materiality default.
-
-The one-to-one External Loan Principal / Issued Guarantee Amount invariant is always CRITICAL and cannot be downgraded by policy.
-
 ## 8. Exact vs Tolerance Matching
 
 Comparison rules are versioned and classify fields as:
