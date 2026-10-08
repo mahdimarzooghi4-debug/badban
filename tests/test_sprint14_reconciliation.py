@@ -741,6 +741,7 @@ async def test_unconfigured_adapter_records_outage_audit_without_creating_run(
     assert audit is not None
     assert "ReconciliationRunCompleted" not in event_types
 
+
 @pytest.mark.integration
 async def test_same_snapshot_different_scope_reference_creates_distinct_runs(
     database,
@@ -778,7 +779,10 @@ async def test_same_snapshot_different_scope_reference_creates_distinct_runs(
     async with database.session_factory() as session:
         runs = (
             await session.scalars(
-                select(ReconciliationRun).order_by(ReconciliationRun.created_at, ReconciliationRun.id)
+                select(ReconciliationRun).order_by(
+                    ReconciliationRun.created_at,
+                    ReconciliationRun.id,
+                )
             )
         ).all()
 
