@@ -12,10 +12,17 @@ from sqlalchemy.exc import DBAPIError
 from badban.api.app import create_app
 from badban.application.idempotency import canonical_request_hash
 from badban.application.lender_adapter import (
+    AdapterHealth,
     LenderCapabilityManifest,
+    LenderInboundRequest,
+    LenderOperationResult,
+    LenderOutboundCommand,
+    LenderProviderState,
     LenderReconciliationLoan,
     LenderReconciliationScope,
     LenderReconciliationSnapshot,
+    LenderStateQuery,
+    NormalizedLenderEvent,
     TranslatedProviderError,
 )
 from badban.application.reconciliation import ReconciliationError, execute_lender_reconciliation
@@ -76,6 +83,18 @@ class SnapshotAdapter:
             outbound_mapping_version="test-outbound-v1",
         )
 
+    async def submit_command(self, command: LenderOutboundCommand) -> LenderOperationResult:
+        raise AssertionError("submit_command is not used by reconciliation tests")
+
+    async def fetch_state(self, query: LenderStateQuery) -> LenderProviderState:
+        raise AssertionError("fetch_state is not used by reconciliation tests")
+
+    async def verify_and_normalize(
+        self,
+        request: LenderInboundRequest,
+    ) -> NormalizedLenderEvent:
+        raise AssertionError("verify_and_normalize is not used by reconciliation tests")
+
     async def fetch_reconciliation_snapshot(
         self,
         scope: LenderReconciliationScope,
@@ -90,6 +109,9 @@ class SnapshotAdapter:
             code="PROVIDER_UNAVAILABLE",
             classification="RETRYABLE",
         )
+
+    async def health_check(self) -> AdapterHealth:
+        return "AVAILABLE"
 
 
 @pytest.fixture
