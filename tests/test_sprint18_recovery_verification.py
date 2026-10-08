@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text, update
+from sqlalchemy import select, text, update
 from sqlalchemy.exc import DBAPIError
 
 from badban.api.app import create_app
@@ -17,6 +17,7 @@ from badban.config import Settings
 from badban.infrastructure.persistence.models import (
     Identity,
     JournalEntry,
+    JournalPosting,
     OperationalStopControl,
     PolicyVersion,
     ReconciliationBlock,
@@ -171,6 +172,162 @@ async def test_recovery_verification_passes_balanced_authoritative_state(
     assert journal_id not in {
         UUID(value) for value in checks["JOURNAL_INTEGRITY"]["details"]["invalid_posted_entry_ids"]
     }
+
+
+@pytest.mark.integration
+async def test_recovery_verification_fails_on_invalid_aggregate_version(
+    settings: Settings,
+    database,
+    clean_sprint18_tables,
+) -> None:
+    operator = await _identity_with_global_role(
+        database,
+        subject="sprint18-operator-version",
+        identity_type="STAFF",
+        role=ROLE_OPERATIONS,
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            grant = await session.scalar(
+                select(RoleGrant).where(RoleGrant.identity_id == operator.id)
+            )
+            assert grant is not None
+            await session.execute(
+                update(RoleGrant).where(RoleGrant.id == grant.id).values(version=0)
+            )
+            grant_id = grant.id
+
+    async with await _client(settings) as client:
+        response = await client.post(
+            "/api/v1/recovery-verifications",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={
+                "restore_reference": "restore-invalid-version",
+                "environment_reference": "stage-recovery-test",
+            },
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    checks = {check["check_code"]: check for check in body["checks"]}
+    aggregate_check = checks["AGGREGATE_VERSION_INTEGRITY"]
+    assert aggregate_check["status"] == "FAIL"
+    assert str(grant_id) in aggregate_check["details"]["invalid_rows"]["role_grants"]
+
+
+@pytest.mark.integration
+async def test_recovery_verification_detects_balanced_but_noninverse_reversal(
+    settings: Settings,
+    database,
+    clean_sprint18_tables,
+) -> None:
+    operator = await _identity_with_global_role(
+        database,
+        subject="sprint18-operator-reversal",
+        identity_type="STAFF",
+        role=ROLE_OPERATIONS,
+    )
+    original_id = await _seed_balanced_journal(database, actor_id=operator.id)
+    now = datetime.now(UTC)
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            original = await session.get(JournalEntry, original_id)
+            assert original is not None
+            await session.execute(
+                text(
+                    "ALTER TABLE journal_entries DISABLE TRIGGER "
+                    "trg_journal_entries_posted_append_only"
+                )
+            )
+            await session.execute(
+                text(
+                    "ALTER TABLE journal_postings DISABLE TRIGGER "
+                    "trg_journal_postings_append_only"
+                )
+            )
+            reversal = JournalEntry(
+                business_event_type="REVERSAL",
+                business_event_id=str(original.id),
+                legal_entity_id=original.legal_entity_id,
+                currency=original.currency,
+                state="POSTED",
+                effective_at=now,
+                posted_at=now,
+                reversal_of_entry_id=original.id,
+                idempotency_key=f"bad-reversal-{uuid4()}",
+                request_hash="1" * 64,
+                actor_reference=operator.id,
+                correlation_id=uuid4(),
+                causation_id=original.correlation_id,
+                policy_version_reference=original.policy_version_reference,
+                posting_template_reference="REVERSAL@1",
+                account_mapping_reference=original.account_mapping_reference,
+                evidence_reference=original.evidence_reference,
+                settlement_reference=original.settlement_reference,
+                reason="restored noninverse reversal",
+            )
+            session.add(reversal)
+            await session.flush()
+            session.add_all(
+                [
+                    JournalPosting(
+                        journal_entry_id=reversal.id,
+                        account_code="WRONG_REVERSAL_DEBIT",
+                        legal_entity_id=original.legal_entity_id,
+                        economic_owner_type="PROGRAM",
+                        debit_amount=Decimal("10"),
+                        credit_amount=Decimal("0"),
+                        currency=original.currency,
+                    ),
+                    JournalPosting(
+                        journal_entry_id=reversal.id,
+                        account_code="WRONG_REVERSAL_CREDIT",
+                        legal_entity_id=original.legal_entity_id,
+                        economic_owner_type="PROGRAM",
+                        debit_amount=Decimal("0"),
+                        credit_amount=Decimal("10"),
+                        currency=original.currency,
+                    ),
+                ]
+            )
+            await session.flush()
+            reversal_id = reversal.id
+            await session.execute(
+                text(
+                    "ALTER TABLE journal_postings ENABLE TRIGGER "
+                    "trg_journal_postings_append_only"
+                )
+            )
+            await session.execute(
+                text(
+                    "ALTER TABLE journal_entries ENABLE TRIGGER "
+                    "trg_journal_entries_posted_append_only"
+                )
+            )
+
+    async with await _client(settings) as client:
+        response = await client.post(
+            "/api/v1/recovery-verifications",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={
+                "restore_reference": "restore-noninverse-reversal",
+                "environment_reference": "stage-recovery-test",
+            },
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    checks = {check["check_code"]: check for check in body["checks"]}
+    journal_check = checks["JOURNAL_INTEGRITY"]
+    assert journal_check["status"] == "FAIL"
+    assert str(reversal_id) in journal_check["details"]["invalid_reversal_entry_ids"]
+
+    async with database.session_factory() as session:
+        restored_reversal = await session.get(JournalEntry, reversal_id)
+    assert restored_reversal is not None
+    assert restored_reversal.state == "POSTED"
 
 
 @pytest.mark.integration
