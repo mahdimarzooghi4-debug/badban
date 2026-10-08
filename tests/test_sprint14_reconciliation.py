@@ -71,10 +71,14 @@ class SnapshotAdapter:
         snapshot: LenderReconciliationSnapshot,
         *,
         error: Exception | None = None,
+        assert_scope_reference: bool = False,
+        expected_scope_reference: str | None = None,
     ) -> None:
         self.provider_id = provider_id
         self.snapshot = snapshot
         self.error = error
+        self.assert_scope_reference = assert_scope_reference
+        self.expected_scope_reference = expected_scope_reference
 
     def capability_manifest(self) -> LenderCapabilityManifest:
         return LenderCapabilityManifest(
@@ -110,6 +114,8 @@ class SnapshotAdapter:
         scope: LenderReconciliationScope,
     ) -> LenderReconciliationSnapshot:
         assert scope.provider_id == self.provider_id
+        if self.assert_scope_reference:
+            assert scope.scope_reference == self.expected_scope_reference
         if self.error is not None:
             raise self.error
         return self.snapshot
@@ -409,6 +415,8 @@ async def _execute(
     provider: CreditProvider,
     operator: Identity,
     adapter: SnapshotAdapter,
+    *,
+    scope_reference: str | None = None,
 ):
     from badban.application.lender_adapter import LenderAdapterRegistry
 
@@ -419,7 +427,7 @@ async def _execute(
         registry,
         provider_id=provider.id,
         scope_definition={"pilot_scope": "bounded-pilot"},
-        scope_reference=None,
+        scope_reference=scope_reference,
         actor_type=operator.identity_type,
         actor_id=operator.id,
         correlation_id=uuid4(),
@@ -1136,9 +1144,20 @@ async def test_correction_resolution_requires_fresh_recheck_before_block_clears(
                 )
             ],
         ),
+        assert_scope_reference=True,
+        expected_scope_reference="scope-a",
     )
-    run_id = await _execute(database, provider, operator, mismatched)
+    run_id = await _execute(
+        database,
+        provider,
+        operator,
+        mismatched,
+        scope_reference="scope-a",
+    )
     async with database.session_factory() as session:
+        run = await session.get(ReconciliationRun, run_id)
+        assert run is not None
+        assert run.scope_reference == "scope-a"
         case = await session.scalar(
             select(ReconciliationCase).where(
                 ReconciliationCase.run_id == run_id,
@@ -1152,7 +1171,12 @@ async def test_correction_resolution_requires_fresh_recheck_before_block_clears(
     app.state.token_verifier = FakeVerifier()
     app.state.lender_adapter_registry.register(
         provider.id,
-        SnapshotAdapter(provider.id, _snapshot(provider.id)),
+        SnapshotAdapter(
+            provider.id,
+            _snapshot(provider.id),
+            assert_scope_reference=True,
+            expected_scope_reference="scope-a",
+        ),
     )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         proposal = await client.post(
@@ -1185,6 +1209,13 @@ async def test_correction_resolution_requires_fresh_recheck_before_block_clears(
                 )
             )
             assert active_block is not None
+
+        scope_substitution = await client.post(
+            f"/api/v1/reconciliation/cases/{case_id}/recheck",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={"scope_reference": "scope-b"},
+        )
+        assert scope_substitution.status_code == 422
 
         rechecked = await client.post(
             f"/api/v1/reconciliation/cases/{case_id}/recheck",
