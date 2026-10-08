@@ -1138,6 +1138,13 @@ class ReconciliationCase(VersionedMixin, Base):
             "materiality IN ('INFO','WARNING','MATERIAL','CRITICAL')",
             name="ck_reconciliation_case_materiality",
         ),
+        CheckConstraint(
+            "resolution_type IS NULL OR resolution_type IN ("
+            "'INTERNAL_CORRECTION','EXTERNAL_CORRECTION','LATE_EVENT_APPLIED',"
+            "'MAPPING_CORRECTION','ACCEPTED_DIFFERENCE','DISPUTE_OUTCOME'"
+            ")",
+            name="ck_reconciliation_case_resolution_type",
+        ),
         Index("ix_reconciliation_cases_type_status", "reconciliation_type", "status"),
         Index("ix_reconciliation_cases_internal", "internal_entity_type", "internal_entity_id"),
         Index("ix_reconciliation_cases_provider_status", "external_provider_id", "status"),
