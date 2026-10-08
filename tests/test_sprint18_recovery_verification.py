@@ -168,7 +168,9 @@ async def test_recovery_verification_passes_balanced_authoritative_state(
     assert checks["JOURNAL_INTEGRITY"]["status"] == "PASS"
     assert checks["OUTBOX_INBOX_INTEGRITY"]["status"] == "PASS"
     assert checks["SOURCE_INTEGRITY_EXTERNAL_VERIFICATION"]["status"] == "PASS"
-    assert journal_id not in {UUID(value) for value in checks["JOURNAL_INTEGRITY"]["details"]["invalid_posted_entry_ids"]}
+    assert journal_id not in {
+        UUID(value) for value in checks["JOURNAL_INTEGRITY"]["details"]["invalid_posted_entry_ids"]
+    }
 
 
 @pytest.mark.integration
@@ -421,7 +423,9 @@ async def test_recovery_preserves_stale_reconciliation_and_active_stop(
     assert checks["RECONCILIATION_STATE_READABILITY"]["status"] == "PASS"
     assert checks["RECONCILIATION_STATE_READABILITY"]["details"]["stale_case_count"] == 1
     assert checks["RECONCILIATION_STATE_READABILITY"]["details"]["active_block_count"] == 1
-    assert checks["RECONCILIATION_STATE_READABILITY"]["details"]["business_follow_up_required"] is True
+    assert (
+        checks["RECONCILIATION_STATE_READABILITY"]["details"]["business_follow_up_required"] is True
+    )
     assert checks["STOP_CONTROL_PRESERVATION"]["status"] == "PASS"
     assert checks["STOP_CONTROL_PRESERVATION"]["details"]["active_control_count"] == 1
 
