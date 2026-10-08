@@ -467,7 +467,6 @@ async def get_reconciliation_case(
     )
 
 
-
 async def _authorize_case_mutation(
     session: AsyncSession,
     *,
