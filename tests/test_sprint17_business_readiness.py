@@ -213,7 +213,7 @@ async def test_global_stop_activation_is_idempotent_and_clear_restores_ready(
         identity_type="STAFF",
         role=ROLE_OPERATIONS,
     )
-    scope = {"pilot_scope": "sprint17-ready"}
+    scope: dict[str, object] = {"pilot_scope": "sprint17-ready"}
     pack, risk = await _seed_ready_policy_and_risk(
         database,
         actor_id=operator.id,
