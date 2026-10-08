@@ -37,9 +37,7 @@ _ALLOWED_CHECKER_ROLES = frozenset(
     {"RISK", "FINANCE_RECONCILIATION", "LEGAL_COMPLIANCE", "GOVERNANCE_APPROVER"}
 )
 _UNRESOLVED_CASE_STATUSES = frozenset({"MISMATCH", "STALE", "DISPUTED"})
-_RESOURCE_SOURCES = frozenset(
-    {"RECONCILIATION_CASE", "INTERNAL_ENTITY", "EXTERNAL_PROVIDER"}
-)
+_RESOURCE_SOURCES = frozenset({"RECONCILIATION_CASE", "INTERNAL_ENTITY", "EXTERNAL_PROVIDER"})
 
 
 class ReconciliationResolutionError(RuntimeError):
@@ -147,13 +145,16 @@ def _blocking_rules(policy: PolicyVersion, case: ReconciliationCase) -> list[Blo
         command = raw.get("blocked_command_type")
         resource_source = raw.get("resource_source")
         resource_type = raw.get("resource_type")
-        if not all(isinstance(value, str) and value.strip() for value in (
-            reason,
-            materiality,
-            command,
-            resource_source,
-            resource_type,
-        )):
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (
+                reason,
+                materiality,
+                command,
+                resource_source,
+                resource_type,
+            )
+        ):
             raise ReconciliationResolutionError(
                 "RECONCILIATION_POLICY_INVALID",
                 "Blocking rules require nonblank reason/materiality/command/resource fields",
@@ -309,8 +310,7 @@ async def sync_case_blocks_from_policy(
     matched_rules = [
         rule
         for rule in _blocking_rules(resolved_policy, case)
-        if rule.reason_code == case.mismatch_reason_code
-        and rule.materiality == case.materiality
+        if rule.reason_code == case.mismatch_reason_code and rule.materiality == case.materiality
     ]
     activated: list[ReconciliationBlock] = []
     for rule in matched_rules:
@@ -454,7 +454,11 @@ async def propose_resolution(
             "RECONCILIATION_RESOLUTION_TYPE_INVALID",
             "Resolution type is not authorized",
         )
-    if not reason.strip() or not evidence_references or any(not item.strip() for item in evidence_references):
+    if (
+        not reason.strip()
+        or not evidence_references
+        or any(not item.strip() for item in evidence_references)
+    ):
         raise ReconciliationResolutionError(
             "RECONCILIATION_RESOLUTION_EVIDENCE_REQUIRED",
             "Resolution requires a nonblank reason and evidence references",
@@ -803,9 +807,7 @@ async def recheck_lender_resolution(
     async with database.session_factory() as session:
         async with session.begin():
             case = await session.scalar(
-                select(ReconciliationCase)
-                .where(ReconciliationCase.id == case_id)
-                .with_for_update()
+                select(ReconciliationCase).where(ReconciliationCase.id == case_id).with_for_update()
             )
             proposal = await session.scalar(
                 select(ReconciliationResolutionProposal)
