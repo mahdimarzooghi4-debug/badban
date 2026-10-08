@@ -1087,6 +1087,7 @@ class ReconciliationRun(Base):
         nullable=True,
     )
     scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    scope_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
     policy_pack_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("policy_versions.id", ondelete="RESTRICT"),
