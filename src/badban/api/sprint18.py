@@ -5,7 +5,7 @@ from typing import Any, Literal, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,16 +53,7 @@ class RecoveryVerificationCreate(BaseModel):
     restore_reference: str = Field(min_length=1, max_length=255)
     environment_reference: str = Field(min_length=1, max_length=120)
     source_backup_reference: str | None = Field(default=None, min_length=1, max_length=500)
-    source_integrity_verified: bool | None = None
     source_integrity_reference: str | None = Field(default=None, min_length=1, max_length=500)
-
-    @model_validator(mode="after")
-    def verified_source_requires_reference(self) -> RecoveryVerificationCreate:
-        if self.source_integrity_verified is True and self.source_integrity_reference is None:
-            raise ValueError(
-                "source_integrity_reference is required when source_integrity_verified is true"
-            )
-        return self
 
 
 class RecoveryVerificationCheckView(BaseModel):
@@ -194,7 +185,6 @@ async def create_recovery_verification(
             restore_reference=body.restore_reference,
             environment_reference=body.environment_reference,
             source_backup_reference=body.source_backup_reference,
-            source_integrity_verified=body.source_integrity_verified,
             source_integrity_reference=body.source_integrity_reference,
             actor_type=principal.identity_type,
             actor_id=principal.identity_id,
