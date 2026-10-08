@@ -128,17 +128,11 @@ async def _journal_check(session: AsyncSession) -> RecoveryCheck:
             invalid_posted.append(str(entry.id))
         if entry.reversal_of_entry_id is not None:
             original = by_id.get(entry.reversal_of_entry_id)
-            if (
-                original is None
-                or original.id == entry.id
-                or original.state != "POSTED"
-            ):
+            if original is None or original.id == entry.id or original.state != "POSTED":
                 invalid_reversals.append(str(entry.id))
 
     status: _CHECK_STATUS = (
-        "PASS"
-        if not invalid_posted and not invalid_reversals and not prepared_ids
-        else "FAIL"
+        "PASS" if not invalid_posted and not invalid_reversals and not prepared_ids else "FAIL"
     )
     return RecoveryCheck(
         code="JOURNAL_INTEGRITY",
@@ -162,8 +156,7 @@ async def _messaging_check(session: AsyncSession) -> RecoveryCheck:
     ).all()
 
     journal_events = {
-        (message.event_type, message.aggregate_type, message.aggregate_id)
-        for message in outbox
+        (message.event_type, message.aggregate_type, message.aggregate_id) for message in outbox
     }
     missing_journal_event_ids: list[str] = []
     for entry in posted:
@@ -216,9 +209,7 @@ async def _messaging_check(session: AsyncSession) -> RecoveryCheck:
                 1 for message in outbox if message.dead_lettered_at is not None
             ),
             "inbox_count": len(inbox),
-            "unprocessed_inbox_count": sum(
-                1 for message in inbox if message.processed_at is None
-            ),
+            "unprocessed_inbox_count": sum(1 for message in inbox if message.processed_at is None),
             "missing_journal_event_ids": missing_journal_event_ids,
             "malformed_outbox_ids": malformed_outbox,
             "duplicate_inbox_ids": duplicate_inbox_ids,
@@ -237,10 +228,7 @@ async def _evidence_check(session: AsyncSession) -> RecoveryCheck:
             or not evidence.storage_provider.strip()
             or not evidence.storage_reference.strip()
             or scheme in {"http", "https"}
-            or (
-                evidence.content_hash is not None
-                and not evidence.content_hash.strip()
-            )
+            or (evidence.content_hash is not None and not evidence.content_hash.strip())
         ):
             invalid_ids.append(str(evidence.id))
 
@@ -259,22 +247,17 @@ async def _evidence_check(session: AsyncSession) -> RecoveryCheck:
 async def _access_control_check(session: AsyncSession) -> RecoveryCheck:
     grants = (await session.scalars(select(RoleGrant))).all()
     identities = {
-        identity.id: identity
-        for identity in (await session.scalars(select(Identity))).all()
+        identity.id: identity for identity in (await session.scalars(select(Identity))).all()
     }
     invalid_grants: list[str] = []
     for grant in grants:
         identity = identities.get(grant.identity_id)
-        scope_valid = (
-            grant.scope_type in _VALID_SCOPE_TYPES
-            and (
-                (grant.scope_type == SCOPE_GLOBAL and grant.scope_id is None)
-                or (grant.scope_type != SCOPE_GLOBAL and grant.scope_id is not None)
-            )
+        scope_valid = grant.scope_type in _VALID_SCOPE_TYPES and (
+            (grant.scope_type == SCOPE_GLOBAL and grant.scope_id is None)
+            or (grant.scope_type != SCOPE_GLOBAL and grant.scope_id is not None)
         )
-        active_identity_valid = (
-            grant.status != "ACTIVE"
-            or (identity is not None and identity.status == "ACTIVE")
+        active_identity_valid = grant.status != "ACTIVE" or (
+            identity is not None and identity.status == "ACTIVE"
         )
         if not scope_valid or not active_identity_valid:
             invalid_grants.append(str(grant.id))
@@ -308,26 +291,19 @@ async def _policy_legal_provider_check(
 
     valid_authorizations = (
         await session.scalars(
-            select(LegalAuthorization).where(
-                LegalAuthorization.lifecycle_status == "VALID"
-            )
+            select(LegalAuthorization).where(LegalAuthorization.lifecycle_status == "VALID")
         )
     ).all()
     invalid_authorization_ids = [
         str(authorization.id)
         for authorization in valid_authorizations
         if authorization.effective_from > evaluated_at
-        or (
-            authorization.expires_at is not None
-            and authorization.expires_at <= evaluated_at
-        )
+        or (authorization.expires_at is not None and authorization.expires_at <= evaluated_at)
     ]
     providers = (await session.scalars(select(CreditProvider))).all()
 
     status: _CHECK_STATUS = (
-        "PASS"
-        if not invalid_policy_ids and not invalid_authorization_ids
-        else "FAIL"
+        "PASS" if not invalid_policy_ids and not invalid_authorization_ids else "FAIL"
     )
     return RecoveryCheck(
         code="POLICY_PROVIDER_LEGAL_INTEGRITY",
@@ -354,15 +330,12 @@ async def _reconciliation_check(session: AsyncSession) -> RecoveryCheck:
             "failed_run_count": sum(1 for run in runs if run.status == "FAILED"),
             "case_count": len(cases),
             "unresolved_case_count": sum(
-                1
-                for case in cases
-                if case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"}
+                1 for case in cases if case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"}
             ),
             "stale_case_count": sum(1 for case in cases if case.status == "STALE"),
             "active_block_count": sum(1 for block in blocks if block.active),
             "business_follow_up_required": any(
-                case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"}
-                for case in cases
+                case.status in {"PENDING", "MISMATCH", "STALE", "DISPUTED"} for case in cases
             )
             or any(block.active for block in blocks),
         },
@@ -474,14 +447,8 @@ async def execute_recovery_verification(
         ),
     ]
     failed_count = sum(1 for check in checks if check.status == "FAIL")
-    not_verified_count = sum(
-        1 for check in checks if check.status == "NOT_VERIFIED"
-    )
-    status = (
-        "PASSED"
-        if failed_count == 0 and not_verified_count == 0
-        else "FAILED"
-    )
+    not_verified_count = sum(1 for check in checks if check.status == "NOT_VERIFIED")
+    status = "PASSED" if failed_count == 0 and not_verified_count == 0 else "FAILED"
     completed_at = datetime.now(UTC)
     verification = RecoveryVerification(
         restore_reference=restore_ref,
@@ -525,9 +492,7 @@ async def execute_recovery_verification(
         correlation_id=correlation_id,
         outcome="SUCCESS" if status == "PASSED" else "FAILED",
         reason_code=(
-            "RECOVERY_VERIFICATION_PASSED"
-            if status == "PASSED"
-            else "RECOVERY_VERIFICATION_FAILED"
+            "RECOVERY_VERIFICATION_PASSED" if status == "PASSED" else "RECOVERY_VERIFICATION_FAILED"
         ),
         new_state={
             "status": status,
