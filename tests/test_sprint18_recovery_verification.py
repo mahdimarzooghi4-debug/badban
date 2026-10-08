@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select, text, update
+from sqlalchemy import text, update
 from sqlalchemy.exc import DBAPIError
 
 from badban.api.app import create_app
