@@ -1373,8 +1373,7 @@ class RecoveryVerification(Base):
             name="ck_recovery_verification_status",
         ),
         CheckConstraint(
-            "check_count >= 0 AND failed_check_count >= 0 "
-            "AND not_verified_check_count >= 0",
+            "check_count >= 0 AND failed_check_count >= 0 AND not_verified_check_count >= 0",
             name="ck_recovery_verification_counts_nonnegative",
         ),
         Index("ix_recovery_verifications_restore", "restore_reference", "created_at"),
