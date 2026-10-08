@@ -1053,6 +1053,157 @@ class ExternalLoanEvent(Base):
     )
 
 
+class ReconciliationRun(Base):
+    __tablename__ = "reconciliation_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "reconciliation_type IN ("
+            "'LENDER_EXTERNAL_LOAN','GUARANTEE_ISSUER','CUSTODY_ASSET',"
+            "'SETTLEMENT','COLLATERAL_REGISTRY','LEDGER_SUBLEDGER'"
+            ")",
+            name="ck_reconciliation_run_type",
+        ),
+        CheckConstraint(
+            "status IN ('RUNNING','COMPLETED','FAILED')",
+            name="ck_reconciliation_run_status",
+        ),
+        CheckConstraint(
+            "matched_count >= 0 AND mismatch_count >= 0 AND stale_count >= 0 "
+            "AND critical_count >= 0",
+            name="ck_reconciliation_run_counts_nonnegative",
+        ),
+        UniqueConstraint("source_fingerprint", name="uq_reconciliation_run_source_fingerprint"),
+        Index("ix_reconciliation_runs_type_status", "reconciliation_type", "status"),
+        Index("ix_reconciliation_runs_provider_status", "provider_id", "status"),
+        Index("ix_reconciliation_runs_started", "started_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    provider_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("credit_providers.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    scope_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    policy_pack_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    policy_pack_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    rule_policy_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    rule_policy_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    rule_policy_version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    rule_schema_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    internal_cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    external_cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_snapshot_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_evidence_references: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    source_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    matched_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    mismatch_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stale_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    critical_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ReconciliationCase(VersionedMixin, Base):
+    __tablename__ = "reconciliation_cases"
+    __table_args__ = (
+        CheckConstraint(
+            "reconciliation_type IN ("
+            "'LENDER_EXTERNAL_LOAN','GUARANTEE_ISSUER','CUSTODY_ASSET',"
+            "'SETTLEMENT','COLLATERAL_REGISTRY','LEDGER_SUBLEDGER'"
+            ")",
+            name="ck_reconciliation_case_type",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING','MATCHED','MISMATCH','STALE','DISPUTED','RESOLVED')",
+            name="ck_reconciliation_case_status",
+        ),
+        CheckConstraint(
+            "materiality IN ('INFO','WARNING','MATERIAL','CRITICAL')",
+            name="ck_reconciliation_case_materiality",
+        ),
+        Index("ix_reconciliation_cases_type_status", "reconciliation_type", "status"),
+        Index("ix_reconciliation_cases_internal", "internal_entity_type", "internal_entity_id"),
+        Index("ix_reconciliation_cases_provider_status", "external_provider_id", "status"),
+        Index("ix_reconciliation_cases_run", "run_id"),
+        Index("ix_reconciliation_cases_compared", "compared_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_runs.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    reconciliation_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    internal_entity_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    internal_entity_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    external_provider_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("credit_providers.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    materiality: Mapped[str] = mapped_column(String(20), nullable=False)
+    mismatch_reason_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    compared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolution_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    rule_policy_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    rule_policy_version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    first_detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ReconciliationObservation(Base):
+    __tablename__ = "reconciliation_observations"
+    __table_args__ = (
+        Index("ix_reconciliation_observations_case", "reconciliation_case_id"),
+        Index("ix_reconciliation_observations_observed", "observed_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    internal_value_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    external_value_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    difference_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class PolicyVersion(VersionedMixin, Base):
     __tablename__ = "policy_versions"
     __table_args__ = (
@@ -1067,7 +1218,7 @@ class PolicyVersion(VersionedMixin, Base):
             "('ASSET_TYPE_POLICY','OWNERSHIP_FUNDING_POLICY',"
             "'PROVIDER_PRODUCT_POLICY','RISK_APPETITE_POLICY',"
             "'RETURN_ALLOCATION_POLICY','LEGAL_AUTHORIZATION_POLICY',"
-            "'POSTING_ACCOUNTING_MAPPING_POLICY','PILOT_POLICY_PACK')",
+            "'POSTING_ACCOUNTING_MAPPING_POLICY','RECONCILIATION_POLICY','PILOT_POLICY_PACK')",
             name="ck_policy_version_type",
         ),
         CheckConstraint(
