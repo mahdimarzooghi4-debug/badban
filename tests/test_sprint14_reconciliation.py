@@ -613,7 +613,9 @@ async def test_missing_policy_and_missing_adapter_fail_closed(
     assert policy_exc.value.code == "RECONCILIATION_POLICY_MISSING"
 
     async with database.session_factory() as session:
-        assert int(await session.scalar(select(func.count()).select_from(ReconciliationRun)) or 0) == 0
+        assert (
+            int(await session.scalar(select(func.count()).select_from(ReconciliationRun)) or 0) == 0
+        )
 
 
 @pytest.mark.integration
