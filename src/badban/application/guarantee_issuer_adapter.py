@@ -296,7 +296,9 @@ class GuaranteeIssuerReconciliationSnapshot(BaseModel):
     @classmethod
     def snapshot_at_is_timezone_aware(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("guarantee issuer reconciliation snapshot timestamp must be timezone-aware")
+            raise ValueError(
+                "guarantee issuer reconciliation snapshot timestamp must be timezone-aware"
+            )
         return value
 
     @field_validator("evidence_references")
