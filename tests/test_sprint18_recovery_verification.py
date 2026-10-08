@@ -243,8 +243,7 @@ async def test_recovery_verification_detects_balanced_but_noninverse_reversal(
             )
             await session.execute(
                 text(
-                    "ALTER TABLE journal_postings DISABLE TRIGGER "
-                    "trg_journal_postings_append_only"
+                    "ALTER TABLE journal_postings DISABLE TRIGGER trg_journal_postings_append_only"
                 )
             )
             reversal = JournalEntry(
@@ -295,10 +294,7 @@ async def test_recovery_verification_detects_balanced_but_noninverse_reversal(
             await session.flush()
             reversal_id = reversal.id
             await session.execute(
-                text(
-                    "ALTER TABLE journal_postings ENABLE TRIGGER "
-                    "trg_journal_postings_append_only"
-                )
+                text("ALTER TABLE journal_postings ENABLE TRIGGER trg_journal_postings_append_only")
             )
             await session.execute(
                 text(
