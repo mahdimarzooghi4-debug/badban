@@ -560,6 +560,7 @@ async def execute_lender_reconciliation(
                 reconciliation_type=LENDER_RECONCILIATION_TYPE,
                 provider_id=provider_id,
                 scope_definition=scope_definition,
+                scope_reference=scope_reference,
                 policy_pack_id=policy.policy_pack_id,
                 policy_pack_version=policy.policy_pack_version,
                 rule_policy_version_id=policy.rule_policy_version_id,
