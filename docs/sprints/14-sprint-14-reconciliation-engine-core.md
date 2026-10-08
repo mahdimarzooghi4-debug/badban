@@ -1,6 +1,6 @@
 # Sprint 14 — Reconciliation Engine Core and Lender Baseline
 
-- **Status:** Accepted / Code Authorized
+- **Status:** Code + Code Review Complete / Merge Pending Explicit Approval
 - **Date:** 2026-10-08
 - **Stage:** Sprint
 - **Scope:** backend-first / BL-042 Core + lender vertical slice
