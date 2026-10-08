@@ -524,15 +524,12 @@ async def execute_lender_reconciliation(
         async with session.begin():
             await session.execute(
                 text(
-                    "SELECT pg_advisory_xact_lock("
-                    "hashtextextended(:reconciliation_fingerprint, 0))"
+                    "SELECT pg_advisory_xact_lock(hashtextextended(:reconciliation_fingerprint, 0))"
                 ),
                 {"reconciliation_fingerprint": fingerprint},
             )
             existing = await session.scalar(
-                select(ReconciliationRun).where(
-                    ReconciliationRun.source_fingerprint == fingerprint
-                )
+                select(ReconciliationRun).where(ReconciliationRun.source_fingerprint == fingerprint)
             )
             if existing is not None:
                 return existing.id
