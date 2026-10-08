@@ -365,30 +365,16 @@ async def _stop_control_check(session: AsyncSession) -> RecoveryCheck:
 
 def _source_integrity_check(
     *,
-    source_integrity_verified: bool | None,
     source_integrity_reference: str | None,
 ) -> RecoveryCheck:
-    if source_integrity_verified is None:
-        return RecoveryCheck(
-            code="SOURCE_INTEGRITY_EXTERNAL_VERIFICATION",
-            status="NOT_VERIFIED",
-            details={"externally_verified": False},
-            evidence_reference=source_integrity_reference,
-        )
-    if source_integrity_verified:
-        return RecoveryCheck(
-            code="SOURCE_INTEGRITY_EXTERNAL_VERIFICATION",
-            status="PASS" if source_integrity_reference is not None else "FAIL",
-            details={
-                "externally_verified": True,
-                "verification_reference_supplied": source_integrity_reference is not None,
-            },
-            evidence_reference=source_integrity_reference,
-        )
     return RecoveryCheck(
         code="SOURCE_INTEGRITY_EXTERNAL_VERIFICATION",
-        status="FAIL",
-        details={"externally_verified": False},
+        status="NOT_VERIFIED",
+        details={
+            "externally_verified": False,
+            "authoritative_external_verifier_connected": False,
+            "verification_reference_supplied": source_integrity_reference is not None,
+        },
         evidence_reference=source_integrity_reference,
     )
 
@@ -399,7 +385,6 @@ async def execute_recovery_verification(
     restore_reference: str,
     environment_reference: str,
     source_backup_reference: str | None,
-    source_integrity_verified: bool | None,
     source_integrity_reference: str | None,
     actor_type: str,
     actor_id: UUID,
@@ -425,12 +410,6 @@ async def execute_recovery_verification(
         code="RECOVERY_INTEGRITY_REFERENCE_INVALID",
         field="source_integrity_reference",
     )
-    if source_integrity_verified is True and integrity_ref is None:
-        raise RecoveryVerificationError(
-            "RECOVERY_INTEGRITY_REFERENCE_REQUIRED",
-            "A verified external source-integrity result requires an evidence reference",
-        )
-
     started_at = datetime.now(UTC)
     checks = [
         await _database_check(session),
@@ -441,10 +420,7 @@ async def execute_recovery_verification(
         await _policy_legal_provider_check(session, evaluated_at=started_at),
         await _reconciliation_check(session),
         await _stop_control_check(session),
-        _source_integrity_check(
-            source_integrity_verified=source_integrity_verified,
-            source_integrity_reference=integrity_ref,
-        ),
+        _source_integrity_check(source_integrity_reference=integrity_ref),
     ]
     failed_count = sum(1 for check in checks if check.status == "FAIL")
     not_verified_count = sum(1 for check in checks if check.status == "NOT_VERIFIED")
