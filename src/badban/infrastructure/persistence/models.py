@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -1199,6 +1200,86 @@ class ReconciliationObservation(Base):
     difference_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ReconciliationResolutionProposal(VersionedMixin, Base):
+    __tablename__ = "reconciliation_resolution_proposals"
+    __table_args__ = (
+        CheckConstraint(
+            "resolution_type IN ("
+            "'INTERNAL_CORRECTION','EXTERNAL_CORRECTION','LATE_EVENT_APPLIED',"
+            "'MAPPING_CORRECTION','ACCEPTED_DIFFERENCE','DISPUTE_OUTCOME'"
+            ")",
+            name="ck_reconciliation_resolution_type",
+        ),
+        CheckConstraint(
+            "status IN ('PROPOSED','APPROVED','REJECTED','APPLIED')",
+            name="ck_reconciliation_resolution_status",
+        ),
+        Index("ix_reconciliation_resolution_case_status", "reconciliation_case_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    expected_case_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    resolution_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    evidence_references: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    correction_command_references: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="PROPOSED")
+    proposed_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    approved_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ReconciliationBlock(Base):
+    __tablename__ = "reconciliation_blocks"
+    __table_args__ = (
+        UniqueConstraint(
+            "reconciliation_case_id",
+            "blocked_command_type",
+            "resource_type",
+            "resource_id",
+            name="uq_reconciliation_block_case_command_resource",
+        ),
+        Index("ix_reconciliation_blocks_active_command", "active", "blocked_command_type"),
+        Index("ix_reconciliation_blocks_resource", "resource_type", "resource_id", "active"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reconciliation_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reconciliation_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    blocked_command_type: Mapped[str] = mapped_column(String(160), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    resource_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    policy_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    policy_version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cleared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
