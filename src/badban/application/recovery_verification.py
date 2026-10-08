@@ -147,6 +147,7 @@ async def _journal_check(session: AsyncSession) -> RecoveryCheck:
             "journal_entry_count": len(entries),
             "posted_count": sum(1 for entry in entries if entry.state == "POSTED"),
             "prepared_count": len(prepared_ids),
+            "prepared_entry_ids": prepared_ids,
             "invalid_posted_entry_ids": invalid_posted,
             "invalid_reversal_entry_ids": invalid_reversals,
         },
