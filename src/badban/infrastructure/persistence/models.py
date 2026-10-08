@@ -1237,6 +1237,11 @@ class ReconciliationResolutionProposal(VersionedMixin, Base):
         JSONB, nullable=False, default=list
     )
     payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    approval_request_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("approval_requests.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="PROPOSED")
     proposed_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     approved_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
