@@ -495,6 +495,11 @@ async def propose_resolution(
 
     approval: ApprovalRequest | None = None
     if governance.approval_required:
+        if governance.checker_role is None:
+            raise ReconciliationResolutionError(
+                "RECONCILIATION_RESOLUTION_POLICY_MISSING",
+                "Checker role is required for governed resolution approval",
+            )
         scope_type = "PROVIDER" if case.external_provider_id is not None else "GLOBAL"
         approval = ApprovalRequest(
             action_type="RECONCILIATION_RESOLUTION",
@@ -680,7 +685,8 @@ async def approve_resolution(
     case.resolution_type = proposal.resolution_type
     case.resolution_reference = f"ReconciliationResolutionProposal:{proposal.id}"
 
-    if proposal.resolution_type in _IMMEDIATE_RESOLUTION_TYPES:
+    resolved_immediately = proposal.resolution_type in _IMMEDIATE_RESOLUTION_TYPES
+    if resolved_immediately:
         proposal.status = "APPLIED"
         case.status = "RESOLVED"
         case.resolved_at = now
@@ -691,13 +697,11 @@ async def approve_resolution(
             policy=policy,
             correlation_id=correlation_id,
         )
-        event_type = "ReconciliationResolved"
     else:
         proposal.status = "APPROVED"
         if case.status != "DISPUTED":
             case.status = "DISPUTED"
             case.version += 1
-        event_type = "ReconciliationResolutionProposed"
 
     append_audit(
         session,
@@ -717,19 +721,20 @@ async def approve_resolution(
             "case_status": case.status,
         },
     )
-    session.add(
-        _event(
-            event_type=event_type,
-            case=case,
-            payload={
-                "case_id": str(case.id),
-                "proposal_id": str(proposal.id),
-                "resolution_type": proposal.resolution_type,
-                "case_status": case.status,
-            },
-            correlation_id=correlation_id,
+    if resolved_immediately:
+        session.add(
+            _event(
+                event_type="ReconciliationResolved",
+                case=case,
+                payload={
+                    "case_id": str(case.id),
+                    "proposal_id": str(proposal.id),
+                    "resolution_type": proposal.resolution_type,
+                    "case_status": case.status,
+                },
+                correlation_id=correlation_id,
+            )
         )
-    )
     return proposal
 
 
