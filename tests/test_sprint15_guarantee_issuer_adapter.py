@@ -94,6 +94,11 @@ def test_manifest_accepts_only_canonical_guarantee_issuer_events() -> None:
         )
 
 
+def test_unknown_guarantee_issuer_event_type_fails_closed() -> None:
+    with pytest.raises(ValidationError):
+        _event(event_type="PROVIDER_SPECIFIC_STATUS")
+
+
 def test_normalized_issuer_event_uses_exact_decimal_and_authoritative_evidence() -> None:
     event = _event()
     assert str(event.issued_amount_decimal()) == "100.000000000000000001"
