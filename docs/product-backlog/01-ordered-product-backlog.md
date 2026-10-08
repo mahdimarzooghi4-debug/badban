@@ -981,7 +981,8 @@ Internal risk secrets and unrelated records are not exposed.
 **Priority:** P3  
 **Type:** Operational Enabler  
 **Depends on:** BL-004, BL-041, BL-042  
-**Traceability:** Technical 12 §§29-30; Technical 13 §§30-31; Technical 14 §§18-20
+**Traceability:** Technical 12 §§29-30; Technical 13 §§30-31; Technical 14 §§18-20  
+**Delivery Status:** Sprint 18 Recovery Verification Core Code + Code Review complete on PR #21; stacked on Sprint 17; full external backup/source verification remains pending an authoritative external verifier; merge pending prerequisite ordering and explicit approval
 
 **Acceptance Criteria**
 
