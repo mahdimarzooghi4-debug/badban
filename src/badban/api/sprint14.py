@@ -313,9 +313,7 @@ async def list_reconciliation_cases(
         ReconciliationCase.id.desc(),
     )
     if reconciliation_type is not None:
-        statement = statement.where(
-            ReconciliationCase.reconciliation_type == reconciliation_type
-        )
+        statement = statement.where(ReconciliationCase.reconciliation_type == reconciliation_type)
     if case_status is not None:
         statement = statement.where(ReconciliationCase.status == case_status)
     if materiality is not None:
