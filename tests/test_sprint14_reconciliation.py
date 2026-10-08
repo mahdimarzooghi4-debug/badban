@@ -740,3 +740,47 @@ async def test_unconfigured_adapter_records_outage_audit_without_creating_run(
     assert run_count == 0
     assert audit is not None
     assert "ReconciliationRunCompleted" not in event_types
+
+@pytest.mark.integration
+async def test_same_snapshot_different_scope_reference_creates_distinct_runs(
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    from badban.application.lender_adapter import LenderAdapterRegistry
+
+    operator, _, provider, _, _ = await _seed(database)
+    snapshot = _snapshot(provider.id)
+    registry = LenderAdapterRegistry()
+    registry.register(provider.id, SnapshotAdapter(provider.id, snapshot))
+
+    first_id = await execute_lender_reconciliation(
+        database,
+        registry,
+        provider_id=provider.id,
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        scope_reference="scope-a",
+        actor_type=operator.identity_type,
+        actor_id=operator.id,
+        correlation_id=uuid4(),
+    )
+    second_id = await execute_lender_reconciliation(
+        database,
+        registry,
+        provider_id=provider.id,
+        scope_definition={"pilot_scope": "bounded-pilot"},
+        scope_reference="scope-b",
+        actor_type=operator.identity_type,
+        actor_id=operator.id,
+        correlation_id=uuid4(),
+    )
+
+    assert first_id != second_id
+    async with database.session_factory() as session:
+        runs = (
+            await session.scalars(
+                select(ReconciliationRun).order_by(ReconciliationRun.created_at, ReconciliationRun.id)
+            )
+        ).all()
+
+    assert len(runs) == 2
+    assert runs[0].source_fingerprint != runs[1].source_fingerprint
