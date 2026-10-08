@@ -46,8 +46,7 @@ def upgrade() -> None:
             name="ck_recovery_verification_status",
         ),
         sa.CheckConstraint(
-            "check_count >= 0 AND failed_check_count >= 0 "
-            "AND not_verified_check_count >= 0",
+            "check_count >= 0 AND failed_check_count >= 0 AND not_verified_check_count >= 0",
             name="ck_recovery_verification_counts_nonnegative",
         ),
         sa.ForeignKeyConstraint(
@@ -149,8 +148,7 @@ def downgrade() -> None:
         "ON recovery_verification_checks"
     )
     op.execute(
-        "DROP TRIGGER IF EXISTS trg_recovery_verifications_append_only "
-        "ON recovery_verifications"
+        "DROP TRIGGER IF EXISTS trg_recovery_verifications_append_only ON recovery_verifications"
     )
     op.execute("DROP FUNCTION IF EXISTS badban_reject_recovery_verification_mutation")
     op.drop_index(
