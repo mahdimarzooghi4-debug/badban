@@ -145,15 +145,17 @@ def _blocking_rules(policy: PolicyVersion, case: ReconciliationCase) -> list[Blo
         command = raw.get("blocked_command_type")
         resource_source = raw.get("resource_source")
         resource_type = raw.get("resource_type")
-        if not all(
-            isinstance(value, str) and value.strip()
-            for value in (
-                reason,
-                materiality,
-                command,
-                resource_source,
-                resource_type,
-            )
+        if (
+            not isinstance(reason, str)
+            or not reason.strip()
+            or not isinstance(materiality, str)
+            or not materiality.strip()
+            or not isinstance(command, str)
+            or not command.strip()
+            or not isinstance(resource_source, str)
+            or not resource_source.strip()
+            or not isinstance(resource_type, str)
+            or not resource_type.strip()
         ):
             raise ReconciliationResolutionError(
                 "RECONCILIATION_POLICY_INVALID",
@@ -302,7 +304,7 @@ async def sync_case_blocks_from_policy(
                     correlation_id=correlation_id,
                 )
             )
-        return active
+        return list(active)
 
     if case.mismatch_reason_code is None:
         return []
