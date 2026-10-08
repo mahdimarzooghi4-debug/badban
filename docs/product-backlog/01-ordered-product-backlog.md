@@ -964,7 +964,8 @@ Internal risk secrets and unrelated records are not exposed.
 **Priority:** P3  
 **Type:** Operational Capability  
 **Depends on:** BL-032, BL-042, BL-005  
-**Traceability:** Technical 13 §§7,29
+**Traceability:** Technical 13 §§7,29  
+**Delivery Status:** Sprint 17 Code + Code Review complete on PR #20; stacked on Sprint 16; merge pending prerequisite ordering and explicit approval
 
 **Acceptance Criteria**
 
