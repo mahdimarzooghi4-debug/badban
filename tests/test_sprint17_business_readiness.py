@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
@@ -11,7 +12,9 @@ from sqlalchemy import func, select, text
 from badban.api.app import create_app
 from badban.application.business_readiness import (
     BusinessReadinessError,
+    activate_stop_control,
     assert_stop_control_allows,
+    assert_stop_scope,
 )
 from badban.application.idempotency import canonical_request_hash
 from badban.config import Settings
@@ -441,3 +444,87 @@ async def test_provider_and_asset_stop_overlays_do_not_mutate_lifecycle_and_audi
     assert stored_provider is not None and stored_provider.lifecycle_status == "ACTIVE"
     assert stored_asset is not None and stored_asset.status == "ACTIVE"
     assert active_count == 2
+
+
+@pytest.mark.parametrize(
+    ("control_type", "scope_type", "has_scope_id"),
+    [
+        ("STOP_NEW_GUARANTEE_RESERVATIONS", "GLOBAL", False),
+        ("STOP_GUARANTEE_ACTIVATION", "GLOBAL", False),
+        ("SUSPEND_PROVIDER_FOR_NEW_ACTIONS", "PROVIDER", True),
+        ("SUSPEND_ASSET_TYPE_FOR_NEW_ACTIONS", "ASSET_TYPE", True),
+        ("STOP_CLAIM_SETTLEMENT", "GLOBAL", False),
+        ("STOP_COLLATERAL_RELEASE", "GLOBAL", False),
+    ],
+)
+def test_canonical_stop_control_scope_matrix(
+    control_type: str,
+    scope_type: str,
+    has_scope_id: bool,
+) -> None:
+    scope_id = uuid4() if has_scope_id else None
+    assert_stop_scope(
+        control_type=control_type,
+        scope_type=scope_type,
+        scope_id=scope_id,
+    )
+
+    invalid_scope_type = "GLOBAL" if scope_type != "GLOBAL" else "PROVIDER"
+    invalid_scope_id = None if invalid_scope_type == "GLOBAL" else uuid4()
+    with pytest.raises(BusinessReadinessError) as invalid:
+        assert_stop_scope(
+            control_type=control_type,
+            scope_type=invalid_scope_type,
+            scope_id=invalid_scope_id,
+        )
+    assert invalid.value.code == "STOP_CONTROL_SCOPE_INVALID"
+
+
+@pytest.mark.integration
+async def test_concurrent_identical_stop_activation_has_one_business_effect(
+    database,
+    clean_sprint17_tables,
+) -> None:
+    operator = await _identity_with_global_role(
+        database,
+        subject="sprint17-concurrent-operator",
+        identity_type="STAFF",
+        role=ROLE_OPERATIONS,
+    )
+
+    async def activate_once() -> UUID:
+        async with database.session_factory() as session:
+            async with session.begin():
+                control = await activate_stop_control(
+                    session,
+                    control_type="STOP_NEW_GUARANTEE_RESERVATIONS",
+                    scope_type="GLOBAL",
+                    scope_id=None,
+                    reason="concurrent stop activation",
+                    evidence_reference="evidence:test:concurrent-stop",
+                    actor_type=operator.identity_type,
+                    actor_id=operator.id,
+                    correlation_id=uuid4(),
+                )
+                control_id = control.id
+        return control_id
+
+    first_id, second_id = await asyncio.gather(activate_once(), activate_once())
+    assert first_id == second_id
+
+    async with database.session_factory() as session:
+        active_count = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(OperationalStopControl)
+                .where(
+                    OperationalStopControl.control_type
+                    == "STOP_NEW_GUARANTEE_RESERVATIONS",
+                    OperationalStopControl.scope_type == "GLOBAL",
+                    OperationalStopControl.scope_id.is_(None),
+                    OperationalStopControl.active.is_(True),
+                )
+            )
+            or 0
+        )
+    assert active_count == 1
