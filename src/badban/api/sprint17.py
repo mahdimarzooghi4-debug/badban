@@ -330,9 +330,13 @@ async def business_readiness(
     if body.provider_id is not None:
         try:
             adapter = request.app.state.lender_adapter_registry.resolve(body.provider_id)
-            provider_health = await adapter.health_check()
-        except (LenderAdapterError, Exception):
+        except LenderAdapterError:
             provider_health = None
+        else:
+            try:
+                provider_health = await adapter.health_check()
+            except Exception:
+                provider_health = None
 
     result = await evaluate_business_readiness(
         session,
