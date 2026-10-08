@@ -446,9 +446,10 @@ async def test_recovery_preserves_stale_reconciliation_and_active_stop(
     assert response.status_code == 201
     body = response.json()
     assert body["status"] == "FAILED"
+    assert body["failed_check_count"] == 1
     assert body["not_verified_check_count"] == 1
     checks = {check["check_code"]: check for check in body["checks"]}
-    assert checks["RECONCILIATION_STATE_READABILITY"]["status"] == "PASS"
+    assert checks["RECONCILIATION_STATE_READABILITY"]["status"] == "FAIL"
     assert checks["RECONCILIATION_STATE_READABILITY"]["details"]["stale_case_count"] == 1
     assert checks["RECONCILIATION_STATE_READABILITY"]["details"]["active_block_count"] == 1
     assert (
