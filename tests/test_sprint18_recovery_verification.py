@@ -133,7 +133,6 @@ def _external_integrity_payload(*, restore_reference: str) -> dict[str, object]:
         "restore_reference": restore_reference,
         "environment_reference": "stage-recovery-test",
         "source_backup_reference": "backup:test:sprint18",
-        "source_integrity_verified": True,
         "source_integrity_reference": "integrity:test:sprint18",
     }
 
@@ -161,13 +160,13 @@ async def test_recovery_verification_passes_balanced_authoritative_state(
 
     assert response.status_code == 201
     body = response.json()
-    assert body["status"] == "PASSED"
+    assert body["status"] == "FAILED"
     assert body["failed_check_count"] == 0
-    assert body["not_verified_check_count"] == 0
+    assert body["not_verified_check_count"] == 1
     checks = {check["check_code"]: check for check in body["checks"]}
     assert checks["JOURNAL_INTEGRITY"]["status"] == "PASS"
     assert checks["OUTBOX_INBOX_INTEGRITY"]["status"] == "PASS"
-    assert checks["SOURCE_INTEGRITY_EXTERNAL_VERIFICATION"]["status"] == "PASS"
+    assert checks["SOURCE_INTEGRITY_EXTERNAL_VERIFICATION"]["status"] == "NOT_VERIFIED"
     assert journal_id not in {
         UUID(value) for value in checks["JOURNAL_INTEGRITY"]["details"]["invalid_posted_entry_ids"]
     }
@@ -207,6 +206,34 @@ async def test_recovery_verification_fails_closed_without_external_source_integr
         if check["check_code"] == "SOURCE_INTEGRITY_EXTERNAL_VERIFICATION"
     )
     assert source_check["status"] == "NOT_VERIFIED"
+
+
+@pytest.mark.integration
+async def test_caller_cannot_assert_external_source_integrity(
+    settings: Settings,
+    database,
+    clean_sprint18_tables,
+) -> None:
+    operator = await _identity_with_global_role(
+        database,
+        subject="sprint18-operator-no-self-attest",
+        identity_type="STAFF",
+        role=ROLE_OPERATIONS,
+    )
+
+    async with await _client(settings) as client:
+        response = await client.post(
+            "/api/v1/recovery-verifications",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            json={
+                "restore_reference": "restore-self-attest-rejected",
+                "environment_reference": "stage-recovery-test",
+                "source_integrity_reference": "integrity:test:sprint18",
+                "source_integrity_verified": True,
+            },
+        )
+
+    assert response.status_code == 422
 
 
 @pytest.mark.integration
@@ -418,7 +445,8 @@ async def test_recovery_preserves_stale_reconciliation_and_active_stop(
 
     assert response.status_code == 201
     body = response.json()
-    assert body["status"] == "PASSED"
+    assert body["status"] == "FAILED"
+    assert body["not_verified_check_count"] == 1
     checks = {check["check_code"]: check for check in body["checks"]}
     assert checks["RECONCILIATION_STATE_READABILITY"]["status"] == "PASS"
     assert checks["RECONCILIATION_STATE_READABILITY"]["details"]["stale_case_count"] == 1
