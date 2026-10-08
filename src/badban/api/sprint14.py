@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
@@ -25,6 +25,7 @@ from badban.application.reconciliation_resolution import (
 from badban.infrastructure.persistence.models import (
     ApprovalRequest,
     CreditProvider,
+    ReconciliationBlock,
     ReconciliationCase,
     ReconciliationObservation,
     ReconciliationResolutionProposal,
@@ -115,6 +116,9 @@ class ReconciliationCaseView(BaseModel):
     rule_policy_version_number: int
     first_detected_at: datetime
     last_observed_at: datetime
+    age_seconds: int = 0
+    last_observed_age_seconds: int = 0
+    active_block_count: int = 0
     version: int
     created_at: datetime
     updated_at: datetime
@@ -122,6 +126,47 @@ class ReconciliationCaseView(BaseModel):
 
 class ReconciliationCaseDetailView(ReconciliationCaseView):
     observations: list[ReconciliationObservationView]
+
+
+def _elapsed_seconds(now: datetime, then: datetime) -> int:
+    return max(0, int((now - then).total_seconds()))
+
+
+def _case_view(
+    case: ReconciliationCase,
+    *,
+    now: datetime,
+    active_block_count: int,
+) -> ReconciliationCaseView:
+    return ReconciliationCaseView.model_validate(case).model_copy(
+        update={
+            "age_seconds": _elapsed_seconds(now, case.first_detected_at),
+            "last_observed_age_seconds": _elapsed_seconds(now, case.last_observed_at),
+            "active_block_count": active_block_count,
+        }
+    )
+
+
+async def _active_block_counts(
+    session: AsyncSession,
+    case_ids: list[UUID],
+) -> dict[UUID, int]:
+    if not case_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(
+                ReconciliationBlock.reconciliation_case_id,
+                func.count(ReconciliationBlock.id),
+            )
+            .where(
+                ReconciliationBlock.reconciliation_case_id.in_(case_ids),
+                ReconciliationBlock.active.is_(True),
+            )
+            .group_by(ReconciliationBlock.reconciliation_case_id)
+        )
+    ).all()
+    return {case_id: int(count) for case_id, count in rows}
 
 
 class ReconciliationResolutionProposalRequest(BaseModel):
@@ -396,8 +441,9 @@ async def list_reconciliation_cases(
             correlation_id=correlation_id,
         )
 
+    request_now = datetime.now(UTC)
     statement = select(ReconciliationCase).order_by(
-        ReconciliationCase.created_at.desc(),
+        ReconciliationCase.first_detected_at.desc(),
         ReconciliationCase.id.desc(),
     )
     if reconciliation_type is not None:
@@ -409,10 +455,18 @@ async def list_reconciliation_cases(
     if provider_id is not None:
         statement = statement.where(ReconciliationCase.external_provider_id == provider_id)
     if min_age_seconds is not None:
-        cutoff = datetime.now(UTC) - timedelta(seconds=min_age_seconds)
-        statement = statement.where(ReconciliationCase.created_at <= cutoff)
+        cutoff = request_now - timedelta(seconds=min_age_seconds)
+        statement = statement.where(ReconciliationCase.first_detected_at <= cutoff)
     rows = (await session.scalars(statement.limit(limit))).all()
-    return [ReconciliationCaseView.model_validate(row) for row in rows]
+    block_counts = await _active_block_counts(session, [row.id for row in rows])
+    return [
+        _case_view(
+            row,
+            now=request_now,
+            active_block_count=block_counts.get(row.id, 0),
+        )
+        for row in rows
+    ]
 
 
 @router.get("/cases/{case_id}", response_model=ReconciliationCaseDetailView)
@@ -446,6 +500,18 @@ async def get_reconciliation_case(
             target_id=str(case.id),
             correlation_id=correlation_id,
         )
+    request_now = datetime.now(UTC)
+    active_block_count = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(ReconciliationBlock)
+            .where(
+                ReconciliationBlock.reconciliation_case_id == case.id,
+                ReconciliationBlock.active.is_(True),
+            )
+        )
+        or 0
+    )
     observations = (
         await session.scalars(
             select(ReconciliationObservation)
@@ -456,7 +522,11 @@ async def get_reconciliation_case(
             )
         )
     ).all()
-    base = ReconciliationCaseView.model_validate(case).model_dump()
+    base = _case_view(
+        case,
+        now=request_now,
+        active_block_count=active_block_count,
+    ).model_dump()
     return ReconciliationCaseDetailView(
         **base,
         observations=[
