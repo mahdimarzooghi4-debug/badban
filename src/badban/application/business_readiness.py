@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import or_, select, text
@@ -54,7 +54,7 @@ class BusinessReadinessReason:
 
 @dataclass(frozen=True, slots=True)
 class BusinessReadinessResult:
-    status: str
+    status: Literal["READY", "NOT_READY"]
     evaluated_at: datetime
     policy_pack_id: UUID | None
     risk_snapshot_id: UUID | None
