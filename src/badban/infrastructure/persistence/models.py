@@ -1166,6 +1166,7 @@ class ReconciliationCase(VersionedMixin, Base):
     compared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolution_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    resolution_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
     rule_policy_version_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("policy_versions.id", ondelete="RESTRICT"),
