@@ -59,6 +59,7 @@ class ReconciliationRunView(BaseModel):
     reconciliation_type: str
     provider_id: UUID | None
     scope_definition: dict[str, Any]
+    scope_reference: str | None
     policy_pack_id: UUID
     policy_pack_version: int
     rule_policy_version_id: UUID
@@ -168,8 +169,6 @@ class ReconciliationResolutionApproveRequest(BaseModel):
 
 class ReconciliationRecheckRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-    scope_reference: str | None = Field(default=None, min_length=1, max_length=500)
 
 
 class ReconciliationRecheckView(BaseModel):
@@ -626,7 +625,6 @@ async def recheck_reconciliation_case(
             request.app.state.database,
             request.app.state.lender_adapter_registry,
             case_id=case.id,
-            scope_reference=body.scope_reference,
             actor_type=principal.identity_type,
             actor_id=principal.identity_id,
             correlation_id=correlation_id,
