@@ -453,10 +453,7 @@ async def evaluate_business_readiness(
 
     risk_snapshot = await session.scalar(
         select(PortfolioRiskSnapshot)
-        .where(
-            PortfolioRiskSnapshot.evaluated_inputs["scope_definition"]
-            == policy_scope_definition
-        )
+        .where(PortfolioRiskSnapshot.evaluated_inputs["scope_definition"] == policy_scope_definition)
         .order_by(
             PortfolioRiskSnapshot.evaluated_at.desc(),
             PortfolioRiskSnapshot.created_at.desc(),
