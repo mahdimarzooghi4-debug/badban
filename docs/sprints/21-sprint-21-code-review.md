@@ -4,9 +4,9 @@
 - **Date:** 2026-10-09
 - **Scope:** BL-033 prerequisite — Guarantee Reserve Metrics Snapshot
 - **PR:** #24
-- **Reviewed Head:** `5a273cc11f957a52183857386ec16d1872237245`
+- **Reviewed Head:** `1f64afca6d707bcdb225e6c4e0ea0f6f408b0083`
 - **Base:** `sprint-20-delinquency-evaluator-foundation`
-- **CI Evidence:** #388 — SUCCESS
+- **CI Evidence:** #389 — SUCCESS
 
 ## Review Outcome
 
@@ -75,9 +75,9 @@ Tests cover:
 
 ## Verification
 
-At reviewed HEAD `5a273cc11f957a52183857386ec16d1872237245`:
+At reviewed HEAD `1f64afca6d707bcdb225e6c4e0ea0f6f408b0083`:
 
-- CI #388 succeeded;
+- CI #389 succeeded;
 - Secret Scan, Format, Lint, Type Check, migrations, migration drift, tests, dependency audit, and container build passed;
 - PR #24 remains Draft/Open;
 - no Stage/QA/Release/Production is claimed.
