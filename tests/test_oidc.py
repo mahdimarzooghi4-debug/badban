@@ -128,9 +128,7 @@ async def test_oidc_rejects_untrusted_jwks_before_outbound_request(
     def handler(request: httpx.Request) -> httpx.Response:
         requested.append(str(request.url))
         if str(request.url) == settings.resolved_oidc_discovery_url:
-            return httpx.Response(
-                200, json={"issuer": settings.oidc_issuer, "jwks_uri": jwks_uri}
-            )
+            return httpx.Response(200, json={"issuer": settings.oidc_issuer, "jwks_uri": jwks_uri})
         raise AssertionError("Untrusted JWKS URI must not be fetched")
 
     verifier = OidcTokenVerifier(
@@ -199,9 +197,7 @@ async def test_oidc_rejects_discovery_redirect_even_with_redirect_following_clie
 
     verifier = OidcTokenVerifier(
         settings,
-        client=httpx.AsyncClient(
-            transport=httpx.MockTransport(handler), follow_redirects=True
-        ),
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=True),
     )
     with pytest.raises(AuthenticationError) as rejected:
         await verifier._fetch_jwks()

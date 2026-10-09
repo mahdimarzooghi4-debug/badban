@@ -71,9 +71,7 @@ class OidcTokenVerifier:
                 if not isinstance(key_document, dict) or not isinstance(
                     key_document.get("keys"), list
                 ):
-                    raise AuthenticationError(
-                        "OIDC_JWKS_INVALID", "OIDC JWKS document is invalid"
-                    )
+                    raise AuthenticationError("OIDC_JWKS_INVALID", "OIDC JWKS document is invalid")
                 jwks = PyJWKSet.from_dict(key_document)
             except AuthenticationError:
                 raise
