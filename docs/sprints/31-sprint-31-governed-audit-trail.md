@@ -3,7 +3,7 @@
 - **Date:** 2026-10-09
 - **Scope:** Backend-only BL-044 / accepted Technical 07 §33, Technical 11 §14
 - **Base:** Sprint 30 PR #33, exact-head CI #448 SUCCESS
-- **Status:** Draft code; CI and independent Code Review pending
+- **Status:** Code and automated Technical Code Review complete; stacked Draft PR #34; no merge
 
 ## Contract
 
@@ -47,3 +47,10 @@ reservation, provider settlement, financial adjustments or exception
 overrides. Scope tags remain authoritative; neither audit query nor
 its caller may infer program ownership for missing scope records.
 No Stage/QA/Release/Production/Figma or PR merge.
+
+## Code and review evidence
+
+- Code HEAD: `a4e362c18407ae3ad67a607e6eace01a7e0af140`
+- Full code CI #451: SUCCESS, 320 tests passed with 1 warning; Quality and Secret Scan green
+- [Technical Code Review](./31-sprint-31-code-review.md)
+- Final documentation HEAD requires its own CI before closure; PR stays Draft/Open
