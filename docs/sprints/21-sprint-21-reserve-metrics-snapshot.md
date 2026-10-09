@@ -1,6 +1,6 @@
 # Sprint 21 — Guarantee Reserve Metrics Snapshot
 
-- **Status:** Accepted / Code Authorized
+- **Status:** Code + Code Review Complete / Merge Pending Explicit Approval
 - **Date:** 2026-10-09
 - **Stage:** Sprint
 - **Scope:** BL-033 prerequisite / reserve metrics producer
