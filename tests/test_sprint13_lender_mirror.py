@@ -1176,7 +1176,7 @@ async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
         assert (
             await client.get(f"/api/v1/external-loans/{uuid4()}/events", headers=auth)
         ).status_code == 404
-    assert set(app.openapi()["paths"][f"/api/v1/external-loans/{{loan_id}}/events"]) == {"get"}
+    assert set(app.openapi()["paths"]["/api/v1/external-loans/{loan_id}/events"]) == {"get"}
     async with database.session_factory() as session:
         stored = await session.get(GuaranteeCase, guarantee.id)
         assert stored is not None and stored.state == "ISSUED"
