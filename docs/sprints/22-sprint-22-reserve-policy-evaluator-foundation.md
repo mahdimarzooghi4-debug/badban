@@ -1,6 +1,6 @@
 # Sprint 22 — Reserve Policy Evaluator Foundation
 
-- **Status:** Accepted / Code Authorized
+- **Status:** Code + Code Review Complete / Merge Pending Explicit Approval
 - **Date:** 2026-10-09
 - **Stage:** Sprint
 - **Scope:** BL-033 prerequisite / reserve requirement + eligibility evaluator foundation
