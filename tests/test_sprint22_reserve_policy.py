@@ -229,6 +229,7 @@ def test_duplicate_registration_and_unknown_definition_fail_closed() -> None:
         Decimal("Infinity"),
         Decimal("1.0000000000000000001"),
         Decimal("100000000000000000000"),
+        Decimal("1E+20"),
     ],
 )
 def test_invalid_evaluator_outputs_fail_closed(bad_result: Decimal) -> None:
