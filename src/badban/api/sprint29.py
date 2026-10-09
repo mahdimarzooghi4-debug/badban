@@ -101,7 +101,7 @@ async def _authorized_mirror(
     response_model=LenderEventEvidencePage,
     description=(
         "Authorized Provider-scoped, read-only normalized lender event history. "
-        "APPPLIED/STALE/HISTORY_ONLY/CORRECTED events are observed facts only; "
+        "APPLIED/STALE/HISTORY_ONLY/CORRECTED events are observed facts only; "
         "an event does not authorize guarantee activation, repayment posting, "
         "risk approval or any financial action. Chronological keyset cursor "
         "is bound to this same loan; no cross-provider event enumeration."

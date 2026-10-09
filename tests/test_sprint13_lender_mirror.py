@@ -1079,8 +1079,42 @@ async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
     )
     async with database.session_factory() as session:
         async with session.begin():
-            session.add_all([mirror, other_mirror, other_user])
+            other_provider = CreditProvider(
+                legal_entity_id=provider.legal_entity_id,
+                provider_code=f"OTHER-PROVIDER-{uuid4()}",
+                display_name="Other scoped lender",
+                provider_type="EXTERNAL_LENDER",
+                integration_mode="WEBHOOK_CALLBACK",
+                authorization_review_state="TEST",
+                lifecycle_status="ACTIVE",
+                created_by=auditor.id,
+            )
+            session.add_all([mirror, other_mirror, other_user, other_provider])
             await session.flush()
+            session.add(
+                RoleGrant(
+                    identity_id=other_user.id,
+                    role_code=ROLE_AUDITOR,
+                    scope_type=SCOPE_PROVIDER,
+                    scope_id=other_provider.id,
+                    valid_from=base_time,
+                    status="ACTIVE",
+                    granted_by=None,
+                    reason_ref="test-provider-isolation",
+                )
+            )
+            scoped_other_mirror = ExternalLoanMirror(
+                guarantee_case_id=None,
+                provider_id=other_provider.id,
+                external_loan_id=f"other-provider-loan-{uuid4()}",
+                state="PENDING",
+                original_principal=Decimal("50"),
+                outstanding_principal=Decimal("50"),
+                currency="IRR",
+            )
+            session.add(scoped_other_mirror)
+            await session.flush()
+            other_provider_loan_id = scoped_other_mirror.id
             event_rows = []
             for i, (kind, processed, principal) in enumerate(
                 [
@@ -1160,6 +1194,17 @@ async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
         assert corrected.json()["processed_status"] == "CORRECTED"
         assert (await client.get(path)).status_code == 401
         assert (await client.get(path, headers=denied_auth)).status_code == 403
+        own_scoped = await client.get(
+            f"/api/v1/external-loans/{other_provider_loan_id}/events",
+            headers=denied_auth,
+        )
+        assert own_scoped.status_code == 200
+        assert own_scoped.json()["items"] == []
+        assert (
+            await client.get(
+                f"/api/v1/external-loans/{other_provider_loan_id}/events", headers=auth
+            )
+        ).status_code == 403
         assert (
             await client.get(path + f"/{ids_in_order[0]}", headers=denied_auth)
         ).status_code == 403
