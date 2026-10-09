@@ -97,7 +97,6 @@ class InboxMessage(Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-
 class LenderInboxScanCheckpoint(Base):
     """Worker scheduling metadata; never substitutes for inbox facts or outcome."""
 
@@ -113,9 +112,7 @@ class LenderInboxScanCheckpoint(Base):
     last_received_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_message_id: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), nullable=True
-    )
+    last_message_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )

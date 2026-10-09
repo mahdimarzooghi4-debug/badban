@@ -139,20 +139,21 @@ async def test_poison_oldest_does_not_starve_later_real_lender_events(
 
     async with database.session_factory() as session:
         good = (
-            await session.scalars(
-                select(InboxMessage).where(InboxMessage.id.in_(keys["valid"]))
-            )
+            await session.scalars(select(InboxMessage).where(InboxMessage.id.in_(keys["valid"])))
         ).all()
         bad = (
-            await session.scalars(
-                select(InboxMessage).where(InboxMessage.id.in_(keys["poison"]))
-            )
+            await session.scalars(select(InboxMessage).where(InboxMessage.id.in_(keys["poison"])))
         ).all()
         assert len(good) == len(bad) == 2
         assert all(x.processed_at is not None for x in good)
         assert all(x.processed_at is None for x in bad)
-        assert int(await session.scalar(select(func.count()).select_from(ExternalLoanMirror)) or 0) == 2
-        assert int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0) == 2
+        assert (
+            int(await session.scalar(select(func.count()).select_from(ExternalLoanMirror)) or 0)
+            == 2
+        )
+        assert (
+            int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0) == 2
+        )
         assert int(await session.scalar(select(func.count()).select_from(OutboxMessage)) or 0) == 2
         assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
         assert int(await session.scalar(select(func.count()).select_from(GuaranteeCase)) or 0) == 0
@@ -222,16 +223,12 @@ async def test_processed_rows_excluded_and_cursor_pair_protected(
 
 
 @pytest.mark.integration
-async def test_zero_pending_and_invalid_batch_are_safe(
-    database, clean_sprint33_tables
-) -> None:
+async def test_zero_pending_and_invalid_batch_are_safe(database, clean_sprint33_tables) -> None:
     assert await _select_pending_lender_inbox_ids(database, batch_size=1) == []
     assert (await process_pending_lender_inbox_batch(database, batch_size=1)).claimed == 0
     with pytest.raises(ValueError):
         await process_pending_lender_inbox_batch(database, batch_size=0)
-    assert int(
-        await _get_checkpoint_count(database)
-    ) == 1
+    assert int(await _get_checkpoint_count(database)) == 1
 
 
 async def _get_checkpoint_count(database) -> int:
