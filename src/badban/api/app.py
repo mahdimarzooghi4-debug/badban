@@ -21,6 +21,7 @@ from badban.api.sprint18 import router as sprint18_router
 from badban.api.sprint21 import router as sprint21_router
 from badban.api.sprint26 import router as sprint26_router
 from badban.api.sprint28 import router as sprint28_router
+from badban.api.sprint29 import router as sprint29_router
 from badban.api.v1 import router as v1_router
 from badban.application.lender_adapter import LenderAdapterRegistry
 from badban.config import Settings, get_settings
@@ -65,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sprint21_router)
     app.include_router(sprint26_router)
     app.include_router(sprint28_router)
+    app.include_router(sprint29_router)
     configure_tracing(app, resolved)
     return app
 

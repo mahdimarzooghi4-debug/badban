@@ -1033,3 +1033,190 @@ async def test_reconciliation_snapshot_contract_is_provider_scoped(
     assert snapshot.source_reference == "test-statement-1"
     assert snapshot.loans[0].external_loan_id == "loan-1"
     assert snapshot.loans[0].outstanding_principal == "75"
+
+
+def test_lender_event_evidence_openapi_is_read_only(settings: Settings) -> None:
+    paths = create_app(settings).openapi()["paths"]
+    listing = paths["/api/v1/external-loans/{loan_id}/events"]
+    detail = paths["/api/v1/external-loans/{loan_id}/events/{event_id}"]
+    assert set(listing) == {"get"}
+    assert set(detail) == {"get"}
+    assert {"401", "403", "404", "422"}.issubset(listing["get"]["responses"])
+    assert {"401", "403", "404"}.issubset(detail["get"]["responses"])
+    schemas = create_app(settings).openapi()["components"]["schemas"]
+    props = schemas["LenderEventEvidenceView"]["properties"]
+    assert props["principal_delta"]["format"] == "decimal"
+    assert props["outstanding_principal_reported"]["format"] == "decimal"
+    assert "payload" not in props
+
+
+@pytest.mark.integration
+async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
+    settings: Settings, database, clean_sprint13_lender_tables
+) -> None:
+    auditor, provider, guarantee = await _seed_context(database)
+    other_user = Identity(
+        identity_type="AUDITOR", external_subject=f"other-provider-{uuid4()}", status="ACTIVE"
+    )
+    base_time = datetime.now(UTC) - timedelta(minutes=3)
+    mirror = ExternalLoanMirror(
+        guarantee_case_id=guarantee.id,
+        provider_id=provider.id,
+        external_loan_id=f"loan-events-{uuid4()}",
+        state="ACTIVE",
+        original_principal=Decimal("100"),
+        outstanding_principal=Decimal("70"),
+        currency="IRR",
+    )
+    other_mirror = ExternalLoanMirror(
+        guarantee_case_id=None,
+        provider_id=provider.id,
+        external_loan_id=f"other-loan-{uuid4()}",
+        state="PENDING",
+        original_principal=Decimal("50"),
+        outstanding_principal=Decimal("50"),
+        currency="IRR",
+    )
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add_all([mirror, other_mirror, other_user])
+            await session.flush()
+            event_rows = []
+            for i, (kind, processed, principal) in enumerate(
+                [
+                    ("LOAN_APPROVED", "APPLIED", None),
+                    ("LOAN_DISBURSED", "APPLIED", Decimal("0")),
+                    ("REPAYMENT_RECEIVED", "APPLIED", Decimal("-30.000")),
+                    ("LOAN_CORRECTED", "CORRECTED", Decimal("0")),
+                    ("LOAN_APPROVED", "STALE", None),
+                ]
+            ):
+                event_rows.append(
+                    ExternalLoanEvent(
+                        external_loan_mirror_id=mirror.id,
+                        provider_event_id=f"trace-{i}-{uuid4()}",
+                        event_type=kind,
+                        principal_delta=principal,
+                        outstanding_principal_reported=Decimal("70.000"),
+                        provider_event_at=base_time + timedelta(seconds=i),
+                        received_at=base_time + timedelta(minutes=1),
+                        evidence_references=[f"evidence:trace-{i}"],
+                        payload_hash=hashlib.sha256(f"trace-{i}".encode()).hexdigest(),
+                        processed_status=processed,
+                        provider_contract_version="provider:test-v1",
+                        adapter_mapping_version="mapping:test-v1",
+                        inbound_normalization_version="normalize:test-v1",
+                        provider_event_sequence=i + 1,
+                    )
+                )
+            other_event = ExternalLoanEvent(
+                external_loan_mirror_id=other_mirror.id,
+                provider_event_id=f"foreign-cursor-{uuid4()}",
+                event_type="LOAN_APPROVED",
+                principal_delta=None,
+                outstanding_principal_reported=Decimal("50"),
+                provider_event_at=base_time,
+                received_at=base_time,
+                evidence_references=[],
+                payload_hash="c" * 64,
+                processed_status="HISTORY_ONLY",
+                provider_contract_version="provider:test-v1",
+                adapter_mapping_version="mapping:test-v1",
+                inbound_normalization_version="normalize:test-v1",
+            )
+            session.add_all([*event_rows, other_event])
+            await session.flush()
+            mirror_id, other_id, foreign_cursor = mirror.id, other_mirror.id, other_event.id
+            ids_in_order = [event.id for event in event_rows]
+    app, client = await _app_client(settings)
+    path = f"/api/v1/external-loans/{mirror_id}/events"
+    auth = {"Authorization": f"Bearer {auditor.external_subject}"}
+    denied_auth = {"Authorization": f"Bearer {other_user.external_subject}"}
+    async with client:
+        collected: list[str] = []
+        cursor = None
+        while True:
+            parameters: dict[str, object] = {"limit": 2}
+            if cursor is not None:
+                parameters["after"] = cursor
+            response = await client.get(path, headers=auth, params=parameters)
+            assert response.status_code == 200, response.text
+            body = response.json()
+            assert body["provider_id"] == str(provider.id)
+            assert len(body["items"]) <= 2
+            collected.extend(item["id"] for item in body["items"])
+            cursor = body["next_cursor"]
+            if cursor is None:
+                break
+        assert collected == [str(identifier) for identifier in ids_in_order]
+        detail = await client.get(path + f"/{ids_in_order[2]}", headers=auth)
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["event_type"] == "REPAYMENT_RECEIVED"
+        assert Decimal(detail.json()["principal_delta"]) == Decimal("-30.000")
+        assert detail.json()["evidence_references"] == ["evidence:trace-2"]
+        assert detail.json()["processed_status"] == "APPLIED"
+        corrected = await client.get(path + f"/{ids_in_order[3]}", headers=auth)
+        assert corrected.status_code == 200
+        assert corrected.json()["processed_status"] == "CORRECTED"
+        assert (await client.get(path)).status_code == 401
+        assert (await client.get(path, headers=denied_auth)).status_code == 403
+        assert (await client.get(path + f"/{ids_in_order[0]}", headers=denied_auth)).status_code == 403
+        assert (await client.get(path, headers=auth, params={"limit": 0})).status_code == 422
+        assert (await client.get(path, headers=auth, params={"limit": 101})).status_code == 422
+        foreign = await client.get(
+            path, headers=auth, params={"after": str(foreign_cursor)}
+        )
+        assert foreign.status_code == 422
+        assert foreign.json()["error"]["code"] == "LENDER_EVENT_CURSOR_INVALID"
+        cross_loan = await client.get(
+            f"/api/v1/external-loans/{other_id}/events/{ids_in_order[0]}", headers=auth
+        )
+        assert cross_loan.status_code == 404
+        assert cross_loan.json()["error"]["code"] == "LENDER_EVENT_NOT_FOUND"
+        assert (await client.get(f"/api/v1/external-loans/{uuid4()}/events", headers=auth)).status_code == 404
+    assert set(app.openapi()["paths"][f"/api/v1/external-loans/{{loan_id}}/events"]) == {"get"}
+    async with database.session_factory() as session:
+        stored = await session.get(GuaranteeCase, guarantee.id)
+        assert stored is not None and stored.state == "ISSUED"
+        assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
+        assert int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0) == 6
+
+
+@pytest.mark.integration
+async def test_lender_event_page_empty_and_revoked_grant_denies(
+    settings: Settings, database, clean_sprint13_lender_tables
+) -> None:
+    auditor, provider, guarantee = await _seed_context(database)
+    mirror = ExternalLoanMirror(
+        guarantee_case_id=guarantee.id,
+        provider_id=provider.id,
+        external_loan_id=f"empty-loan-{uuid4()}",
+        state="PENDING",
+        original_principal=Decimal("100"),
+        outstanding_principal=Decimal("100"),
+        currency="IRR",
+    )
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add(mirror)
+            await session.flush()
+            mirror_id = mirror.id
+    _, client = await _app_client(settings)
+    path = f"/api/v1/external-loans/{mirror_id}/events"
+    auth = {"Authorization": f"Bearer {auditor.external_subject}"}
+    async with client:
+        empty = await client.get(path, headers=auth)
+        assert empty.status_code == 200
+        assert empty.json()["items"] == []
+        assert empty.json()["next_cursor"] is None
+        async with database.session_factory() as session:
+            async with session.begin():
+                grants = (
+                    await session.scalars(
+                        select(RoleGrant).where(RoleGrant.identity_id == auditor.id)
+                    )
+                ).all()
+                assert len(grants) == 1
+                grants[0].status = "REVOKED"
+        denied = await client.get(path, headers=auth)
+        assert denied.status_code == 403
