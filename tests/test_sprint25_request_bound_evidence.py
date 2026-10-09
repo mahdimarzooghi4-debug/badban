@@ -39,7 +39,9 @@ async def _request_facts(database) -> dict[str, object]:
             session.add_all([actor, participant])
             await session.flush()
             program = Program(
-                code=f"REQ-EV-{uuid4().hex[:12]}", name="Request Evidence Program", created_by=actor.id
+                code=f"REQ-EV-{uuid4().hex[:12]}",
+                name="Request Evidence Program",
+                created_by=actor.id,
             )
             lender = LegalEntity(
                 legal_name="Synthetic Lender",

@@ -158,10 +158,7 @@ async def read_request_bound_backing_evidence(
             "REQUEST_EVIDENCE_STATE_CONFLICT", "REQUESTED case has reservation or exposure fields"
         )
 
-    source_rows = [
-        (row[1], row[4], row[5], row[6])
-        for row in rows
-    ]
+    source_rows = [(row[1], row[4], row[5], row[6]) for row in rows]
     backing = build_backing_source_inventory(
         source_rows, episode_id=episode.id, program_id=program_id
     )
