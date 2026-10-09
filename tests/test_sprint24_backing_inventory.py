@@ -218,9 +218,16 @@ async def test_inventory_rejects_mismatched_asset_source_lineage(
     facts = await _source_facts(database)
     async with database.session_factory() as session:
         async with session.begin():
+            second_program = Program(
+                code=f"INV-OTHER-{uuid4().hex[:12]}",
+                name="Other Program",
+                created_by=uuid4(),
+            )
+            session.add(second_program)
+            await session.flush()
             source = await session.get(AssetPosition, facts["owned"])
             assert source is not None
-            source.program_id = uuid4()
+            source.program_id = second_program.id
     async with database.session_factory() as session:
         with pytest.raises(BackingInventoryError) as mismatch:
             await read_backing_source_inventory(
