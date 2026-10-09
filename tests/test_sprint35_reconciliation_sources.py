@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -23,6 +24,7 @@ from badban.application.reconciliation_sources import (
     SettlementSnapshot,
     SourceCapability,
     SourceTarget,
+    SourceType,
     canonical_fields,
     stable_key,
     verify_source_snapshot,
@@ -35,10 +37,10 @@ SCOPE = {"program": "pilot-1"}
 
 def _target(kind: str) -> SourceTarget:
     if kind == "LEDGER":
-        return SourceTarget(reconciliation_type=kind, program_id=SOURCE_ID)
+        return SourceTarget(reconciliation_type=cast(SourceType, kind), program_id=SOURCE_ID)
     if kind == "LENDER":
-        return SourceTarget(reconciliation_type=kind, provider_id=SOURCE_ID)
-    return SourceTarget(reconciliation_type=kind, source_legal_entity_id=SOURCE_ID)
+        return SourceTarget(reconciliation_type=cast(SourceType, kind), provider_id=SOURCE_ID)
+    return SourceTarget(reconciliation_type=cast(SourceType, kind), source_legal_entity_id=SOURCE_ID)
 
 
 def _record(kind: str):
@@ -129,7 +131,7 @@ def _snapshot(kind: str, *, records=None):
         coverage_to=NOW,
         watermark="cursor-1",
         content_hash="0" * 64,
-        reconciliation_type=kind,
+        reconciliation_type=cast(SourceType, kind),
         records=tuple(supplied),
     )
     data = draft.model_dump(mode="json")
@@ -140,7 +142,7 @@ def _snapshot(kind: str, *, records=None):
 def _capability(kind: str) -> SourceCapability:
     return SourceCapability(
         source_id=SOURCE_ID,
-        reconciliation_type=kind,
+        reconciliation_type=cast(SourceType, kind),
         contract_version="provider-1",
         mapping_version="mapping-1",
     )
@@ -163,10 +165,10 @@ def test_five_source_contracts_verify_provenance_and_stable_identity(kind):
 @pytest.mark.parametrize("kind", list(_CLASSES))
 def test_source_identity_shape_rejects_wrong_or_ambiguous_ownership(kind):
     with pytest.raises(ValidationError):
-        SourceTarget(reconciliation_type=kind, provider_id=SOURCE_ID)
+        SourceTarget(reconciliation_type=cast(SourceType, kind), provider_id=SOURCE_ID)
     with pytest.raises(ValidationError):
         SourceTarget(
-            reconciliation_type=kind,
+            reconciliation_type=cast(SourceType, kind),
             program_id=SOURCE_ID,
             source_legal_entity_id=SOURCE_ID,
         )
