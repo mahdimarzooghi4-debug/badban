@@ -30,6 +30,7 @@ async def test_environment_secret_provider_requires_explicit_value(
         ("https://user:password@issuer.example", None),
         ("https://issuer.example/#fragment", None),
         ("https://issuer.example:broken", None),
+        ("https://issuer.example:0", None),
     ],
 )
 def test_stage_rejects_insecure_or_untrusted_oidc_endpoints(

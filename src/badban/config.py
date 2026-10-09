@@ -24,7 +24,9 @@ def oidc_url_origin(url: str) -> tuple[str, str, int] | None:
             or parts.fragment
         ):
             return None
-        port = parts.port or (443 if parts.scheme == "https" else 80)
+        if parts.port == 0:
+            return None
+        port = parts.port if parts.port is not None else (443 if parts.scheme == "https" else 80)
     except ValueError:
         return None
     return (parts.scheme, parts.hostname.lower(), port)

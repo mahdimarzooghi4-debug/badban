@@ -116,6 +116,7 @@ async def test_oidc_rejects_invalid_signature(settings: Settings) -> None:
         "https://169.254.169.254/latest/meta-data",
         "https://attacker@issuer.test/jwks",
         "https://issuer.test:444/jwks",
+        "https://issuer.test:0/jwks",
         "https://issuer.test/jwks#injected",
         "javascript:alert(1)",
     ],
