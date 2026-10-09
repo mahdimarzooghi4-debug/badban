@@ -251,10 +251,7 @@ async def read_guarantee_workspace(
         or guarantee.guarantee_mode != product.guarantee_mode
         or (
             guarantee.external_loan_mirror_id is not None
-            and (
-                external_loan is None
-                or external_loan.id != guarantee.external_loan_mirror_id
-            )
+            and (external_loan is None or external_loan.id != guarantee.external_loan_mirror_id)
         )
         or (
             external_loan is not None
