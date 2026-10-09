@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select
@@ -29,7 +29,7 @@ from badban.infrastructure.persistence.models import (
 )
 
 
-async def _request_facts(database) -> dict[str, object]:
+async def _request_facts(database) -> dict[str, UUID]:
     actor = Identity(
         identity_type="STAFF", external_subject=f"request-evidence-{uuid4()}", status="ACTIVE"
     )
