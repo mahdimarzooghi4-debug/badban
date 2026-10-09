@@ -907,7 +907,8 @@ No UI action bypasses command authorization/business gates.
 **Priority:** P2  
 **Type:** Read Model / UI Capability  
 **Depends on:** BL-030, BL-042, BL-043  
-**Traceability:** Technical 07 §§27-28; Technical 13
+**Traceability:** Technical 07 §§27-28; Technical 13  
+**Delivery Status:** Sprint 19 backend read-model core Code + Code Review complete on PR #22; UI workspace remains incomplete/out of scope; merge pending prerequisite ordering and explicit approval
 
 **Acceptance Criteria**
 
