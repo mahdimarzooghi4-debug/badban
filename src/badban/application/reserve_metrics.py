@@ -42,11 +42,7 @@ async def _lock_snapshot_scope(
 ) -> None:
     await session.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
-        {
-            "key": (
-                f"reserve-metrics:{legal_entity_id}:{currency}:{source_fingerprint}"
-            )
-        },
+        {"key": (f"reserve-metrics:{legal_entity_id}:{currency}:{source_fingerprint}")},
     )
 
 
@@ -81,9 +77,7 @@ async def create_reserve_metrics_snapshot(
                 JournalEntry.state == "POSTED",
                 JournalPosting.legal_entity_id == legal_entity_id,
                 JournalPosting.currency == normalized_currency,
-                JournalPosting.account_code.in_(
-                    [RESERVE_CASH_ACCOUNT, RESERVE_DESIGNATED_ACCOUNT]
-                ),
+                JournalPosting.account_code.in_([RESERVE_CASH_ACCOUNT, RESERVE_DESIGNATED_ACCOUNT]),
             )
             .order_by(JournalPosting.id)
         )
