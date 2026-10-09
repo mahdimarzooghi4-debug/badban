@@ -1,7 +1,7 @@
 # Sprint 29 — Provider-Scoped Lender Event Evidence History
 
 - **Date:** 2026-10-09
-- **Status:** Code / tests / CI in progress
+- **Status:** Code + Technical Code Review COMPLETE / Merge Pending Explicit Approval
 - **Dependency:** Draft PR #31 (Sprint 28) with full CI #439 success
 - **Scope:** Backend-only, Technical 07 §21 and Technical 08 event lineage
 - **Decision:** technical event-evidence query authorization only; no new business policy
@@ -45,3 +45,10 @@ application or BL-028 guarantee exposure reduction.
 - No Stage/QA/Release/Production, Merge, Figma, or real-money operations.
 - BL-020/026/027/028 remain blocked on authoritative, approved
   reservation/activation and product-specific financial contracts.
+
+## Exit Evidence
+
+- Reviewed source HEAD: `8a9db081ba17860ed3c9e9851f7835757aca9147`
+- CI #444: SUCCESS, 314 tests passed, Quality & Secret Scan successful.
+- [Technical Code Review](./29-sprint-29-code-review.md)
+- PR #32 remains Draft/Open and stacked on PR #31; no Merge/Stage/QA/Release/Production.
