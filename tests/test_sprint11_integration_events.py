@@ -31,10 +31,14 @@ class RecordingPublisher:
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail
         self.calls: list[tuple[str, dict[str, object]]] = []
+        self.message_ids: list[str | None] = []
 
-    async def publish(self, subject: str, payload: bytes) -> tuple[str, int]:
+    async def publish(
+        self, subject: str, payload: bytes, *, message_id: str | None = None
+    ) -> tuple[str, int]:
         envelope = json.loads(payload)
         self.calls.append((subject, envelope))
+        self.message_ids.append(message_id)
         if self.fail:
             raise RuntimeError("broker unavailable")
         return ("BADBAN_EVENTS", len(self.calls))
@@ -46,9 +50,12 @@ class BlockingPublisher(RecordingPublisher):
         self.started = asyncio.Event()
         self.release = asyncio.Event()
 
-    async def publish(self, subject: str, payload: bytes) -> tuple[str, int]:
+    async def publish(
+        self, subject: str, payload: bytes, *, message_id: str | None = None
+    ) -> tuple[str, int]:
         envelope = json.loads(payload)
         self.calls.append((subject, envelope))
+        self.message_ids.append(message_id)
         self.started.set()
         await self.release.wait()
         return ("BADBAN_EVENTS", len(self.calls))
@@ -144,6 +151,7 @@ async def test_outbox_publish_success_serializes_versioned_envelope(
     subject, envelope = publisher.calls[0]
     assert subject == "badban.events.JournalPosted"
     assert envelope["event_id"] == str(event_id)
+    assert publisher.message_ids == [str(event_id)]
     assert envelope["event_type"] == "JournalPosted"
     assert envelope["event_version"] == 1
     assert envelope["aggregate_type"] == "TestAggregate"
@@ -177,6 +185,7 @@ async def test_outbox_failure_is_retryable_without_losing_event(
     assert failed.claimed == 1
     assert failed.published == 0
     assert failed.failed == 1
+    assert failed_publisher.message_ids == [str(event_id)]
 
     async with database.session_factory() as session:
         stored = await session.get(OutboxMessage, event_id)
@@ -202,6 +211,7 @@ async def test_outbox_failure_is_retryable_without_losing_event(
         now=retry_at,
     )
     assert retried.published == 1
+    assert success_publisher.message_ids == [str(event_id)]
 
     async with database.session_factory() as session:
         stored = await session.get(OutboxMessage, event_id)
@@ -235,6 +245,7 @@ async def test_two_publishers_do_not_claim_same_outbox_row_concurrently(
     assert first.claimed == 1
     assert first.published == 1
     assert len(publisher.calls) == 1
+    assert publisher.message_ids and all(mid == publisher.message_ids[0] for mid in publisher.message_ids)
 
 
 @pytest.mark.integration
