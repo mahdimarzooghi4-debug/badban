@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal, TypeVar
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -97,7 +97,9 @@ async def _authorize_global(
             correlation_id=correlation_id,
         )
     except AuthorizationDenied as exc:
-        raise ApiError(403, exc.code, "Global integration-delivery read permission required") from exc
+        raise ApiError(
+            403, exc.code, "Global integration-delivery read permission required"
+        ) from exc
 
 
 def _outbox_status(row: OutboxMessage, observed_at: datetime) -> OutboxStatus:
@@ -115,10 +117,7 @@ def _outbox_predicate(status: OutboxStatus, observed_at: datetime):
         return OutboxMessage.published_at.is_not(None)
     if status == "DEAD_LETTERED":
         return OutboxMessage.dead_lettered_at.is_not(None)
-    unpublished = (
-        OutboxMessage.published_at.is_(None)
-        & OutboxMessage.dead_lettered_at.is_(None)
-    )
+    unpublished = OutboxMessage.published_at.is_(None) & OutboxMessage.dead_lettered_at.is_(None)
     if status == "RETRY_SCHEDULED":
         return unpublished & (OutboxMessage.next_attempt_at > observed_at)
     return unpublished & or_(
@@ -176,7 +175,11 @@ def _inbox_view(row: InboxMessage) -> InboxDeliveryView:
         "and observed delivery lifecycle; no event payload, free-text failure "
         "reason, credential or replay action. Stable filtered keyset pagination."
     ),
-    responses={401: {"description": "AUTHENTICATION_REQUIRED"}, 403: {"description": "AUTHORIZATION_DENIED"}, 422: {"description": "DELIVERY_CURSOR_INVALID or invalid filter"}},
+    responses={
+        401: {"description": "AUTHENTICATION_REQUIRED"},
+        403: {"description": "AUTHORIZATION_DENIED"},
+        422: {"description": "DELIVERY_CURSOR_INVALID or invalid filter"},
+    },
 )
 async def list_outbox_delivery(
     status: OutboxStatus | None = None,
@@ -232,7 +235,11 @@ async def list_outbox_delivery(
         "metadata without normalized/raw provider payloads or evidence content. "
         "Cursor is bound to the full authorized filtered stream."
     ),
-    responses={401: {"description": "AUTHENTICATION_REQUIRED"}, 403: {"description": "AUTHORIZATION_DENIED"}, 422: {"description": "DELIVERY_CURSOR_INVALID or invalid filter"}},
+    responses={
+        401: {"description": "AUTHENTICATION_REQUIRED"},
+        403: {"description": "AUTHORIZATION_DENIED"},
+        422: {"description": "DELIVERY_CURSOR_INVALID or invalid filter"},
+    },
 )
 async def list_inbox_delivery(
     status: InboxStatus | None = None,
@@ -255,7 +262,9 @@ async def list_inbox_delivery(
         filters.append(InboxMessage.event_type == event_type)
     stmt = select(InboxMessage).where(*filters)
     if after is not None:
-        anchor = await session.scalar(select(InboxMessage).where(InboxMessage.id == after, *filters))
+        anchor = await session.scalar(
+            select(InboxMessage).where(InboxMessage.id == after, *filters)
+        )
         if anchor is None:
             raise ApiError(422, "DELIVERY_CURSOR_INVALID", "Cursor is outside filtered inbox")
         stmt = stmt.where(
@@ -279,7 +288,11 @@ async def list_inbox_delivery(
     "/outbox/{message_id}",
     response_model=OutboxDeliveryView,
     description="GLOBAL AUDITOR/SYSTEM_OPERATOR, read-only outbox delivery metadata; no event payload.",
-    responses={401: {"description": "AUTHENTICATION_REQUIRED"}, 403: {"description": "AUTHORIZATION_DENIED"}, 404: {"description": "OUTBOX_MESSAGE_NOT_FOUND"}},
+    responses={
+        401: {"description": "AUTHENTICATION_REQUIRED"},
+        403: {"description": "AUTHORIZATION_DENIED"},
+        404: {"description": "OUTBOX_MESSAGE_NOT_FOUND"},
+    },
 )
 async def get_outbox_delivery(
     message_id: UUID,
@@ -298,7 +311,11 @@ async def get_outbox_delivery(
     "/inbox/{message_id}",
     response_model=InboxDeliveryView,
     description="GLOBAL AUDITOR/SYSTEM_OPERATOR, read-only inbox metadata; no provider payload.",
-    responses={401: {"description": "AUTHENTICATION_REQUIRED"}, 403: {"description": "AUTHORIZATION_DENIED"}, 404: {"description": "INBOX_MESSAGE_NOT_FOUND"}},
+    responses={
+        401: {"description": "AUTHENTICATION_REQUIRED"},
+        403: {"description": "AUTHORIZATION_DENIED"},
+        404: {"description": "INBOX_MESSAGE_NOT_FOUND"},
+    },
 )
 async def get_inbox_delivery(
     message_id: UUID,
@@ -321,7 +338,10 @@ async def get_inbox_delivery(
         "delivery states; NOT an operational health PASS or transaction authorization. "
         "No invented age limits or alert thresholds."
     ),
-    responses={401: {"description": "AUTHENTICATION_REQUIRED"}, 403: {"description": "AUTHORIZATION_DENIED"}},
+    responses={
+        401: {"description": "AUTHENTICATION_REQUIRED"},
+        403: {"description": "AUTHORIZATION_DENIED"},
+    },
 )
 async def get_delivery_summary(
     principal: Principal = Depends(get_current_principal),
@@ -334,9 +354,9 @@ async def get_delivery_summary(
     for state in ("QUEUED", "RETRY_SCHEDULED", "DEAD_LETTERED", "PUBLISHED"):
         outbox[state] = int(
             await session.scalar(
-                select(func.count()).select_from(OutboxMessage).where(
-                    _outbox_predicate(state, observed_at)
-                )
+                select(func.count())
+                .select_from(OutboxMessage)
+                .where(_outbox_predicate(state, observed_at))
             )
             or 0
         )
@@ -344,9 +364,7 @@ async def get_delivery_summary(
     for state in ("PENDING", "PROCESSED"):
         inbox[state] = int(
             await session.scalar(
-                select(func.count()).select_from(InboxMessage).where(
-                    _inbox_predicate(state)
-                )
+                select(func.count()).select_from(InboxMessage).where(_inbox_predicate(state))
             )
             or 0
         )

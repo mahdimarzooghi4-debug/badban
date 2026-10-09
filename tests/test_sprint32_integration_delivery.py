@@ -151,7 +151,10 @@ async def test_delivery_observations_paging_filters_and_summary(
         )
         assert summary.status_code == 200
         assert summary.json()["outbox"] == {
-            "QUEUED": 1, "RETRY_SCHEDULED": 1, "DEAD_LETTERED": 1, "PUBLISHED": 1
+            "QUEUED": 1,
+            "RETRY_SCHEDULED": 1,
+            "DEAD_LETTERED": 1,
+            "PUBLISHED": 1,
         }
         assert summary.json()["inbox"] == {"PENDING": 2, "PROCESSED": 1}
 
@@ -172,8 +175,7 @@ async def test_delivery_observations_paging_filters_and_summary(
         assert second.json()["next_cursor"] is None
         rows = first.json()["items"] + second.json()["items"]
         assert {entry["id"] for entry in rows} == {
-            str(ids[state])
-            for state in ("QUEUED", "RETRY_SCHEDULED", "DEAD_LETTERED", "PUBLISHED")
+            str(ids[state]) for state in ("QUEUED", "RETRY_SCHEDULED", "DEAD_LETTERED", "PUBLISHED")
         }
         assert "DO_NOT_EXPOSE" not in str(rows)
 
@@ -182,9 +184,7 @@ async def test_delivery_observations_paging_filters_and_summary(
             headers=_headers("delivery-auditor"),
         )
         assert filtered.status_code == 200
-        assert [item["id"] for item in filtered.json()["items"]] == [
-            str(ids["DEAD_LETTERED"])
-        ]
+        assert [item["id"] for item in filtered.json()["items"]] == [str(ids["DEAD_LETTERED"]) ]
         wrong_cursor = await client.get(
             f"/api/v1/integration-delivery/outbox?status=DEAD_LETTERED&after={ids['QUEUED']}",
             headers=_headers("delivery-auditor"),
@@ -224,9 +224,7 @@ async def test_delivery_observations_paging_filters_and_summary(
             headers=_headers("delivery-auditor"),
         )
         assert pending.status_code == 200
-        assert [entry["id"] for entry in pending.json()["items"]] == [
-            str(ids["inbox-1"])
-        ]
+        assert [entry["id"] for entry in pending.json()["items"]] == [str(ids["inbox-1"])]
 
         outbox_detail = await client.get(
             f"/api/v1/integration-delivery/outbox/{ids['RETRY_SCHEDULED']}",
@@ -267,7 +265,10 @@ async def test_delivery_security_and_missing_records(
             no_token = await client.get(path)
             assert no_token.status_code == 401
             for subject in (
-                "delivery-scoped", "delivery-ops", "delivery-revoked", "delivery-service"
+                "delivery-scoped",
+                "delivery-ops",
+                "delivery-revoked",
+                "delivery-service",
             ):
                 denied = await client.get(path, headers=_headers(subject))
                 assert denied.status_code == 403
@@ -280,7 +281,9 @@ async def test_delivery_security_and_missing_records(
             assert missing.status_code == 404
     async with database.session_factory() as session:
         denied = await session.scalar(
-            select(func.count()).select_from(AuditEvent).where(
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(
                 AuditEvent.action == "INTEGRATION_DELIVERY_READ",
                 AuditEvent.outcome == "DENIED",
             )
