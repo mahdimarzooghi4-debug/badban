@@ -68,6 +68,7 @@ async def test_broker_failure_does_not_erase_pending_outbox(
     assert pending is not None
     assert pending.published_at is None
 
+
 @pytest.mark.integration
 async def test_jetstream_stable_event_identity_survives_ack_then_database_rollback(
     settings, database, clean_sprint11_event_tables
@@ -125,9 +126,7 @@ async def test_jetstream_stable_event_identity_survives_ack_then_database_rollba
                 )
         interrupted = AckThenCancel()
         with pytest.raises(asyncio.CancelledError):
-            await publish_outbox_batch(
-                database, interrupted, subject_prefix=prefix, batch_size=1
-            )
+            await publish_outbox_batch(database, interrupted, subject_prefix=prefix, batch_size=1)
         assert interrupted.receipt == (stream_name, 1)
         async with database.session_factory() as session:
             unacknowledged = await session.get(OutboxMessage, event_id)
@@ -159,7 +158,9 @@ async def test_jetstream_stable_event_identity_survives_ack_then_database_rollba
 
 
 @pytest.mark.integration
-async def test_jetstream_same_identity_suppresses_duplicate_within_configured_window(settings) -> None:
+async def test_jetstream_same_identity_suppresses_duplicate_within_configured_window(
+    settings,
+) -> None:
     transport = NatsJetStreamTransport(settings.nats_url)
     stream_name = f"BADBAN_S34_{uuid4().hex[:12].upper()}"
     subject = f"badban.s34.{uuid4().hex}"
@@ -182,4 +183,3 @@ async def test_jetstream_same_identity_suppresses_duplicate_within_configured_wi
             await transport.delete_stream(stream_name)
         finally:
             await transport.close()
-

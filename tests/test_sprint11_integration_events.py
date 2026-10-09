@@ -245,7 +245,9 @@ async def test_two_publishers_do_not_claim_same_outbox_row_concurrently(
     assert first.claimed == 1
     assert first.published == 1
     assert len(publisher.calls) == 1
-    assert publisher.message_ids and all(mid == publisher.message_ids[0] for mid in publisher.message_ids)
+    assert publisher.message_ids and all(
+        mid == publisher.message_ids[0] for mid in publisher.message_ids
+    )
 
 
 @pytest.mark.integration
