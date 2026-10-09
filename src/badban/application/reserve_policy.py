@@ -106,10 +106,15 @@ class ReserveEligibilityEvaluator(Protocol):
     ) -> Decimal: ...
 
 
-def _required_text(value: object, *, field: str) -> str:
+def _required_text(
+    value: object,
+    *,
+    field: str,
+    error_code: str = "RESERVE_POLICY_DEFINITION_INVALID",
+) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ReservePolicyEvaluationError(
-            "RESERVE_POLICY_DEFINITION_INVALID",
+            error_code,
             f"{field} must be a non-blank string",
         )
     return value.strip()
@@ -188,7 +193,11 @@ def validate_reserve_requirement_evidence(
     evidence: ReserveRequirementEvidence,
 ) -> None:
     _assert_aware_datetime(evidence.evaluated_at, field="evaluated_at")
-    _required_text(evidence.evidence_version, field="evidence_version")
+    _required_text(
+        evidence.evidence_version,
+        field="evidence_version",
+        error_code="RESERVE_POLICY_EVIDENCE_INVALID",
+    )
     if not evidence.authoritative_input_references or any(
         not reference.strip() for reference in evidence.authoritative_input_references
     ):
@@ -202,7 +211,11 @@ def validate_reserve_requirement_evidence(
             "input_values must not be empty",
         )
     for name, value in evidence.input_values.items():
-        _required_text(name, field="input_values key")
+        _required_text(
+            name,
+            field="input_values key",
+            error_code="RESERVE_POLICY_EVIDENCE_INVALID",
+        )
         _exact_non_negative_decimal(
             value,
             field=f"input_values.{name}",
@@ -234,8 +247,16 @@ def validate_reserve_metrics_evidence(evidence: ReserveMetricsEvidence) -> None:
             "RESERVE_POLICY_EVIDENCE_INVALID",
             "source_fingerprint must be a SHA-256 hex digest",
         )
-    _required_text(evidence.algorithm_code, field="algorithm_code")
-    _required_text(evidence.algorithm_version, field="algorithm_version")
+    _required_text(
+        evidence.algorithm_code,
+        field="algorithm_code",
+        error_code="RESERVE_POLICY_EVIDENCE_INVALID",
+    )
+    _required_text(
+        evidence.algorithm_version,
+        field="algorithm_version",
+        error_code="RESERVE_POLICY_EVIDENCE_INVALID",
+    )
     expected_reference = f"reserve-metrics:{evidence.snapshot_id}"
     if evidence.reserve_metrics_reference != expected_reference:
         raise ReservePolicyEvaluationError(
