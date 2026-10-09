@@ -105,3 +105,145 @@ async def test_oidc_rejects_invalid_signature(settings: Settings) -> None:
     verifier = _verifier(settings, trusted.public_key())
     with pytest.raises(AuthenticationError, match="invalid"):
         await verifier.verify(token)
+
+
+@pytest.mark.parametrize(
+    "jwks_uri",
+    [
+        "http://issuer.test/jwks",
+        "https://issuer.test.evil.example/jwks",
+        "https://127.0.0.1/jwks",
+        "https://169.254.169.254/latest/meta-data",
+        "https://attacker@issuer.test/jwks",
+        "https://issuer.test:444/jwks",
+        "https://issuer.test/jwks#injected",
+        "javascript:alert(1)",
+    ],
+)
+async def test_oidc_rejects_untrusted_jwks_before_outbound_request(
+    settings: Settings, jwks_uri: str
+) -> None:
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        if str(request.url) == settings.resolved_oidc_discovery_url:
+            return httpx.Response(
+                200, json={"issuer": settings.oidc_issuer, "jwks_uri": jwks_uri}
+            )
+        raise AssertionError("Untrusted JWKS URI must not be fetched")
+
+    verifier = OidcTokenVerifier(
+        settings, client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    with pytest.raises(AuthenticationError) as rejected:
+        await verifier._fetch_jwks()
+    assert rejected.value.code == "OIDC_DISCOVERY_INVALID"
+    assert requested == [settings.resolved_oidc_discovery_url]
+
+
+@pytest.mark.parametrize("discovery_document", [[], "not-an-object", None, {}])
+async def test_oidc_invalid_discovery_document_fails_closed(
+    settings: Settings, discovery_document: object
+) -> None:
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        return httpx.Response(200, json=discovery_document)
+
+    verifier = OidcTokenVerifier(
+        settings, client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    with pytest.raises(AuthenticationError) as rejected:
+        await verifier._fetch_jwks()
+    assert rejected.value.code == "OIDC_DISCOVERY_INVALID"
+    assert requested == [settings.resolved_oidc_discovery_url]
+
+
+@pytest.mark.parametrize("jwks_document", [[], None, {}, {"keys": "not-an-array"}])
+async def test_oidc_invalid_jwks_shape_fails_closed(
+    settings: Settings, jwks_document: object
+) -> None:
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        if str(request.url) == settings.resolved_oidc_discovery_url:
+            return httpx.Response(
+                200,
+                json={"issuer": settings.oidc_issuer, "jwks_uri": "https://issuer.test/jwks"},
+            )
+        assert str(request.url) == "https://issuer.test/jwks"
+        return httpx.Response(200, json=jwks_document)
+
+    verifier = OidcTokenVerifier(
+        settings, client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    with pytest.raises(AuthenticationError) as rejected:
+        await verifier._fetch_jwks()
+    assert rejected.value.code == "OIDC_JWKS_INVALID"
+    assert requested == [settings.resolved_oidc_discovery_url, "https://issuer.test/jwks"]
+
+
+async def test_oidc_rejects_discovery_redirect_even_with_redirect_following_client(
+    settings: Settings,
+) -> None:
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        if str(request.url) == settings.resolved_oidc_discovery_url:
+            return httpx.Response(302, headers={"Location": "http://169.254.169.254/latest"})
+        raise AssertionError("Redirect destination must not be accessed")
+
+    verifier = OidcTokenVerifier(
+        settings,
+        client=httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), follow_redirects=True
+        ),
+    )
+    with pytest.raises(AuthenticationError) as rejected:
+        await verifier._fetch_jwks()
+    assert rejected.value.code == "OIDC_PROVIDER_UNAVAILABLE"
+    assert requested == [settings.resolved_oidc_discovery_url]
+
+
+async def test_oidc_refreshes_trusted_jwks_on_unknown_key_rotation(
+    settings: Settings,
+) -> None:
+    old_private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    new_private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    counter = 0
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal counter
+        requested.append(str(request.url))
+        if str(request.url) == settings.resolved_oidc_discovery_url:
+            return httpx.Response(
+                200,
+                json={"issuer": settings.oidc_issuer, "jwks_uri": "https://issuer.test/jwks"},
+            )
+        assert str(request.url) == "https://issuer.test/jwks"
+        counter += 1
+        key = old_private.public_key() if counter == 1 else new_private.public_key()
+        jwk = RSAAlgorithm.to_jwk(key, as_dict=True)
+        jwk["kid"] = "old" if counter == 1 else "new"
+        jwk["use"] = "sig"
+        jwk["alg"] = "RS256"
+        return httpx.Response(200, json={"keys": [jwk]})
+
+    verifier = OidcTokenVerifier(
+        settings, client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    first = jwt.encode(
+        _issuer_payload(settings), old_private, algorithm="RS256", headers={"kid": "old"}
+    )
+    second = jwt.encode(
+        _issuer_payload(settings), new_private, algorithm="RS256", headers={"kid": "new"}
+    )
+    assert (await verifier.verify(first))["sub"] == "subject-1"
+    assert (await verifier.verify(second))["sub"] == "subject-1"
+    assert counter == 2
+    assert all(url.startswith("https://issuer.test/") for url in requested)

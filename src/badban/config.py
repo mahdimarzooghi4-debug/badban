@@ -4,9 +4,30 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal, Protocol
+from urllib.parse import urlsplit
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def oidc_url_origin(url: str) -> tuple[str, str, int] | None:
+    """Parse a trusted HTTP(S) origin without credentials, fragments or control chars."""
+    if not isinstance(url, str) or any(ord(char) <= 32 or char == "\\\\" for char in url):
+        return None
+    try:
+        parts = urlsplit(url)
+        if (
+            parts.scheme not in {"http", "https"}
+            or not parts.hostname
+            or parts.username is not None
+            or parts.password is not None
+            or parts.fragment
+        ):
+            return None
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+    except ValueError:
+        return None
+    return (parts.scheme, parts.hostname.lower(), port)
 
 
 class Settings(BaseSettings):
@@ -31,8 +52,14 @@ class Settings(BaseSettings):
             raise ValueError("BADBAN_VAULT_ADDRESS is required when secret_provider=vault")
         if self.app_env in {"stage", "production"} and self.secret_provider != "vault":
             raise ValueError("Stage/production requires BADBAN_SECRET_PROVIDER=vault")
-        if not self.oidc_issuer.startswith(("https://", "http://")):
-            raise ValueError("BADBAN_OIDC_ISSUER must be an absolute HTTP(S) URL")
+        issuer_origin = oidc_url_origin(self.oidc_issuer)
+        if issuer_origin is None:
+            raise ValueError("BADBAN_OIDC_ISSUER must be a valid absolute HTTP(S) URL")
+        if self.app_env in {"stage", "production"} and issuer_origin[0] != "https":
+            raise ValueError("Stage/production OIDC issuer must use HTTPS")
+        discovery_origin = oidc_url_origin(self.resolved_oidc_discovery_url)
+        if discovery_origin is None or discovery_origin != issuer_origin:
+            raise ValueError("OIDC discovery URL must share the configured issuer origin")
         if not self.oidc_audience.strip():
             raise ValueError("BADBAN_OIDC_AUDIENCE must not be empty")
         return self

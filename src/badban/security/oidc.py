@@ -8,7 +8,7 @@ import httpx
 import jwt
 from jwt import PyJWKSet
 
-from badban.config import Settings
+from badban.config import Settings, oidc_url_origin
 
 
 class AuthenticationError(RuntimeError):
@@ -38,30 +38,46 @@ class OidcTokenVerifier:
                 return self._cached_jwks
 
             owns_client = self._client is None
-            client = self._client or httpx.AsyncClient(timeout=5.0)
+            client = self._client or httpx.AsyncClient(timeout=5.0, follow_redirects=False)
             try:
-                discovery = await client.get(self._settings.resolved_oidc_discovery_url)
+                discovery = await client.get(
+                    self._settings.resolved_oidc_discovery_url, follow_redirects=False
+                )
                 discovery.raise_for_status()
                 document = discovery.json()
+                if not isinstance(document, dict):
+                    raise AuthenticationError(
+                        "OIDC_DISCOVERY_INVALID", "OIDC discovery document must be an object"
+                    )
                 if document.get("issuer") != self._settings.oidc_issuer:
                     raise AuthenticationError(
                         "OIDC_DISCOVERY_INVALID",
                         "OIDC discovery issuer does not match configured issuer",
                     )
                 jwks_uri = document.get("jwks_uri")
-                if not isinstance(jwks_uri, str) or not jwks_uri.startswith(
-                    ("https://", "http://")
+                issuer_origin = oidc_url_origin(self._settings.oidc_issuer)
+                if (
+                    not isinstance(jwks_uri, str)
+                    or issuer_origin is None
+                    or oidc_url_origin(jwks_uri) != issuer_origin
                 ):
                     raise AuthenticationError(
                         "OIDC_DISCOVERY_INVALID",
-                        "OIDC discovery document has no valid jwks_uri",
+                        "OIDC JWKS URL must be an absolute URL on the trusted issuer origin",
                     )
-                response = await client.get(jwks_uri)
+                response = await client.get(jwks_uri, follow_redirects=False)
                 response.raise_for_status()
-                jwks = PyJWKSet.from_dict(response.json())
+                key_document = response.json()
+                if not isinstance(key_document, dict) or not isinstance(
+                    key_document.get("keys"), list
+                ):
+                    raise AuthenticationError(
+                        "OIDC_JWKS_INVALID", "OIDC JWKS document is invalid"
+                    )
+                jwks = PyJWKSet.from_dict(key_document)
             except AuthenticationError:
                 raise
-            except (httpx.HTTPError, ValueError, jwt.PyJWTError) as exc:
+            except (httpx.HTTPError, ValueError, TypeError, KeyError, jwt.PyJWTError) as exc:
                 raise AuthenticationError(
                     "OIDC_PROVIDER_UNAVAILABLE",
                     "OIDC discovery/JWKS could not be validated",
