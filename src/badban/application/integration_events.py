@@ -27,7 +27,9 @@ class IntegrationEventError(RuntimeError):
 
 
 class EventPublisher(Protocol):
-    async def publish(self, subject: str, payload: bytes) -> tuple[str, int]: ...
+    async def publish(
+        self, subject: str, payload: bytes, *, message_id: str | None = None
+    ) -> tuple[str, int]: ...
 
 
 InboxHandler = Callable[[AsyncSession, InboxMessage], Awaitable[None]]
@@ -131,6 +133,7 @@ async def publish_outbox_batch(
                     await publisher.publish(
                         event_subject(event.event_type, prefix=subject_prefix),
                         serialize_outbox_event(event),
+                        message_id=str(event.id),
                     )
                 except Exception as exc:
                     event.last_error = type(exc).__name__

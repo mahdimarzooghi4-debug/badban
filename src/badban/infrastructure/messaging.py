@@ -39,10 +39,21 @@ class NatsJetStreamTransport:
         except Exception:
             await jetstream.add_stream(config=StreamConfig(name=name, subjects=list(subjects)))
 
-    async def publish(self, subject: str, payload: bytes) -> tuple[str, int]:
+    async def publish(
+        self, subject: str, payload: bytes, *, message_id: str | None = None
+    ) -> tuple[str, int]:
+        """Include a stable event identity for JetStream's bounded deduplication.
+
+        Nats-Msg-Id is advisory deduplication *within the stream's configured
+        window*. After that window, delivery remains at-least-once and
+        consumers still must deduplicate by immutable event_id.
+        """
+        if message_id is not None and not message_id.strip():
+            raise ValueError("message_id must be nonblank when supplied")
         await self.connect()
         assert self._client is not None
-        ack = await self._client.jetstream().publish(subject, payload)
+        headers = {"Nats-Msg-Id": message_id} if message_id is not None else None
+        ack = await self._client.jetstream().publish(subject, payload, headers=headers)
         return ack.stream, ack.seq
 
     async def consume_one(self, subject: str, timeout: float = 2.0) -> bytes:

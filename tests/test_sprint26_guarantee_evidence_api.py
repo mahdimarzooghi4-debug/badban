@@ -16,6 +16,7 @@ from badban.infrastructure.persistence.models import (
     CreditProductVersion,
     CreditProvider,
     DecisionSnapshot,
+    ExternalLoanMirror,
     GuaranteeCase,
     Identity,
     JournalEntry,
@@ -336,3 +337,223 @@ async def test_request_evidence_fingerprint_tracks_actual_asset_mutations(
         after = await client.get(path, headers=_headers(str(keys["ops"])))
         assert after.status_code == 200
     assert before.json()["evidence_fingerprint"] != after.json()["evidence_fingerprint"]
+
+
+def test_guarantee_ops_openapi_list_workspace_contract(settings: Settings) -> None:
+    api = create_app(settings).openapi()
+    listing = api["paths"]["/api/v1/guarantees"]["get"]
+    workspace = api["paths"]["/api/v1/guarantees/{guarantee_id}/workspace"]["get"]
+    assert {"401", "403", "422"}.issubset(listing["responses"])
+    assert {"401", "403", "404", "409"}.issubset(workspace["responses"])
+    components = api["components"]["schemas"]
+    assert components["GuaranteeListView"]["properties"]["next_cursor"]
+    assert components["GuaranteeWorkspaceFoundationView"]["properties"]["request_evidence"]
+    assert (
+        components["ExternalLoanObservedView"]["properties"]["outstanding_principal"]["format"]
+        == "decimal"
+    )
+
+
+@pytest.mark.integration
+async def test_program_scoped_guarantee_listing_pagination_and_authorization(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    async with database.session_factory() as session:
+        async with session.begin():
+            original = await session.get(GuaranteeCase, keys["guarantee"])
+            assert original is not None
+            for _ in range(4):
+                session.add(
+                    GuaranteeCase(
+                        participation_episode_id=original.participation_episode_id,
+                        provider_id=original.provider_id,
+                        credit_product_version_id=original.credit_product_version_id,
+                        state="REQUESTED",
+                        requested_principal=Decimal("11"),
+                        current_guarantee_exposure=Decimal("0"),
+                        guarantee_mode="FIXED",
+                    )
+                )
+    base_url = "/api/v1/guarantees"
+    params = {"program_id": str(keys["program"]), "limit": 2}
+    async with await _client(settings) as client:
+        all_ids: list[str] = []
+        next_cursor = None
+        while True:
+            page_params = dict(params)
+            if next_cursor is not None:
+                page_params["after"] = next_cursor
+            result = await client.get(
+                base_url, headers=_headers(str(keys["ops"])), params=page_params
+            )
+            assert result.status_code == 200, result.text
+            body = result.json()
+            assert body["program_id"] == str(keys["program"])
+            assert len(body["items"]) <= 2
+            all_ids += [entry["id"] for entry in body["items"]]
+            next_cursor = body["next_cursor"]
+            if next_cursor is None:
+                break
+        assert len(all_ids) == len(set(all_ids)) == 5
+        assert all_ids == sorted(all_ids)
+        assert str(keys["guarantee"]) in all_ids
+        for role in ("risk", "finance", "auditor"):
+            scoped = await client.get(base_url, headers=_headers(str(keys[role])), params=params)
+            assert scoped.status_code == 200
+        outsider = await client.get(
+            base_url, headers=_headers(str(keys["outsider"])), params=params
+        )
+        assert outsider.status_code == 403
+        assert (await client.get(base_url, params=params)).status_code == 401
+        assert (
+            await client.get(base_url, headers=_headers(str(keys["ops"])), params={"limit": 3})
+        ).status_code == 422
+        assert (
+            await client.get(
+                base_url,
+                headers=_headers(str(keys["ops"])),
+                params={"program_id": str(keys["program"]), "limit": 101},
+            )
+        ).status_code == 422
+        empty = await client.get(
+            base_url,
+            headers=_headers(str(keys["ops"])),
+            params={"program_id": str(keys["program"]), "state": "CLOSED"},
+        )
+        assert empty.status_code == 200
+        assert empty.json()["items"] == []
+        assert empty.json()["next_cursor"] is None
+
+
+@pytest.mark.integration
+async def test_workspace_uses_real_observed_sources_and_denies_cross_program(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    url = f"/api/v1/guarantees/{keys['guarantee']}/workspace"
+    async with await _client(settings) as client:
+        for role in ("ops", "risk", "finance", "auditor"):
+            result = await client.get(url, headers=_headers(str(keys[role])))
+            assert result.status_code == 200, result.text
+            body = result.json()
+            assert body["program_id"] == str(keys["program"])
+            assert body["guarantee"]["state"] == "REQUESTED"
+            assert body["provider"]["lifecycle_status"] == "DRAFT"
+            assert body["captured_product"]["lifecycle_status"] == "DRAFT"
+            assert body["request_evidence"]["guarantee_case_id"] == str(keys["guarantee"])
+            assert len(body["request_evidence"]["backing"]["sources"]) == 2
+            assert body["external_loan"] is None
+            assert not body["backing_allocation_contract_available"]
+            assert not body["claim_recovery_contract_available"]
+            assert not body["action_eligibility_evaluated"]
+        assert (await client.get(url)).status_code == 401
+        assert (await client.get(url, headers=_headers(str(keys["outsider"])))).status_code == 403
+        missing = await client.get(
+            f"/api/v1/guarantees/{uuid4()}/workspace",
+            headers=_headers(str(keys["ops"])),
+        )
+        assert missing.status_code == 404
+
+
+@pytest.mark.integration
+async def test_workspace_refuses_mismatched_captured_product_and_keeps_state_observed(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    url = f"/api/v1/guarantees/{keys['guarantee']}/workspace"
+    async with database.session_factory() as session:
+        async with session.begin():
+            guarantee = await session.get(GuaranteeCase, keys["guarantee"])
+            assert guarantee is not None
+            guarantee.state = "RESERVED"
+    async with await _client(settings) as client:
+        result = await client.get(url, headers=_headers(str(keys["ops"])))
+        assert result.status_code == 200, result.text
+        assert result.json()["guarantee"]["state"] == "RESERVED"
+        assert result.json()["request_evidence"] is None
+    async with database.session_factory() as session:
+        async with session.begin():
+            guarantee = await session.get(GuaranteeCase, keys["guarantee"])
+            assert guarantee is not None
+            original_provider = await session.get(CreditProvider, guarantee.provider_id)
+            assert original_provider is not None
+            other = CreditProvider(
+                legal_entity_id=original_provider.legal_entity_id,
+                provider_code=f"WS-OTHER-{uuid4().hex[:12]}",
+                display_name="Different Provider",
+                provider_type="EXTERNAL_LENDER",
+                integration_mode="CONTROLLED_MANUAL",
+                authorization_review_state="PENDING",
+                lifecycle_status="DRAFT",
+                created_by=uuid4(),
+            )
+            session.add(other)
+            await session.flush()
+            guarantee.provider_id = other.id
+    async with await _client(settings) as client:
+        mismatch = await client.get(url, headers=_headers(str(keys["ops"])))
+        assert mismatch.status_code == 409
+        assert mismatch.json()["error"]["code"] == "GUARANTEE_WORKSPACE_LINEAGE_CONFLICT"
+
+
+@pytest.mark.integration
+async def test_workspace_reads_authoritative_mirror_link_even_without_case_pointer(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    async with database.session_factory() as session:
+        async with session.begin():
+            guarantee = await session.get(GuaranteeCase, keys["guarantee"])
+            assert guarantee is not None
+            # Inbound loan mirrors may link to a case before its reverse pointer
+            # is recorded. Observing a mirror does not activate the guarantee.
+            session.add(
+                ExternalLoanMirror(
+                    guarantee_case_id=guarantee.id,
+                    provider_id=guarantee.provider_id,
+                    external_loan_id=f"test-loan-{uuid4()}",
+                    state="PENDING",
+                    original_principal=Decimal("25.125"),
+                    outstanding_principal=Decimal("25.125"),
+                    currency="IRR",
+                )
+            )
+    url = f"/api/v1/guarantees/{keys['guarantee']}/workspace"
+    async with await _client(settings) as client:
+        response = await client.get(url, headers=_headers(str(keys["ops"])))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["guarantee"]["state"] == "REQUESTED"
+    assert body["guarantee"]["external_loan_mirror_id"] is None
+    assert body["external_loan"]["state"] == "PENDING"
+    assert Decimal(body["external_loan"]["outstanding_principal"]) == Decimal("25.125")
+    assert not body["action_eligibility_evaluated"]
+
+
+@pytest.mark.integration
+async def test_workspace_rejects_contradictory_reverse_mirror_reference(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    async with database.session_factory() as session:
+        async with session.begin():
+            guarantee = await session.get(GuaranteeCase, keys["guarantee"])
+            assert guarantee is not None
+            mirror = ExternalLoanMirror(
+                guarantee_case_id=None,
+                provider_id=guarantee.provider_id,
+                external_loan_id=f"unrelated-loan-{uuid4()}",
+                state="PENDING",
+                original_principal=Decimal("25.125"),
+                outstanding_principal=Decimal("25.125"),
+                currency="IRR",
+            )
+            session.add(mirror)
+            await session.flush()
+            guarantee.external_loan_mirror_id = mirror.id
+    url = f"/api/v1/guarantees/{keys['guarantee']}/workspace"
+    async with await _client(settings) as client:
+        response = await client.get(url, headers=_headers(str(keys["ops"])))
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "GUARANTEE_WORKSPACE_LINEAGE_CONFLICT"
