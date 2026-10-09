@@ -40,7 +40,9 @@ def _target(kind: str) -> SourceTarget:
         return SourceTarget(reconciliation_type=cast(SourceType, kind), program_id=SOURCE_ID)
     if kind == "LENDER":
         return SourceTarget(reconciliation_type=cast(SourceType, kind), provider_id=SOURCE_ID)
-    return SourceTarget(reconciliation_type=cast(SourceType, kind), source_legal_entity_id=SOURCE_ID)
+    return SourceTarget(
+        reconciliation_type=cast(SourceType, kind), source_legal_entity_id=SOURCE_ID
+    )
 
 
 def _record(kind: str):
