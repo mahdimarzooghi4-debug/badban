@@ -207,7 +207,7 @@ async def test_request_evidence_missing_and_wrong_program_fail_closed(
             await read_request_bound_backing_evidence(
                 session, guarantee_case_id=keys["guarantee_id"], program_id=uuid4()
             )
-        assert wrong_program.value.code == "REQUEST_EVIDENCE_SCOPE_CONFLICT"
+        assert wrong_program.value.code == "REQUEST_EVIDENCE_NOT_FOUND"
 
 
 @pytest.mark.integration

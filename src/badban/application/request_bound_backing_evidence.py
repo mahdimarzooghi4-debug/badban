@@ -112,7 +112,11 @@ async def read_request_bound_backing_evidence(
                 ValuationObservation,
                 ValuationObservation.asset_position_id == AssetPosition.id,
             )
-            .where(GuaranteeCase.id == guarantee_case_id)
+            .where(
+                GuaranteeCase.id == guarantee_case_id,
+                ParticipationEpisode.program_id == program_id,
+            )
+            .execution_options(populate_existing=True)
         )
     ).all()
     if not rows:
