@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
@@ -294,12 +295,7 @@ def test_registry_rejects_invalid_processing_lineage_and_payload_hash() -> None:
         processed_status="APPLIED",
     )
 
-    invalid_hash = DelinquencyEvidence(
-        **{
-            **valid.__dict__,
-            "payload_hash": "not-a-sha256",
-        }
-    )
+    invalid_hash = replace(valid, payload_hash="not-a-sha256")
     with pytest.raises(DelinquencyEvaluationError) as hash_exc:
         registry.evaluate(
             raw_definition=_raw_definition(),
@@ -308,12 +304,7 @@ def test_registry_rejects_invalid_processing_lineage_and_payload_hash() -> None:
         )
     assert hash_exc.value.code == "DELINQUENCY_EVIDENCE_INSUFFICIENT"
 
-    invalid_lineage = DelinquencyEvidence(
-        **{
-            **valid.__dict__,
-            "provider_contract_version": "",
-        }
-    )
+    invalid_lineage = replace(valid, provider_contract_version="")
     with pytest.raises(DelinquencyEvaluationError) as lineage_exc:
         registry.evaluate(
             raw_definition=_raw_definition(),
