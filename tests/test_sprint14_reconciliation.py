@@ -1261,3 +1261,239 @@ async def test_correction_resolution_requires_fresh_recheck_before_block_clears(
     assert active_blocks == 0
     assert stored_guarantee is not None and stored_guarantee.state == "ISSUED"
     assert journal_count == 0
+
+
+@pytest.mark.integration
+async def test_reconciliation_read_model_exposes_age_and_active_block_context(
+    settings: Settings,
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, _, provider, _, _ = await _seed(
+        database,
+        materiality="MATERIAL",
+        blocking_rules=_case_block_rule("RECON_AMOUNT_MISMATCH", "MATERIAL"),
+        resolution_governance=_resolution_governance(
+            "MATERIAL",
+            approval_required=False,
+        ),
+    )
+    adapter = SnapshotAdapter(
+        provider.id,
+        _snapshot(
+            provider.id,
+            loans=[
+                LenderReconciliationLoan(
+                    external_loan_id="loan-1",
+                    original_principal="100",
+                    outstanding_principal="70",
+                    currency="IRR",
+                    provider_state="ACTIVE",
+                    observed_at=datetime.now(UTC),
+                )
+            ],
+        ),
+    )
+    run_id = await _execute(database, provider, operator, adapter)
+    first_detected_at = datetime.now(UTC) - timedelta(minutes=3)
+    last_observed_at = datetime.now(UTC) - timedelta(seconds=45)
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            case = await session.scalar(
+                select(ReconciliationCase).where(
+                    ReconciliationCase.run_id == run_id,
+                    ReconciliationCase.mismatch_reason_code == "RECON_AMOUNT_MISMATCH",
+                )
+            )
+            assert case is not None
+            case.first_detected_at = first_detected_at
+            case.last_observed_at = last_observed_at
+            await session.flush()
+            case_id = case.id
+            active_blocks_before = int(
+                await session.scalar(
+                    select(func.count())
+                    .select_from(ReconciliationBlock)
+                    .where(
+                        ReconciliationBlock.reconciliation_case_id == case.id,
+                        ReconciliationBlock.active.is_(True),
+                    )
+                )
+                or 0
+            )
+
+    assert active_blocks_before == 1
+
+    app = create_app(settings)
+    app.state.token_verifier = FakeVerifier()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get(
+            "/api/v1/reconciliation/cases",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            params={
+                "provider": str(provider.id),
+                "type": "LENDER_EXTERNAL_LOAN",
+                "status": "MISMATCH",
+                "materiality": "MATERIAL",
+                "min_age_seconds": 120,
+            },
+        )
+        assert listed.status_code == 200
+        assert len(listed.json()) == 1
+        listed_case = listed.json()[0]
+        assert listed_case["id"] == str(case_id)
+        assert listed_case["age_seconds"] >= 120
+        assert listed_case["last_observed_age_seconds"] >= 30
+        assert listed_case["active_block_count"] == 1
+        assert listed_case["version"] >= 1
+
+        too_old = await client.get(
+            "/api/v1/reconciliation/cases",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            params={
+                "provider": str(provider.id),
+                "min_age_seconds": 600,
+            },
+        )
+        assert too_old.status_code == 200
+        assert too_old.json() == []
+
+        detail = await client.get(
+            f"/api/v1/reconciliation/cases/{case_id}",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+        )
+        assert detail.status_code == 200
+        detail_body = detail.json()
+        assert detail_body["age_seconds"] >= 120
+        assert detail_body["last_observed_age_seconds"] >= 30
+        assert detail_body["active_block_count"] == 1
+
+    async with database.session_factory() as session:
+        stored_case = await session.get(ReconciliationCase, case_id)
+        active_blocks_after = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(ReconciliationBlock)
+                .where(
+                    ReconciliationBlock.reconciliation_case_id == case_id,
+                    ReconciliationBlock.active.is_(True),
+                )
+            )
+            or 0
+        )
+
+    assert stored_case is not None
+    assert stored_case.status == "MISMATCH"
+    assert active_blocks_after == active_blocks_before
+
+
+@pytest.mark.integration
+async def test_reconciliation_read_model_preserves_existing_queue_ordering(
+    settings: Settings,
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, _, provider, _, _ = await _seed(database)
+    adapter = SnapshotAdapter(provider.id, _snapshot(provider.id))
+
+    first_run_id = await _execute(
+        database,
+        provider,
+        operator,
+        adapter,
+        scope_reference="queue-order-first",
+    )
+    second_run_id = await _execute(
+        database,
+        provider,
+        operator,
+        adapter,
+        scope_reference="queue-order-second",
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            first_case = await session.scalar(
+                select(ReconciliationCase).where(ReconciliationCase.run_id == first_run_id)
+            )
+            second_case = await session.scalar(
+                select(ReconciliationCase).where(ReconciliationCase.run_id == second_run_id)
+            )
+            assert first_case is not None
+            assert second_case is not None
+            first_case.first_detected_at = datetime.now(UTC)
+            second_case.first_detected_at = datetime.now(UTC) - timedelta(minutes=10)
+            await session.flush()
+            first_case_id = first_case.id
+            second_case_id = second_case.id
+
+    app = create_app(settings)
+    app.state.token_verifier = FakeVerifier()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/reconciliation/cases",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            params={"provider": str(provider.id)},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [row["id"] for row in body[:2]] == [
+        str(second_case_id),
+        str(first_case_id),
+    ]
+
+
+@pytest.mark.integration
+async def test_reconciliation_read_model_does_not_broaden_provider_scope(
+    settings: Settings,
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, outsider, provider, _, _ = await _seed(database)
+    run_id = await _execute(
+        database,
+        provider,
+        operator,
+        SnapshotAdapter(provider.id, _snapshot(provider.id)),
+    )
+    async with database.session_factory() as session:
+        case = await session.scalar(
+            select(ReconciliationCase).where(ReconciliationCase.run_id == run_id)
+        )
+        assert case is not None
+        case_id = case.id
+
+    app = create_app(settings)
+    app.state.token_verifier = FakeVerifier()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        denied_list = await client.get(
+            "/api/v1/reconciliation/cases",
+            headers={"Authorization": f"Bearer {outsider.external_subject}"},
+            params={"provider": str(provider.id)},
+        )
+        denied_detail = await client.get(
+            f"/api/v1/reconciliation/cases/{case_id}",
+            headers={"Authorization": f"Bearer {outsider.external_subject}"},
+        )
+
+    assert denied_list.status_code == 403
+    assert denied_detail.status_code == 403
+
+
+def test_openapi_exposes_reconciliation_operational_read_fields(settings: Settings) -> None:
+    app = create_app(settings)
+    schema = app.openapi()
+
+    properties = schema["components"]["schemas"]["ReconciliationCaseView"]["properties"]
+    assert "age_seconds" in properties
+    assert "last_observed_age_seconds" in properties
+    assert "active_block_count" in properties
+
+    detail_properties = schema["components"]["schemas"]["ReconciliationCaseDetailView"][
+        "properties"
+    ]
+    assert "age_seconds" in detail_properties
+    assert "last_observed_age_seconds" in detail_properties
+    assert "active_block_count" in detail_properties

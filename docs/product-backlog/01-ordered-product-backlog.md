@@ -671,7 +671,8 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Priority:** P2  
 **Type:** Financial/Risk Capability  
 **Depends on:** BL-030, BL-032  
-**Traceability:** Decisions 0007, 0010; Technical 05
+**Traceability:** Decisions 0007, 0010; Technical 05  
+**Delivery Status:** Sprint 21 reserve-metrics snapshot producer and Sprint 22 reserve requirement/eligibility evaluator foundations are Code + Code Review complete on PRs #24/#25; concrete production definitions, coverage integration, and governed draw/replenishment remain incomplete and require separate accepted contracts
 
 **Acceptance Criteria**
 
@@ -689,7 +690,8 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Priority:** P2  
 **Type:** Domain/Integration Capability  
 **Depends on:** BL-025, BL-024  
-**Traceability:** Technical 03, 08
+**Traceability:** Technical 03, 08  
+**Delivery Status:** Sprint 20 delinquency evaluator/registry foundation Code + Code Review complete on PR #23; BL-034 transition remains blocked pending an accepted executable product delinquency definition type and authoritative evidence contract
 
 **Acceptance Criteria**
 
@@ -907,7 +909,8 @@ No UI action bypasses command authorization/business gates.
 **Priority:** P2  
 **Type:** Read Model / UI Capability  
 **Depends on:** BL-030, BL-042, BL-043  
-**Traceability:** Technical 07 §§27-28; Technical 13
+**Traceability:** Technical 07 §§27-28; Technical 13  
+**Delivery Status:** Sprint 19 backend read-model core Code + Code Review complete on PR #22; UI workspace remains incomplete/out of scope; merge pending prerequisite ordering and explicit approval
 
 **Acceptance Criteria**
 
@@ -947,7 +950,8 @@ Internal risk secrets and unrelated records are not exposed.
 **Priority:** P3  
 **Type:** Security Enabler  
 **Depends on:** BL-003, BL-006, provider adapters  
-**Traceability:** Technical 12
+**Traceability:** Technical 12  
+**Delivery Status:** Sprint 27 OIDC Discovery/JWKS trust-boundary hardening is Code + Technical Code Review complete (Draft PR #30; code CI #432 green). BL-048 remains open: live secret rotation, real provider webhook/credential verification, Production OIDC/Vault/egress integration, and security release testing are NOT complete.
 
 **Acceptance Criteria**
 
@@ -981,7 +985,8 @@ Internal risk secrets and unrelated records are not exposed.
 **Priority:** P3  
 **Type:** Operational Enabler  
 **Depends on:** BL-004, BL-041, BL-042  
-**Traceability:** Technical 12 §§29-30; Technical 13 §§30-31; Technical 14 §§18-20
+**Traceability:** Technical 12 §§29-30; Technical 13 §§30-31; Technical 14 §§18-20  
+**Delivery Status:** Sprint 18 Recovery Verification Core Code + Code Review complete on PR #21; stacked on Sprint 17; full external backup/source verification remains pending an authoritative external verifier; merge pending prerequisite ordering and explicit approval
 
 **Acceptance Criteria**
 
