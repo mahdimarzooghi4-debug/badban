@@ -55,16 +55,30 @@ def _headers(subject: str) -> dict[str, str]:
 async def _seed(database) -> dict[str, UUID | str]:
     async with database.session_factory() as session:
         async with session.begin():
-            ops = Identity(identity_type="STAFF", external_subject=f"ev-ops-{uuid4()}", status="ACTIVE")
-            risk = Identity(identity_type="STAFF", external_subject=f"ev-risk-{uuid4()}", status="ACTIVE")
-            finance = Identity(identity_type="STAFF", external_subject=f"ev-finance-{uuid4()}", status="ACTIVE")
-            auditor = Identity(identity_type="AUDITOR", external_subject=f"ev-audit-{uuid4()}", status="ACTIVE")
-            outsider = Identity(identity_type="STAFF", external_subject=f"ev-other-{uuid4()}", status="ACTIVE")
+            ops = Identity(
+                identity_type="STAFF", external_subject=f"ev-ops-{uuid4()}", status="ACTIVE"
+            )
+            risk = Identity(
+                identity_type="STAFF", external_subject=f"ev-risk-{uuid4()}", status="ACTIVE"
+            )
+            finance = Identity(
+                identity_type="STAFF", external_subject=f"ev-finance-{uuid4()}", status="ACTIVE"
+            )
+            auditor = Identity(
+                identity_type="AUDITOR", external_subject=f"ev-audit-{uuid4()}", status="ACTIVE"
+            )
+            outsider = Identity(
+                identity_type="STAFF", external_subject=f"ev-other-{uuid4()}", status="ACTIVE"
+            )
             participant = Participant(external_reference=f"ev-part-{uuid4()}")
             session.add_all([ops, risk, finance, auditor, outsider, participant])
             await session.flush()
-            program = Program(code=f"EV-{uuid4().hex[:12]}", name="Evidence Program", created_by=ops.id)
-            other_program = Program(code=f"OTHER-{uuid4().hex[:12]}", name="Other Program", created_by=ops.id)
+            program = Program(
+                code=f"EV-{uuid4().hex[:12]}", name="Evidence Program", created_by=ops.id
+            )
+            other_program = Program(
+                code=f"OTHER-{uuid4().hex[:12]}", name="Other Program", created_by=ops.id
+            )
             lender = LegalEntity(
                 legal_name="Test Lender",
                 registration_identifier=f"EV-ENTITY-{uuid4()}",
@@ -240,7 +254,9 @@ async def test_scoped_guarantee_reads_are_exact_and_side_effect_free(
             assert detail.status_code == 200
             assert detail.json()["state"] == "REQUESTED"
             assert detail.json()["requested_principal"] == "25.125"
-            evidence = await client.get(path + "/request-evidence", headers=_headers(str(keys[subject])))
+            evidence = await client.get(
+                path + "/request-evidence", headers=_headers(str(keys[subject]))
+            )
             assert evidence.status_code == 200
             body = evidence.json()
             assert body["guarantee_case_id"] == str(keys["guarantee"])
@@ -271,9 +287,7 @@ async def test_cross_program_and_missing_roles_cannot_read_guarantee_evidence(
     async with await _client(settings) as client:
         for suffix in ("", "/request-evidence"):
             no_auth = await client.get(path + suffix)
-            outsider = await client.get(
-                path + suffix, headers=_headers(str(keys["outsider"]))
-            )
+            outsider = await client.get(path + suffix, headers=_headers(str(keys["outsider"])))
             missing = await client.get(
                 f"/api/v1/guarantees/{uuid4()}" + suffix,
                 headers=_headers(str(keys["ops"])),
@@ -299,9 +313,7 @@ async def test_read_evidence_denies_transitioned_case_without_affecting_detail(
         detail = await client.get(path, headers=_headers(str(keys["ops"])))
         assert detail.status_code == 200
         assert detail.json()["state"] == "RESERVED"
-        evidence = await client.get(
-            path + "/request-evidence", headers=_headers(str(keys["ops"]))
-        )
+        evidence = await client.get(path + "/request-evidence", headers=_headers(str(keys["ops"])))
         assert evidence.status_code == 409
         assert evidence.json()["error"]["code"] == "REQUEST_EVIDENCE_STATE_UNSUPPORTED"
 
