@@ -135,7 +135,10 @@ def _asset_source(
                 "Participant-owned AssetPosition does not match its ParticipationEpisode",
             )
     elif position.ownership_funding_type == "PROGRAM_ATTRIBUTED":
-        if position.legal_owner_entity_id is None or position.legal_owner_participant_id is not None:
+        if (
+            position.legal_owner_entity_id is None
+            or position.legal_owner_participant_id is not None
+        ):
             raise BackingInventoryError(
                 "BACKING_SOURCE_OWNER_CONFLICT", "Program-attributed source has invalid owner"
             )
