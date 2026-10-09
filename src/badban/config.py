@@ -12,7 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def oidc_url_origin(url: str) -> tuple[str, str, int] | None:
     """Parse a trusted HTTP(S) origin without credentials, fragments or control chars."""
-    if not isinstance(url, str) or any(ord(char) <= 32 or char == "\\\\" for char in url):
+    if not isinstance(url, str) or any(ord(char) <= 32 or char == "\\" for char in url):
         return None
     try:
         parts = urlsplit(url)
