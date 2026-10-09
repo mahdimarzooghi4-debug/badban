@@ -287,7 +287,7 @@ async def list_inbox_delivery(
 @router.get(
     "/outbox/{message_id}",
     response_model=OutboxDeliveryView,
-    description="GLOBAL AUDITOR/SYSTEM_OPERATOR, read-only outbox delivery metadata; no event payload.",
+    description="GLOBAL AUDITOR/SYSTEM_OPERATOR; read-only delivery metadata, no payload.",
     responses={
         401: {"description": "AUTHENTICATION_REQUIRED"},
         403: {"description": "AUTHORIZATION_DENIED"},
