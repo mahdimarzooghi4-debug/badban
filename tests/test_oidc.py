@@ -148,6 +148,8 @@ async def test_oidc_invalid_discovery_document_fails_closed(
 
     def handler(request: httpx.Request) -> httpx.Response:
         requested.append(str(request.url))
+        if discovery_document is None:
+            return httpx.Response(200, content=b"null")
         return httpx.Response(200, json=discovery_document)
 
     verifier = OidcTokenVerifier(
@@ -173,6 +175,8 @@ async def test_oidc_invalid_jwks_shape_fails_closed(
                 json={"issuer": settings.oidc_issuer, "jwks_uri": "https://issuer.test/jwks"},
             )
         assert str(request.url) == "https://issuer.test/jwks"
+        if jwks_document is None:
+            return httpx.Response(200, content=b"null")
         return httpx.Response(200, json=jwks_document)
 
     verifier = OidcTokenVerifier(
