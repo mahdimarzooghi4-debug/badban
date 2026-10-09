@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 
 from badban.api.app import create_app
 from badban.config import Settings
-from badban.infrastructure.persistence.models import AuditEvent, Identity, RoleGrant
+from badban.infrastructure.persistence.models import Identity, RoleGrant
 from badban.security.audit import append_audit
 from badban.security.authorization import ROLE_AUDITOR, SCOPE_GLOBAL, SCOPE_PROGRAM
 
