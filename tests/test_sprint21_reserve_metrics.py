@@ -183,13 +183,11 @@ async def test_reserve_snapshot_keeps_cash_and_designated_balances_separate(
             JournalLine(
                 account_code="1000.SETTLEMENT_CASH_CONTROL",
                 economic_owner_type="PARTICIPANT",
-                participant_id=uuid4(),
                 debit_amount=Decimal("50"),
             ),
             JournalLine(
                 account_code="2000.PARTICIPANT_PAYABLE_BALANCE",
                 economic_owner_type="PARTICIPANT",
-                participant_id=uuid4(),
                 credit_amount=Decimal("50"),
             ),
         ],
