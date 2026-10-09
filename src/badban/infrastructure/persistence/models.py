@@ -76,6 +76,7 @@ class OutboxMessage(Base):
 class InboxMessage(Base):
     __tablename__ = "inbox_messages"
     __table_args__ = (
+        Index("ix_inbox_processing_scan", "processed_at", "received_at", "id"),
         UniqueConstraint(
             "source_id",
             "event_type",
@@ -94,6 +95,27 @@ class InboxMessage(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class LenderInboxScanCheckpoint(Base):
+    """Worker scheduling metadata; never substitutes for inbox facts or outcome."""
+
+    __tablename__ = "lender_inbox_scan_checkpoints"
+    __table_args__ = (
+        CheckConstraint(
+            "(last_received_at IS NULL) = (last_message_id IS NULL)",
+            name="ck_lender_inbox_checkpoint_pair",
+        ),
+    )
+
+    stream_key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    last_received_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_message_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class IdempotencyRecord(Base):
@@ -1433,6 +1455,56 @@ class RecoveryVerificationCheck(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     details: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class GuaranteeReserveMetricsSnapshot(Base):
+    __tablename__ = "guarantee_reserve_metrics_snapshots"
+    __table_args__ = (
+        CheckConstraint(
+            "source_journal_count >= 0 AND source_posting_count >= 0",
+            name="ck_reserve_metrics_source_counts_nonnegative",
+        ),
+        UniqueConstraint(
+            "legal_entity_id",
+            "currency",
+            "source_fingerprint",
+            name="uq_reserve_metrics_scope_fingerprint",
+        ),
+        Index(
+            "ix_reserve_metrics_scope_evaluated",
+            "legal_entity_id",
+            "currency",
+            "evaluated_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    legal_entity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("legal_entities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    cash_control_balance: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    designated_balance: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    source_journal_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_posting_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_journal_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    source_posting_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    source_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    algorithm_code: Mapped[str] = mapped_column(String(120), nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("identities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
