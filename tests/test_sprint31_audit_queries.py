@@ -150,9 +150,7 @@ async def test_program_scope_keyset_filters_and_payload_suppression(
         assert len(first.json()["items"]) == 2
         cursor = first.json()["next_cursor"]
         assert cursor is not None
-        second = await client.get(
-            url + f"&after={cursor}", headers=_headers("audit-scoped")
-        )
+        second = await client.get(url + f"&after={cursor}", headers=_headers("audit-scoped"))
         assert second.status_code == 200
         assert len(second.json()["items"]) == 2
         assert second.json()["next_cursor"] is None
@@ -206,9 +204,7 @@ async def test_global_auditor_needs_exact_role_and_explicit_program_filter(
 ) -> None:
     ids = await _seed(database)
     async with await _client(settings) as client:
-        scoped_global = await client.get(
-            "/api/v1/audit/events", headers=_headers("audit-scoped")
-        )
+        scoped_global = await client.get("/api/v1/audit/events", headers=_headers("audit-scoped"))
         assert scoped_global.status_code == 403
 
         global_view = await client.get(

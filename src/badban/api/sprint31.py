@@ -119,22 +119,17 @@ async def _query_page(
 ) -> AuditEventPage:
     stmt = select(AuditEvent).where(*filters)
     if after is not None:
-        anchor = await session.scalar(
-            select(AuditEvent).where(AuditEvent.id == after, *filters)
-        )
+        anchor = await session.scalar(select(AuditEvent).where(AuditEvent.id == after, *filters))
         if anchor is None:
             raise ApiError(
                 422, "AUDIT_CURSOR_INVALID", "Cursor is not in the authorized filtered stream"
             )
         stmt = stmt.where(
-            tuple_(AuditEvent.occurred_at, AuditEvent.id)
-            > tuple_(anchor.occurred_at, anchor.id)
+            tuple_(AuditEvent.occurred_at, AuditEvent.id) > tuple_(anchor.occurred_at, anchor.id)
         )
 
     rows = (
-        await session.scalars(
-            stmt.order_by(AuditEvent.occurred_at, AuditEvent.id).limit(limit + 1)
-        )
+        await session.scalars(stmt.order_by(AuditEvent.occurred_at, AuditEvent.id).limit(limit + 1))
     ).all()
     page = rows[:limit]
     return AuditEventPage(
