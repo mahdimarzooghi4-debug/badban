@@ -443,7 +443,7 @@ async def list_reconciliation_cases(
 
     request_now = datetime.now(UTC)
     statement = select(ReconciliationCase).order_by(
-        ReconciliationCase.first_detected_at.desc(),
+        ReconciliationCase.created_at.desc(),
         ReconciliationCase.id.desc(),
     )
     if reconciliation_type is not None:
