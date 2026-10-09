@@ -84,7 +84,9 @@ It may not use `min()`, `max()`, addition, subtraction, or another composition r
 
 ## Evidence
 
-Typed evidence binds to one exact `GuaranteeReserveMetricsSnapshot`:
+Requirement evaluation uses explicit named non-negative exact-decimal inputs plus non-blank authoritative input references and an evidence version. Sprint 22 does not invent producers for those metrics.
+
+Eligibility evaluation binds to one exact `GuaranteeReserveMetricsSnapshot`:
 
 - snapshot ID/reference;
 - legal entity;
@@ -95,7 +97,7 @@ Typed evidence binds to one exact `GuaranteeReserveMetricsSnapshot`:
 - metrics algorithm code/version;
 - evaluated timestamp.
 
-Evidence values must be non-negative, finite exact decimals within storage limits.
+Cash-control and designated balances remain separate. Evidence values must be non-negative, finite exact decimals within storage limits.
 
 ## No Risk API Integration Yet
 
