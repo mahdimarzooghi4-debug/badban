@@ -194,8 +194,7 @@ def validate_reserve_metrics_evidence(evidence: ReserveMetricsEvidence) -> None:
         error_code="RESERVE_POLICY_EVIDENCE_INVALID",
     )
     if len(evidence.source_fingerprint) != 64 or any(
-        character not in "0123456789abcdefABCDEF"
-        for character in evidence.source_fingerprint
+        character not in "0123456789abcdefABCDEF" for character in evidence.source_fingerprint
     ):
         raise ReservePolicyEvaluationError(
             "RESERVE_POLICY_EVIDENCE_INVALID",
