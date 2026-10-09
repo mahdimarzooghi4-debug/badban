@@ -950,7 +950,8 @@ Internal risk secrets and unrelated records are not exposed.
 **Priority:** P3  
 **Type:** Security Enabler  
 **Depends on:** BL-003, BL-006, provider adapters  
-**Traceability:** Technical 12
+**Traceability:** Technical 12  
+**Delivery Status:** Sprint 27 OIDC Discovery/JWKS trust-boundary hardening is Code + Technical Code Review complete (Draft PR #30; code CI #432 green). BL-048 remains open: live secret rotation, real provider webhook/credential verification, Production OIDC/Vault/egress integration, and security release testing are NOT complete.
 
 **Acceptance Criteria**
 
