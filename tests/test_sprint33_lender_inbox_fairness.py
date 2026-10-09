@@ -23,8 +23,8 @@ from badban.infrastructure.persistence.models import (
     Identity,
     InboxMessage,
     JournalEntry,
-    LenderInboxScanCheckpoint,
     LegalEntity,
+    LenderInboxScanCheckpoint,
     OutboxMessage,
 )
 

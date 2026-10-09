@@ -7,8 +7,8 @@ from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import func, select, tuple_
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.integration_events import (
