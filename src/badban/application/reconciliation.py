@@ -20,6 +20,7 @@ from badban.application.lender_adapter import (
     LenderReconciliationSnapshot,
 )
 from badban.application.policy_resolution import ResolvedPolicyPack, resolve_active_policy_pack
+from badban.application.reconciliation_resolution import sync_case_blocks_from_policy
 from badban.infrastructure.persistence.database import Database
 from badban.infrastructure.persistence.models import (
     CreditProvider,
@@ -399,6 +400,18 @@ async def _add_case(
                 occurred_at=compared_at,
             )
         )
+    policy_record = await session.get(PolicyVersion, policy.rule_policy_version_id)
+    if policy_record is None:
+        raise ReconciliationError(
+            "RECONCILIATION_POLICY_INVALID",
+            "Reconciliation Policy disappeared while persisting case",
+        )
+    await sync_case_blocks_from_policy(
+        session,
+        case=case,
+        policy=policy_record,
+        correlation_id=None,
+    )
     return case
 
 
@@ -547,6 +560,7 @@ async def execute_lender_reconciliation(
                 reconciliation_type=LENDER_RECONCILIATION_TYPE,
                 provider_id=provider_id,
                 scope_definition=scope_definition,
+                scope_reference=scope_reference,
                 policy_pack_id=policy.policy_pack_id,
                 policy_pack_version=policy.policy_pack_version,
                 rule_policy_version_id=policy.rule_policy_version_id,

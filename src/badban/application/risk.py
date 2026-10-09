@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from typing import Any
 from uuid import UUID
 
@@ -83,6 +83,16 @@ def _decimal_text(value: Decimal) -> str:
     return format(value, "f")
 
 
+def _fits_storage_decimal(value: Decimal) -> bool:
+    """Validate exact NUMERIC(38,18) representation, including positive exponents."""
+    _, digits, exponent = value.as_tuple()
+    if not isinstance(exponent, int):
+        return False
+    scale = max(0, -exponent)
+    integer_digits = max(0, len(digits) + exponent)
+    return scale <= 18 and integer_digits <= 20
+
+
 def _parse_decimal(value: object, *, field: str, positive: bool = False) -> Decimal:
     if not isinstance(value, str):
         raise RiskEvaluationError("RISK_POLICY_INVALID", f"{field} must be a decimal string")
@@ -95,6 +105,10 @@ def _parse_decimal(value: object, *, field: str, positive: bool = False) -> Deci
     if not parsed.is_finite() or parsed < 0 or (positive and parsed <= 0):
         qualifier = "positive" if positive else "non-negative"
         raise RiskEvaluationError("RISK_POLICY_INVALID", f"{field} must be finite and {qualifier}")
+    if not _fits_storage_decimal(parsed):
+        raise RiskEvaluationError(
+            "RISK_POLICY_INVALID", f"{field} exceeds NUMERIC(38,18) storage precision"
+        )
     return parsed
 
 
@@ -103,16 +117,7 @@ def _storage_decimal(value: Decimal, *, field: str) -> Decimal:
         raise RiskEvaluationError(
             "RISK_INPUT_INVALID", f"{field} must be a finite non-negative Decimal"
         )
-    sign, digits, exponent = value.as_tuple()
-    del sign
-    if not isinstance(exponent, int):
-        raise RiskEvaluationError(
-            "RISK_INPUT_INVALID",
-            f"{field} must have a finite decimal exponent",
-        )
-    scale = max(0, -exponent)
-    integer_digits = max(0, len(digits) - scale)
-    if scale > 18 or integer_digits > 20:
+    if not _fits_storage_decimal(value):
         raise RiskEvaluationError(
             "RISK_INPUT_INVALID",
             f"{field} exceeds NUMERIC(38,18) storage precision",
@@ -241,24 +246,27 @@ def calculate_portfolio_risk(
         else "GREEN"
     )
 
-    committed = active if rules.committed_exposure_mode == "ACTIVE_ONLY" else active + reserved
-    _storage_decimal(committed, field="committed_exposure")
-    utilization = committed / rules.approved_portfolio_limit
+    # 38-digit storage values can need up to 76 digits for exact comparisons.
+    with localcontext() as context:
+        context.prec = 80
+        committed = active if rules.committed_exposure_mode == "ACTIVE_ONLY" else active + reserved
+        _storage_decimal(committed, field="committed_exposure")
+        utilization = committed / rules.approved_portfolio_limit
 
-    exposure_state = "GREEN"
-    if utilization >= rules.utilization_stop_ratio:
-        exposure_state = "RED"
-    elif utilization >= rules.utilization_warning_ratio:
-        exposure_state = "AMBER"
+        exposure_state = "GREEN"
+        if utilization >= rules.utilization_stop_ratio:
+            exposure_state = "RED"
+        elif utilization >= rules.utilization_warning_ratio:
+            exposure_state = "AMBER"
 
-    coverage: Decimal | None = None
-    reserve_state = "GREEN"
-    if reserve_requirement > 0:
-        coverage = reserve_available / reserve_requirement
-        if coverage < rules.reserve_coverage_hard_minimum_ratio:
-            reserve_state = "RED"
-        elif coverage < rules.reserve_coverage_warning_ratio:
-            reserve_state = "AMBER"
+        coverage: Decimal | None = None
+        reserve_state = "GREEN"
+        if reserve_requirement > 0:
+            coverage = reserve_available / reserve_requirement
+            if coverage < rules.reserve_coverage_hard_minimum_ratio:
+                reserve_state = "RED"
+            elif coverage < rules.reserve_coverage_warning_ratio:
+                reserve_state = "AMBER"
 
     gate_states = {
         "exposure": exposure_state,
@@ -372,14 +380,16 @@ async def read_authoritative_exposure(
         )
     ).all()
     total_reserved = Decimal("0")
-    for amount, expires_at in reserved_rows:
-        if amount is None or expires_at is None:
-            raise RiskEvaluationError(
-                "RISK_EXPOSURE_SOURCE_INVALID",
-                "RESERVED GuaranteeCase is missing amount or reservation expiry",
-            )
-        if expires_at > evaluated_at:
-            total_reserved += Decimal(amount)
+    with localcontext() as context:
+        context.prec = 80
+        for amount, expires_at in reserved_rows:
+            if amount is None or expires_at is None:
+                raise RiskEvaluationError(
+                    "RISK_EXPOSURE_SOURCE_INVALID",
+                    "RESERVED GuaranteeCase is missing amount or reservation expiry",
+                )
+            if expires_at > evaluated_at:
+                total_reserved += Decimal(amount)
     _storage_decimal(total_active, field="total_active_exposure")
     _storage_decimal(total_reserved, field="total_reserved_exposure")
     return total_active, total_reserved

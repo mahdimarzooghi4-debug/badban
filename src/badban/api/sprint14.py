@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
@@ -16,10 +16,19 @@ from badban.application.reconciliation import (
     ReconciliationError,
     execute_lender_reconciliation,
 )
+from badban.application.reconciliation_resolution import (
+    ReconciliationResolutionError,
+    approve_resolution,
+    propose_resolution,
+    recheck_lender_resolution,
+)
 from badban.infrastructure.persistence.models import (
+    ApprovalRequest,
     CreditProvider,
+    ReconciliationBlock,
     ReconciliationCase,
     ReconciliationObservation,
+    ReconciliationResolutionProposal,
     ReconciliationRun,
 )
 from badban.security.authorization import (
@@ -51,6 +60,7 @@ class ReconciliationRunView(BaseModel):
     reconciliation_type: str
     provider_id: UUID | None
     scope_definition: dict[str, Any]
+    scope_reference: str | None
     policy_pack_id: UUID
     policy_pack_version: int
     rule_policy_version_id: UUID
@@ -101,10 +111,14 @@ class ReconciliationCaseView(BaseModel):
     compared_at: datetime | None
     resolved_at: datetime | None
     resolution_reference: str | None
+    resolution_type: str | None
     rule_policy_version_id: UUID
     rule_policy_version_number: int
     first_detected_at: datetime
     last_observed_at: datetime
+    age_seconds: int = 0
+    last_observed_age_seconds: int = 0
+    active_block_count: int = 0
     version: int
     created_at: datetime
     updated_at: datetime
@@ -112,6 +126,99 @@ class ReconciliationCaseView(BaseModel):
 
 class ReconciliationCaseDetailView(ReconciliationCaseView):
     observations: list[ReconciliationObservationView]
+
+
+def _elapsed_seconds(now: datetime, then: datetime) -> int:
+    return max(0, int((now - then).total_seconds()))
+
+
+def _case_view(
+    case: ReconciliationCase,
+    *,
+    now: datetime,
+    active_block_count: int,
+) -> ReconciliationCaseView:
+    return ReconciliationCaseView.model_validate(case).model_copy(
+        update={
+            "age_seconds": _elapsed_seconds(now, case.first_detected_at),
+            "last_observed_age_seconds": _elapsed_seconds(now, case.last_observed_at),
+            "active_block_count": active_block_count,
+        }
+    )
+
+
+async def _active_block_counts(
+    session: AsyncSession,
+    case_ids: list[UUID],
+) -> dict[UUID, int]:
+    if not case_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(
+                ReconciliationBlock.reconciliation_case_id,
+                func.count(ReconciliationBlock.id),
+            )
+            .where(
+                ReconciliationBlock.reconciliation_case_id.in_(case_ids),
+                ReconciliationBlock.active.is_(True),
+            )
+            .group_by(ReconciliationBlock.reconciliation_case_id)
+        )
+    ).all()
+    return {case_id: int(count) for case_id, count in rows}
+
+
+class ReconciliationResolutionProposalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    resolution_type: Literal[
+        "INTERNAL_CORRECTION",
+        "EXTERNAL_CORRECTION",
+        "LATE_EVENT_APPLIED",
+        "MAPPING_CORRECTION",
+        "ACCEPTED_DIFFERENCE",
+        "DISPUTE_OUTCOME",
+    ]
+    reason: str = Field(min_length=1, max_length=1000)
+    evidence_references: list[str] = Field(min_length=1, max_length=50)
+    correction_command_references: list[str] = Field(default_factory=list, max_length=50)
+
+
+class ReconciliationResolutionProposalView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    reconciliation_case_id: UUID
+    expected_case_version: int
+    resolution_type: str
+    reason: str
+    evidence_references: list[str]
+    correction_command_references: list[str]
+    payload_hash: str
+    approval_request_id: UUID | None
+    status: str
+    proposed_by: UUID
+    approved_by: UUID | None
+    approved_at: datetime | None
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ReconciliationResolutionApproveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    proposal_id: UUID
+
+
+class ReconciliationRecheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ReconciliationRecheckView(BaseModel):
+    run_id: UUID
+    resolved: bool
 
 
 def _raise_reconciliation_error(exc: ReconciliationError) -> NoReturn:
@@ -134,6 +241,32 @@ def _raise_reconciliation_error(exc: ReconciliationError) -> NoReturn:
         "RECONCILIATION_SCOPE_INVALID",
         "RECONCILIATION_SOURCE_CUTOFF_INVALID",
         "RECONCILIATION_EVIDENCE_REQUIRED",
+    }:
+        raise ApiError(409, exc.code, str(exc)) from exc
+    raise ApiError(422, exc.code, str(exc)) from exc
+
+
+def _raise_resolution_error(exc: ReconciliationResolutionError) -> NoReturn:
+    if exc.code in {
+        "RECONCILIATION_CASE_NOT_FOUND",
+        "RECONCILIATION_RESOLUTION_NOT_FOUND",
+    }:
+        raise ApiError(404, exc.code, str(exc)) from exc
+    if exc.code == "APPROVAL_SELF_APPROVAL_FORBIDDEN":
+        raise ApiError(403, exc.code, str(exc)) from exc
+    if exc.code in {
+        "RECONCILIATION_CASE_STATE_CONFLICT",
+        "RECONCILIATION_RESOLUTION_ALREADY_PENDING",
+        "RECONCILIATION_CASE_VERSION_CONFLICT",
+        "RECONCILIATION_RESOLUTION_PAYLOAD_CHANGED",
+        "RECONCILIATION_RESOLUTION_APPROVAL_REQUIRED",
+        "APPROVAL_PAYLOAD_CHANGED",
+        "APPROVAL_TARGET_VERSION_CONFLICT",
+        "APPROVAL_CHECKER_CONFLICT",
+        "APPROVAL_NOT_APPROVED",
+        "RECONCILIATION_RESOLUTION_NOT_APPROVED",
+        "RECONCILIATION_RESOLUTION_POLICY_MISSING",
+        "RECONCILIATION_BLOCKING_RULE_MISSING",
     }:
         raise ApiError(409, exc.code, str(exc)) from exc
     raise ApiError(422, exc.code, str(exc)) from exc
@@ -308,6 +441,7 @@ async def list_reconciliation_cases(
             correlation_id=correlation_id,
         )
 
+    request_now = datetime.now(UTC)
     statement = select(ReconciliationCase).order_by(
         ReconciliationCase.created_at.desc(),
         ReconciliationCase.id.desc(),
@@ -321,10 +455,18 @@ async def list_reconciliation_cases(
     if provider_id is not None:
         statement = statement.where(ReconciliationCase.external_provider_id == provider_id)
     if min_age_seconds is not None:
-        cutoff = datetime.now(UTC) - timedelta(seconds=min_age_seconds)
-        statement = statement.where(ReconciliationCase.created_at <= cutoff)
+        cutoff = request_now - timedelta(seconds=min_age_seconds)
+        statement = statement.where(ReconciliationCase.first_detected_at <= cutoff)
     rows = (await session.scalars(statement.limit(limit))).all()
-    return [ReconciliationCaseView.model_validate(row) for row in rows]
+    block_counts = await _active_block_counts(session, [row.id for row in rows])
+    return [
+        _case_view(
+            row,
+            now=request_now,
+            active_block_count=block_counts.get(row.id, 0),
+        )
+        for row in rows
+    ]
 
 
 @router.get("/cases/{case_id}", response_model=ReconciliationCaseDetailView)
@@ -358,6 +500,18 @@ async def get_reconciliation_case(
             target_id=str(case.id),
             correlation_id=correlation_id,
         )
+    request_now = datetime.now(UTC)
+    active_block_count = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(ReconciliationBlock)
+            .where(
+                ReconciliationBlock.reconciliation_case_id == case.id,
+                ReconciliationBlock.active.is_(True),
+            )
+        )
+        or 0
+    )
     observations = (
         await session.scalars(
             select(ReconciliationObservation)
@@ -368,7 +522,11 @@ async def get_reconciliation_case(
             )
         )
     ).all()
-    base = ReconciliationCaseView.model_validate(case).model_dump()
+    base = _case_view(
+        case,
+        now=request_now,
+        active_block_count=active_block_count,
+    ).model_dump()
     return ReconciliationCaseDetailView(
         **base,
         observations=[
@@ -376,3 +534,173 @@ async def get_reconciliation_case(
             for observation in observations
         ],
     )
+
+
+async def _authorize_case_mutation(
+    session: AsyncSession,
+    *,
+    case: ReconciliationCase,
+    principal: Principal,
+    roles: set[str],
+    action: str,
+    correlation_id: UUID,
+) -> None:
+    if case.external_provider_id is None:
+        await _authorize_global(
+            session,
+            principal=principal,
+            roles=roles,
+            action=action,
+            target_type="ReconciliationCase",
+            target_id=str(case.id),
+            correlation_id=correlation_id,
+        )
+    else:
+        await _authorize_provider(
+            session,
+            principal=principal,
+            provider_id=case.external_provider_id,
+            roles=roles,
+            action=action,
+            target_type="ReconciliationCase",
+            target_id=str(case.id),
+            correlation_id=correlation_id,
+        )
+
+
+@router.post(
+    "/cases/{case_id}/propose-resolution",
+    response_model=ReconciliationResolutionProposalView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def propose_reconciliation_resolution(
+    case_id: UUID,
+    body: ReconciliationResolutionProposalRequest,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> ReconciliationResolutionProposalView:
+    case = await session.get(ReconciliationCase, case_id)
+    if case is None:
+        raise ApiError(404, "RECONCILIATION_CASE_NOT_FOUND", "Reconciliation case was not found")
+    await _authorize_case_mutation(
+        session,
+        case=case,
+        principal=principal,
+        roles={ROLE_FINANCE_RECONCILIATION},
+        action="RECONCILIATION_RESOLUTION_PROPOSE",
+        correlation_id=correlation_id,
+    )
+    try:
+        proposal = await propose_resolution(
+            session,
+            case_id=case.id,
+            resolution_type=body.resolution_type,
+            reason=body.reason,
+            evidence_references=body.evidence_references,
+            correction_command_references=body.correction_command_references,
+            actor_type=principal.identity_type,
+            actor_id=principal.identity_id,
+            correlation_id=correlation_id,
+        )
+    except ReconciliationResolutionError as exc:
+        _raise_resolution_error(exc)
+    await session.commit()
+    await session.refresh(proposal)
+    return ReconciliationResolutionProposalView.model_validate(proposal)
+
+
+@router.post(
+    "/cases/{case_id}/approve-resolution",
+    response_model=ReconciliationResolutionProposalView,
+)
+async def approve_reconciliation_resolution(
+    case_id: UUID,
+    body: ReconciliationResolutionApproveRequest,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> ReconciliationResolutionProposalView:
+    case = await session.get(ReconciliationCase, case_id)
+    if case is None:
+        raise ApiError(404, "RECONCILIATION_CASE_NOT_FOUND", "Reconciliation case was not found")
+    proposal = await session.get(ReconciliationResolutionProposal, body.proposal_id)
+    if proposal is None or proposal.reconciliation_case_id != case.id:
+        raise ApiError(
+            404,
+            "RECONCILIATION_RESOLUTION_NOT_FOUND",
+            "Resolution proposal was not found",
+        )
+
+    roles = {ROLE_FINANCE_RECONCILIATION}
+    if proposal.approval_request_id is not None:
+        approval = await session.get(ApprovalRequest, proposal.approval_request_id)
+        if approval is None:
+            raise ApiError(
+                409,
+                "RECONCILIATION_RESOLUTION_APPROVAL_REQUIRED",
+                "Resolution approval request was not found",
+            )
+        roles = {approval.required_checker_role}
+
+    await _authorize_case_mutation(
+        session,
+        case=case,
+        principal=principal,
+        roles=roles,
+        action="RECONCILIATION_RESOLUTION_APPROVE",
+        correlation_id=correlation_id,
+    )
+    try:
+        approved = await approve_resolution(
+            session,
+            case_id=case.id,
+            proposal_id=proposal.id,
+            actor_type=principal.identity_type,
+            actor_id=principal.identity_id,
+            correlation_id=correlation_id,
+        )
+    except ReconciliationResolutionError as exc:
+        _raise_resolution_error(exc)
+    await session.commit()
+    await session.refresh(approved)
+    return ReconciliationResolutionProposalView.model_validate(approved)
+
+
+@router.post(
+    "/cases/{case_id}/recheck",
+    response_model=ReconciliationRecheckView,
+)
+async def recheck_reconciliation_case(
+    case_id: UUID,
+    body: ReconciliationRecheckRequest,
+    request: Request,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> ReconciliationRecheckView:
+    case = await session.get(ReconciliationCase, case_id)
+    if case is None:
+        raise ApiError(404, "RECONCILIATION_CASE_NOT_FOUND", "Reconciliation case was not found")
+    await _authorize_case_mutation(
+        session,
+        case=case,
+        principal=principal,
+        roles={ROLE_FINANCE_RECONCILIATION},
+        action="RECONCILIATION_RESOLUTION_RECHECK",
+        correlation_id=correlation_id,
+    )
+    try:
+        result = await recheck_lender_resolution(
+            request.app.state.database,
+            request.app.state.lender_adapter_registry,
+            case_id=case.id,
+            actor_type=principal.identity_type,
+            actor_id=principal.identity_id,
+            correlation_id=correlation_id,
+        )
+    except ReconciliationResolutionError as exc:
+        _raise_resolution_error(exc)
+    except ReconciliationError as exc:
+        _raise_reconciliation_error(exc)
+    return ReconciliationRecheckView(run_id=result.run_id, resolved=result.resolved)
