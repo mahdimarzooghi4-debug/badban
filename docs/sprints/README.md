@@ -90,3 +90,10 @@ Proposed Sprint 04 scope:
 Decision 0028 — Sprint 04 Code Authorization — **Proposed**
 
 Sprint 04 Code is not yet authorized.
+
+## Sprint 14
+
+- [Sprint 14 — Reconciliation Engine Core and Lender Baseline](./14-sprint-14-reconciliation-engine-core.md) — **Accepted / Code Authorized**
+- Decision 0040 authorizes BL-042 Core + lender reconciliation vertical slice only.
+- BL-043 resolution/block workflow remains out of scope.
+- Decision 0033 keeps Stage available, but backend-first strategy means Stage is not automatically run after this Sprint.
