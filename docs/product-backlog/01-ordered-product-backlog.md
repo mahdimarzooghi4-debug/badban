@@ -672,7 +672,7 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Type:** Financial/Risk Capability  
 **Depends on:** BL-030, BL-032  
 **Traceability:** Decisions 0007, 0010; Technical 05  
-**Delivery Status:** Sprint 21 reserve-metrics snapshot producer Code + Code Review complete on PR #24; reserve eligibility, reserve requirement/coverage policy, and governed draw/replenishment remain incomplete and require separate accepted contracts
+**Delivery Status:** Sprint 21 reserve-metrics snapshot producer and Sprint 22 reserve requirement/eligibility evaluator foundations are Code + Code Review complete on PRs #24/#25; concrete production definitions, coverage integration, and governed draw/replenishment remain incomplete and require separate accepted contracts
 
 **Acceptance Criteria**
 
