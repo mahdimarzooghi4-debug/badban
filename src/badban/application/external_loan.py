@@ -82,7 +82,6 @@ def _lender_mirror_lock_key(provider_id: UUID, external_loan_id: str) -> int:
     return int.from_bytes(digest[:8], "big", signed=True)
 
 
-
 def _safe_event_payload(event: NormalizedLenderEvent) -> dict[str, object]:
     return event.model_dump(mode="json")
 
@@ -208,9 +207,7 @@ async def _validate_guarantee_link(
     if guarantee_case_id is None:
         return
     guarantee = await session.scalar(
-        select(GuaranteeCase)
-        .where(GuaranteeCase.id == guarantee_case_id)
-        .with_for_update()
+        select(GuaranteeCase).where(GuaranteeCase.id == guarantee_case_id).with_for_update()
     )
     if guarantee is None:
         raise ExternalLoanError(

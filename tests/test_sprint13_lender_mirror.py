@@ -1378,14 +1378,17 @@ async def test_concurrent_first_lender_events_produce_single_mirror_and_no_busin
         assert persisted_guarantee is not None
         assert persisted_guarantee.state == "ISSUED"
         assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
-        assert int(
-            await session.scalar(
-                select(func.count())
-                .select_from(InboxMessage)
-                .where(InboxMessage.id.in_(inbox_ids), InboxMessage.processed_at.is_not(None))
+        assert (
+            int(
+                await session.scalar(
+                    select(func.count())
+                    .select_from(InboxMessage)
+                    .where(InboxMessage.id.in_(inbox_ids), InboxMessage.processed_at.is_not(None))
+                )
+                or 0
             )
-            or 0
-        ) == 2
+            == 2
+        )
 
 
 @pytest.mark.integration
@@ -1442,8 +1445,7 @@ async def test_competing_lender_loan_ids_cannot_double_link_same_guarantee(
         ).all()
         assert len(mirrors) == 1
         assert (
-            int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0)
-            == 1
+            int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0) == 1
         )
         assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
         assert (
