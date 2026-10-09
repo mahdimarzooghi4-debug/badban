@@ -55,6 +55,14 @@ class ReserveMetricsEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class ReserveRequirementEvidence:
+    input_values: dict[str, Decimal]
+    authoritative_input_references: tuple[str, ...]
+    evidence_version: str
+    evaluated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class ReserveRequirementEvaluation:
     required_reserve: Decimal
     evaluator_version: str
@@ -79,7 +87,7 @@ class ReserveRequirementEvaluator(Protocol):
         self,
         *,
         definition: ReservePolicyDefinition,
-        evidence: ReserveMetricsEvidence,
+        evidence: ReserveRequirementEvidence,
         effective_at: datetime,
     ) -> Decimal: ...
 
@@ -176,6 +184,32 @@ def parse_reserve_policy_definition(raw: dict[str, Any]) -> ReservePolicyDefinit
     )
 
 
+def validate_reserve_requirement_evidence(
+    evidence: ReserveRequirementEvidence,
+) -> None:
+    _assert_aware_datetime(evidence.evaluated_at, field="evaluated_at")
+    _required_text(evidence.evidence_version, field="evidence_version")
+    if not evidence.authoritative_input_references or any(
+        not reference.strip() for reference in evidence.authoritative_input_references
+    ):
+        raise ReservePolicyEvaluationError(
+            "RESERVE_POLICY_EVIDENCE_INVALID",
+            "authoritative_input_references must contain non-blank references",
+        )
+    if not evidence.input_values:
+        raise ReservePolicyEvaluationError(
+            "RESERVE_POLICY_EVIDENCE_INVALID",
+            "input_values must not be empty",
+        )
+    for name, value in evidence.input_values.items():
+        _required_text(name, field="input_values key")
+        _exact_non_negative_decimal(
+            value,
+            field=f"input_values.{name}",
+            error_code="RESERVE_POLICY_EVIDENCE_INVALID",
+        )
+
+
 def validate_reserve_metrics_evidence(evidence: ReserveMetricsEvidence) -> None:
     if not evidence.currency.strip():
         raise ReservePolicyEvaluationError(
@@ -252,12 +286,12 @@ class ReserveRequirementDefinitionRegistry(_EvaluatorRegistry):
         self,
         *,
         raw_definition: dict[str, Any],
-        evidence: ReserveMetricsEvidence,
+        evidence: ReserveRequirementEvidence,
         effective_at: datetime,
     ) -> ReserveRequirementEvaluation:
         _assert_aware_datetime(effective_at, field="effective_at")
         definition = parse_reserve_policy_definition(raw_definition)
-        validate_reserve_metrics_evidence(evidence)
+        validate_reserve_requirement_evidence(evidence)
         evaluator: ReserveRequirementEvaluator = self.resolve(definition)
         required_reserve = _exact_non_negative_decimal(
             evaluator.evaluate(
