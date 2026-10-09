@@ -178,10 +178,10 @@ def _validate_evidence(evidence: DelinquencyEvidence) -> None:
             "DELINQUENCY_EVIDENCE_INSUFFICIENT",
             "Applied lender-authoritative delinquency evidence is required",
         )
-    if evidence.processed_status not in {"APPLIED", "CORRECTED"}:
+    if evidence.processed_status != "APPLIED":
         raise DelinquencyEvaluationError(
             "DELINQUENCY_EVIDENCE_INSUFFICIENT",
-            "STALE or HISTORY_ONLY lender events cannot satisfy delinquency evaluation",
+            "Only APPLIED lender delinquency events are eligible for evaluation",
         )
     if len(evidence.payload_hash) != 64 or any(
         character not in "0123456789abcdefABCDEF" for character in evidence.payload_hash
