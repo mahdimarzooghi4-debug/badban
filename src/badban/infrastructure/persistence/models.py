@@ -76,6 +76,7 @@ class OutboxMessage(Base):
 class InboxMessage(Base):
     __tablename__ = "inbox_messages"
     __table_args__ = (
+        Index("ix_inbox_processing_scan", "processed_at", "received_at", "id"),
         UniqueConstraint(
             "source_id",
             "event_type",
@@ -94,6 +95,27 @@ class InboxMessage(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class LenderInboxScanCheckpoint(Base):
+    """Worker scheduling metadata; never substitutes for inbox facts or outcome."""
+
+    __tablename__ = "lender_inbox_scan_checkpoints"
+    __table_args__ = (
+        CheckConstraint(
+            "(last_received_at IS NULL) = (last_message_id IS NULL)",
+            name="ck_lender_inbox_checkpoint_pair",
+        ),
+    )
+
+    stream_key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    last_received_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_message_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class IdempotencyRecord(Base):
