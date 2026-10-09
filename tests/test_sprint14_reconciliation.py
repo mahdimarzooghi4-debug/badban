@@ -1389,6 +1389,63 @@ async def test_reconciliation_read_model_exposes_age_and_active_block_context(
 
 
 @pytest.mark.integration
+async def test_reconciliation_read_model_preserves_existing_queue_ordering(
+    settings: Settings,
+    database,
+    clean_sprint14_reconciliation_tables,
+) -> None:
+    operator, _, provider, _, _ = await _seed(database)
+    adapter = SnapshotAdapter(provider.id, _snapshot(provider.id))
+
+    first_run_id = await _execute(
+        database,
+        provider,
+        operator,
+        adapter,
+        scope_reference="queue-order-first",
+    )
+    second_run_id = await _execute(
+        database,
+        provider,
+        operator,
+        adapter,
+        scope_reference="queue-order-second",
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            first_case = await session.scalar(
+                select(ReconciliationCase).where(ReconciliationCase.run_id == first_run_id)
+            )
+            second_case = await session.scalar(
+                select(ReconciliationCase).where(ReconciliationCase.run_id == second_run_id)
+            )
+            assert first_case is not None
+            assert second_case is not None
+            first_case.first_detected_at = datetime.now(UTC)
+            second_case.first_detected_at = datetime.now(UTC) - timedelta(minutes=10)
+            await session.flush()
+            first_case_id = first_case.id
+            second_case_id = second_case.id
+
+    app = create_app(settings)
+    app.state.token_verifier = FakeVerifier()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/reconciliation/cases",
+            headers={"Authorization": f"Bearer {operator.external_subject}"},
+            params={"provider": str(provider.id)},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [row["id"] for row in body[:2]] == [
+        str(second_case_id),
+        str(first_case_id),
+    ]
+
+
+@pytest.mark.integration
 async def test_reconciliation_read_model_does_not_broaden_provider_scope(
     settings: Settings,
     database,
