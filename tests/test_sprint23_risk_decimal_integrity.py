@@ -101,9 +101,7 @@ def test_38_digit_exposure_sum_preserves_fractional_increment() -> None:
             "0.000000000000000001",
         ),
     )
-    assert result.committed_exposure == Decimal(
-        "99999999999999999999.000000000000000001"
-    )
+    assert result.committed_exposure == Decimal("99999999999999999999.000000000000000001")
 
 
 def test_derived_exposure_overflow_rejected_without_rounding() -> None:
