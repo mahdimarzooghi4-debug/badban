@@ -157,7 +157,9 @@ async def get_snapshot(
 ) -> ReserveMetricsView:
     snapshot = await session.get(GuaranteeReserveMetricsSnapshot, snapshot_id)
     if snapshot is None:
-        raise ApiError(404, "RESERVE_METRICS_SNAPSHOT_NOT_FOUND", "Reserve metrics snapshot not found")
+        raise ApiError(
+            404, "RESERVE_METRICS_SNAPSHOT_NOT_FOUND", "Reserve metrics snapshot not found"
+        )
     await _authorize(
         session,
         principal=principal,
