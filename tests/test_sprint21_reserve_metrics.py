@@ -422,9 +422,7 @@ async def test_reserve_snapshot_concurrent_identical_source_is_single_record(
     assert first == second
     async with database.session_factory() as session:
         count = int(
-            await session.scalar(
-                select(func.count()).select_from(GuaranteeReserveMetricsSnapshot)
-            )
+            await session.scalar(select(func.count()).select_from(GuaranteeReserveMetricsSnapshot))
             or 0
         )
     assert count == 1
