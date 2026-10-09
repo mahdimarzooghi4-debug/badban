@@ -253,7 +253,7 @@ async def test_scoped_guarantee_reads_are_exact_and_side_effect_free(
             detail = await client.get(path, headers=_headers(str(keys[subject])))
             assert detail.status_code == 200
             assert detail.json()["state"] == "REQUESTED"
-            assert detail.json()["requested_principal"] == "25.125"
+            assert Decimal(detail.json()["requested_principal"]) == Decimal("25.125")
             evidence = await client.get(
                 path + "/request-evidence", headers=_headers(str(keys[subject]))
             )
@@ -262,7 +262,7 @@ async def test_scoped_guarantee_reads_are_exact_and_side_effect_free(
             assert body["guarantee_case_id"] == str(keys["guarantee"])
             assert body["provider_lifecycle_status"] == "DRAFT"
             assert body["product_lifecycle_status"] == "DRAFT"
-            assert body["requested_principal"] == "25.125"
+            assert Decimal(body["requested_principal"]) == Decimal("25.125")
             assert len(body["backing"]["sources"]) == 2
             assert sorted(len(s["valuation_history"]) for s in body["backing"]["sources"]) == [0, 1]
             assert all(isinstance(s["quantity"], str) for s in body["backing"]["sources"])
