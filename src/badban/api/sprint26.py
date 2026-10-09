@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
 from badban.api.errors import ApiError
-from badban.api.sprint07 import GuaranteeCaseView, _view as guarantee_view
+from badban.api.sprint07 import GuaranteeCaseView
+from badban.api.sprint07 import _view as guarantee_view
 from badban.application.backing_source_inventory import BackingInventoryError
 from badban.application.request_bound_backing_evidence import (
     RequestEvidenceError,
