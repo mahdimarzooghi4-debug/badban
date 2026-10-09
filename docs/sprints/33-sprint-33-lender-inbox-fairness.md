@@ -3,7 +3,7 @@
 - **Date:** 2026-10-09
 - **Scope:** Backend BL-041/BL-051 lender Inbox starvation and multi-replica reliability
 - **Base:** Sprint 32 PR #35 exact-head CI #457 SUCCESS
-- **State:** Draft implementation, CI and Technical Code Review pending
+- **State:** Code and automated Technical Code Review complete; Draft/Open PR #36, unmerged
 
 ## Confirmed defect
 
@@ -42,3 +42,10 @@ multiple scanner replicas get disjoint pages while enough pending events
 exist; failed message remains retryable after wrap; processed rows skip;
 invalid checkpoint pair is rejected by DB constraint; batch validation and
 empty path. No provider credentials/real provider network, Stage or QA.
+
+## Review and exact-SHA code evidence
+
+- Code HEAD: `32169b303c19351286c20eb2ed4dc671f0775973`
+- [Full code CI #462](https://github.com/mahdimarzooghi4-debug/badban/actions/runs/37941523784): SUCCESS, 327 passed (1 warning), Quality / Secret Scan green
+- [Automated Technical Code Review](./33-sprint-33-code-review.md) recorded on reviewed code SHA
+- Final documentation HEAD requires separate exact-head CI before closure; no Merge, Stage, QA, Release or Production.
