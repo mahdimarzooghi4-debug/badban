@@ -347,7 +347,10 @@ def test_guarantee_ops_openapi_list_workspace_contract(settings: Settings) -> No
     components = api["components"]["schemas"]
     assert components["GuaranteeListView"]["properties"]["next_cursor"]
     assert components["GuaranteeWorkspaceFoundationView"]["properties"]["request_evidence"]
-    assert components["ExternalLoanObservedView"]["properties"]["outstanding_principal"]["format"] == "decimal"
+    assert (
+        components["ExternalLoanObservedView"]["properties"]["outstanding_principal"]["format"]
+        == "decimal"
+    )
 
 
 @pytest.mark.integration
@@ -395,24 +398,26 @@ async def test_program_scoped_guarantee_listing_pagination_and_authorization(
         assert all_ids == sorted(all_ids)
         assert str(keys["guarantee"]) in all_ids
         for role in ("risk", "finance", "auditor"):
-            scoped = await client.get(
-                base_url, headers=_headers(str(keys[role])), params=params
-            )
+            scoped = await client.get(base_url, headers=_headers(str(keys[role])), params=params)
             assert scoped.status_code == 200
         outsider = await client.get(
             base_url, headers=_headers(str(keys["outsider"])), params=params
         )
         assert outsider.status_code == 403
         assert (await client.get(base_url, params=params)).status_code == 401
-        assert (await client.get(
-            base_url, headers=_headers(str(keys["ops"])), params={"limit": 3}
-        )).status_code == 422
-        assert (await client.get(
-            base_url, headers=_headers(str(keys["ops"])),
-            params={"program_id": str(keys["program"]), "limit": 101},
-        )).status_code == 422
+        assert (
+            await client.get(base_url, headers=_headers(str(keys["ops"])), params={"limit": 3})
+        ).status_code == 422
+        assert (
+            await client.get(
+                base_url,
+                headers=_headers(str(keys["ops"])),
+                params={"program_id": str(keys["program"]), "limit": 101},
+            )
+        ).status_code == 422
         empty = await client.get(
-            base_url, headers=_headers(str(keys["ops"])),
+            base_url,
+            headers=_headers(str(keys["ops"])),
             params={"program_id": str(keys["program"]), "state": "CLOSED"},
         )
         assert empty.status_code == 200

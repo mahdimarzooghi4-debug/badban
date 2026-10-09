@@ -253,16 +253,17 @@ async def read_guarantee_workspace(
         or (guarantee.external_loan_mirror_id is not None and external_loan is None)
         or (
             external_loan is not None
-            and (external_loan.provider_id != provider.id or external_loan.guarantee_case_id != guarantee.id)
+            and (
+                external_loan.provider_id != provider.id
+                or external_loan.guarantee_case_id != guarantee.id
+            )
         )
     ):
         raise ApiError(
             409, "GUARANTEE_WORKSPACE_LINEAGE_CONFLICT", "Captured sources are inconsistent"
         )
     if min(guarantee.version, episode.version, provider.version, product.version) < 1:
-        raise ApiError(
-            409, "GUARANTEE_WORKSPACE_VERSION_INVALID", "Source versions are invalid"
-        )
+        raise ApiError(409, "GUARANTEE_WORKSPACE_VERSION_INVALID", "Source versions are invalid")
 
     evidence_view = None
     if guarantee.state == "REQUESTED":
@@ -277,9 +278,7 @@ async def read_guarantee_workspace(
         evidence_data = asdict(evidence)
         evidence_data["backing"]["source_fingerprint"] = evidence.backing.source_fingerprint
         evidence_data["evidence_fingerprint"] = evidence.evidence_fingerprint
-        evidence_view = RequestBoundEvidenceView.model_validate(
-            _decimal_to_string(evidence_data)
-        )
+        evidence_view = RequestBoundEvidenceView.model_validate(_decimal_to_string(evidence_data))
 
     loan_view = None
     if external_loan is not None:
