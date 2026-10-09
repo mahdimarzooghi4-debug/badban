@@ -230,8 +230,8 @@ def test_registry_fails_closed_on_insufficient_or_invalid_evidence() -> None:
     assert evaluator.last_definition is None
 
 
-@pytest.mark.parametrize("processed_status", ["STALE", "HISTORY_ONLY"])
-def test_registry_rejects_non_applied_lender_history(processed_status: str) -> None:
+@pytest.mark.parametrize("processed_status", ["STALE", "HISTORY_ONLY", "CORRECTED"])
+def test_registry_rejects_non_applied_lender_evidence(processed_status: str) -> None:
     registry = DelinquencyDefinitionRegistry()
     evaluator = FixedResultEvaluator("SATISFIED")
     registry.register(evaluator)
