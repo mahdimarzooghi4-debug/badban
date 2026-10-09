@@ -115,23 +115,28 @@ def _assert_aware_datetime(value: datetime, *, field: str) -> None:
         )
 
 
-def _exact_non_negative_decimal(value: object, *, field: str) -> Decimal:
+def _exact_non_negative_decimal(
+    value: object,
+    *,
+    field: str,
+    error_code: str = "RESERVE_POLICY_RESULT_INVALID",
+) -> Decimal:
     if not isinstance(value, Decimal) or not value.is_finite() or value < 0:
         raise ReservePolicyEvaluationError(
-            "RESERVE_POLICY_RESULT_INVALID",
+            error_code,
             f"{field} must be a finite non-negative Decimal",
         )
     _sign, digits, exponent = value.as_tuple()
     if not isinstance(exponent, int):
         raise ReservePolicyEvaluationError(
-            "RESERVE_POLICY_RESULT_INVALID",
+            error_code,
             f"{field} must have a finite decimal exponent",
         )
     scale = max(0, -exponent)
     integer_digits = max(0, len(digits) - scale)
     if scale > 18 or integer_digits > 20:
         raise ReservePolicyEvaluationError(
-            "RESERVE_POLICY_RESULT_INVALID",
+            error_code,
             f"{field} exceeds NUMERIC(38,18) storage precision",
         )
     return value
@@ -181,10 +186,12 @@ def validate_reserve_metrics_evidence(evidence: ReserveMetricsEvidence) -> None:
     _exact_non_negative_decimal(
         evidence.cash_control_balance,
         field="cash_control_balance",
+        error_code="RESERVE_POLICY_EVIDENCE_INVALID",
     )
     _exact_non_negative_decimal(
         evidence.designated_balance,
         field="designated_balance",
+        error_code="RESERVE_POLICY_EVIDENCE_INVALID",
     )
     if len(evidence.source_fingerprint) != 64 or any(
         character not in "0123456789abcdefABCDEF"
