@@ -201,7 +201,7 @@ async def clean_sprint13_lender_tables(database):
                 "legal_authorizations, legal_entities, journal_postings, journal_entries, "
                 "participation_episodes, role_grants, audit_events, evidence_references, "
                 "programs, participants, identities, idempotency_records, "
-                "outbox_messages, inbox_messages "
+                "outbox_messages, inbox_messages, lender_inbox_scan_checkpoints "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -830,7 +830,9 @@ async def test_sequence_gap_leaves_event_unprocessed_until_missing_predecessor_a
     first_retry = await process_pending_lender_inbox_batch(database)
     assert first_retry.processed >= 1
     second_retry = await process_pending_lender_inbox_batch(database)
-    assert second_retry.processed == 1
+    # Durable fair scanning may retry the gap message in the same batch as
+    # its missing predecessor, instead of requiring a second worker poll.
+    assert first_retry.processed + second_retry.processed == 2
 
     async with database.session_factory() as session:
         mirror = await session.scalar(
