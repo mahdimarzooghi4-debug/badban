@@ -244,10 +244,10 @@ async def test_scoped_guarantee_reads_are_exact_and_side_effect_free(
     keys = await _seed(database)
     path = f"/api/v1/guarantees/{keys['guarantee']}"
     async with database.session_factory() as session:
-        before = tuple(
+        before = [
             int(await session.scalar(select(func.count()).select_from(model)) or 0)
             for model in (GuaranteeCase, JournalEntry, DecisionSnapshot, OutboxMessage)
-        )
+        ]
     async with await _client(settings) as client:
         for subject in ("ops", "risk", "finance", "auditor"):
             detail = await client.get(path, headers=_headers(str(keys[subject])))
@@ -271,10 +271,10 @@ async def test_scoped_guarantee_reads_are_exact_and_side_effect_free(
             assert "eligible" not in body
             assert "available_capacity" not in body
     async with database.session_factory() as session:
-        after = tuple(
+        after = [
             int(await session.scalar(select(func.count()).select_from(model)) or 0)
             for model in (GuaranteeCase, JournalEntry, DecisionSnapshot, OutboxMessage)
-        )
+        ]
     assert before == after
 
 
