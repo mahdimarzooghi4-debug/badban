@@ -227,8 +227,7 @@ async def read_guarantee_workspace(
             )
             .outerjoin(
                 ExternalLoanMirror,
-                (ExternalLoanMirror.id == GuaranteeCase.external_loan_mirror_id)
-                & (ExternalLoanMirror.guarantee_case_id == GuaranteeCase.id),
+                ExternalLoanMirror.guarantee_case_id == GuaranteeCase.id,
             )
             .where(
                 GuaranteeCase.id == guarantee_id,
@@ -250,7 +249,13 @@ async def read_guarantee_workspace(
         or guarantee.credit_product_version_id != product.id
         or product.provider_id != provider.id
         or guarantee.guarantee_mode != product.guarantee_mode
-        or (guarantee.external_loan_mirror_id is not None and external_loan is None)
+        or (
+            guarantee.external_loan_mirror_id is not None
+            and (
+                external_loan is None
+                or external_loan.id != guarantee.external_loan_mirror_id
+            )
+        )
         or (
             external_loan is not None
             and (

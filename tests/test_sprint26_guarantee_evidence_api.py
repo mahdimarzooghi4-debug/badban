@@ -16,6 +16,7 @@ from badban.infrastructure.persistence.models import (
     CreditProductVersion,
     CreditProvider,
     DecisionSnapshot,
+    ExternalLoanMirror,
     GuaranteeCase,
     Identity,
     JournalEntry,
@@ -494,3 +495,65 @@ async def test_workspace_refuses_mismatched_captured_product_and_keeps_state_obs
         mismatch = await client.get(url, headers=_headers(str(keys["ops"])))
         assert mismatch.status_code == 409
         assert mismatch.json()["error"]["code"] == "GUARANTEE_WORKSPACE_LINEAGE_CONFLICT"
+
+
+@pytest.mark.integration
+async def test_workspace_reads_authoritative_mirror_link_even_without_case_pointer(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    async with database.session_factory() as session:
+        async with session.begin():
+            guarantee = await session.get(GuaranteeCase, keys["guarantee"])
+            assert guarantee is not None
+            # Inbound loan mirrors may link to a case before its reverse pointer
+            # is recorded. Observing a mirror does not activate the guarantee.
+            session.add(
+                ExternalLoanMirror(
+                    guarantee_case_id=guarantee.id,
+                    provider_id=guarantee.provider_id,
+                    external_loan_id=f"test-loan-{uuid4()}",
+                    state="PENDING",
+                    original_principal=Decimal("25.125"),
+                    outstanding_principal=Decimal("25.125"),
+                    currency="IRR",
+                )
+            )
+    url = f"/api/v1/guarantees/{keys['guarantee']}/workspace"
+    async with await _client(settings) as client:
+        response = await client.get(url, headers=_headers(str(keys["ops"])))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["guarantee"]["state"] == "REQUESTED"
+    assert body["guarantee"]["external_loan_mirror_id"] is None
+    assert body["external_loan"]["state"] == "PENDING"
+    assert Decimal(body["external_loan"]["outstanding_principal"]) == Decimal("25.125")
+    assert not body["action_eligibility_evaluated"]
+
+
+@pytest.mark.integration
+async def test_workspace_rejects_contradictory_reverse_mirror_reference(
+    settings: Settings, database, clean_sprint07_guarantee_tables
+) -> None:
+    keys = await _seed(database)
+    async with database.session_factory() as session:
+        async with session.begin():
+            guarantee = await session.get(GuaranteeCase, keys["guarantee"])
+            assert guarantee is not None
+            mirror = ExternalLoanMirror(
+                guarantee_case_id=None,
+                provider_id=guarantee.provider_id,
+                external_loan_id=f"unrelated-loan-{uuid4()}",
+                state="PENDING",
+                original_principal=Decimal("25.125"),
+                outstanding_principal=Decimal("25.125"),
+                currency="IRR",
+            )
+            session.add(mirror)
+            await session.flush()
+            guarantee.external_loan_mirror_id = mirror.id
+    url = f"/api/v1/guarantees/{keys['guarantee']}/workspace"
+    async with await _client(settings) as client:
+        response = await client.get(url, headers=_headers(str(keys["ops"])))
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "GUARANTEE_WORKSPACE_LINEAGE_CONFLICT"
