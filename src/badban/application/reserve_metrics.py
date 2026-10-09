@@ -117,9 +117,7 @@ async def create_reserve_metrics_snapshot(
                 "currency": posting.currency,
                 "economic_owner_type": posting.economic_owner_type,
                 "economic_owner_id": (
-                    str(posting.economic_owner_id)
-                    if posting.economic_owner_id is not None
-                    else ""
+                    str(posting.economic_owner_id) if posting.economic_owner_id is not None else ""
                 ),
                 "program_id": str(posting.program_id) if posting.program_id is not None else "",
                 "reserve_account_id": (
