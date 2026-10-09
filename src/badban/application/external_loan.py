@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.integration_events import (
@@ -65,6 +66,21 @@ class LenderInboxBatchResult:
 
 def lender_source_id(provider_id: UUID) -> str:
     return f"{_LENDER_SOURCE_PREFIX}{provider_id}"
+
+
+def _lender_mirror_lock_key(provider_id: UUID, external_loan_id: str) -> int:
+    """Deterministic transaction lock scoped to one provider and external loan.
+
+    A SELECT ... FOR UPDATE cannot serialize the creation of a row that does
+    not exist. Use one PostgreSQL transaction advisory lock before the mirror
+    lookup, independently of worker replica and Python process.
+    """
+    loan_identity = external_loan_id.encode("utf-8")
+    digest = hashlib.sha256(
+        b"badban:lender:mirror:v1:" + provider_id.bytes + loan_identity
+    ).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)
+
 
 
 def _safe_event_payload(event: NormalizedLenderEvent) -> dict[str, object]:
@@ -191,7 +207,11 @@ async def _validate_guarantee_link(
 ) -> None:
     if guarantee_case_id is None:
         return
-    guarantee = await session.get(GuaranteeCase, guarantee_case_id)
+    guarantee = await session.scalar(
+        select(GuaranteeCase)
+        .where(GuaranteeCase.id == guarantee_case_id)
+        .with_for_update()
+    )
     if guarantee is None:
         raise ExternalLoanError(
             "GUARANTEE_CASE_NOT_FOUND",
@@ -201,6 +221,16 @@ async def _validate_guarantee_link(
         raise ExternalLoanError(
             "EVENT_SCOPE_INVALID",
             "GuaranteeCase belongs to a different lender provider",
+        )
+    existing_id = await session.scalar(
+        select(ExternalLoanMirror.id).where(
+            ExternalLoanMirror.guarantee_case_id == guarantee_case_id
+        )
+    )
+    if existing_id is not None:
+        raise ExternalLoanError(
+            "LENDER_GUARANTEE_LINK_CONFLICT",
+            "The GuaranteeCase is already linked to a different External Loan",
         )
 
 
@@ -335,6 +365,17 @@ async def apply_normalized_lender_event(
     provider = await session.get(CreditProvider, event.provider_id)
     if provider is None:
         raise ExternalLoanError("PROVIDER_NOT_FOUND", "Lender provider does not exist")
+
+    # Serialize first insertion and subsequent updates across worker replicas.
+    # The transaction that locks the Inbox row owns this advisory lock too;
+    # the database releases it automatically on commit or rollback.
+    await session.scalar(
+        select(
+            func.pg_advisory_xact_lock(
+                _lender_mirror_lock_key(event.provider_id, event.external_loan_id)
+            )
+        )
+    )
 
     mirror = await session.scalar(
         select(ExternalLoanMirror)

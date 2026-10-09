@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
@@ -15,8 +16,12 @@ from sqlalchemy.exc import DBAPIError
 
 from badban.api.app import create_app
 from badban.application.external_loan import (
+    ExternalLoanError,
+    _lender_mirror_lock_key,
+    process_lender_inbox_message,
     process_pending_lender_inbox_batch,
 )
+from badban.application.integration_events import process_inbox_message_once
 from badban.application.lender_adapter import (
     LenderAdapterError,
     LenderCapabilityManifest,
@@ -1269,3 +1274,186 @@ async def test_lender_event_page_empty_and_revoked_grant_denies(
                 grants[0].status = "REVOKED"
         denied = await client.get(path, headers=auth)
         assert denied.status_code == 403
+
+
+def test_lender_mirror_advisory_key_is_deterministic_and_provider_scoped() -> None:
+    provider_id = uuid4()
+    other_provider_id = uuid4()
+    assert _lender_mirror_lock_key(provider_id, "loan-α") == _lender_mirror_lock_key(
+        provider_id, "loan-α"
+    )
+    assert _lender_mirror_lock_key(provider_id, "loan-α") != _lender_mirror_lock_key(
+        provider_id, "loan-β"
+    )
+    assert _lender_mirror_lock_key(provider_id, "loan-α") != _lender_mirror_lock_key(
+        other_provider_id, "loan-α"
+    )
+
+
+@pytest.mark.integration
+async def test_concurrent_first_lender_events_produce_single_mirror_and_no_business_effect(
+    settings: Settings, database, clean_sprint13_lender_tables
+) -> None:
+    _, provider, guarantee = await _seed_context(database)
+    app, client = await _app_client(settings)
+    app.state.lender_adapter_registry.register(provider.id, TestLenderAdapter(provider.id))
+    base_time = datetime.now(UTC)
+    loan_id = f"concurrent-first-loan-{uuid4()}"
+    events = [
+        {
+            **_raw_event(
+                provider,
+                status="approved",
+                event_id=f"first-approved-{uuid4()}",
+                sequence=1,
+                guarantee_id=guarantee.id,
+                event_time=base_time,
+            ),
+            "external_loan_id": loan_id,
+        },
+        {
+            **_raw_event(
+                provider,
+                status="funded",
+                event_id=f"first-disbursed-{uuid4()}",
+                sequence=2,
+                guarantee_id=guarantee.id,
+                event_time=base_time + timedelta(seconds=1),
+                disbursed="100",
+            ),
+            "external_loan_id": loan_id,
+        },
+    ]
+    async with client:
+        inbox_ids = []
+        for payload in events:
+            response = await client.post(
+                f"/api/v1/integrations/lenders/{provider.id}/events",
+                headers={"x-test-signature": "valid"},
+                json=payload,
+            )
+            assert response.status_code == 202, response.text
+            inbox_ids.append(UUID(response.json()["inbox_message_id"]))
+
+    results = await asyncio.wait_for(
+        asyncio.gather(
+            *(
+                process_inbox_message_once(
+                    database, message_id=message_id, handler=process_lender_inbox_message
+                )
+                for message_id in inbox_ids
+            )
+        ),
+        timeout=15,
+    )
+    assert len(results) == 2 and all(item.processed for item in results)
+
+    async with database.session_factory() as session:
+        mirrors = (
+            await session.scalars(
+                select(ExternalLoanMirror).where(
+                    ExternalLoanMirror.provider_id == provider.id,
+                    ExternalLoanMirror.external_loan_id == loan_id,
+                )
+            )
+        ).all()
+        assert len(mirrors) == 1
+        mirror = mirrors[0]
+        histories = (
+            await session.scalars(
+                select(ExternalLoanEvent).where(
+                    ExternalLoanEvent.external_loan_mirror_id == mirror.id
+                )
+            )
+        ).all()
+        assert len(histories) == 2
+        assert {x.provider_event_id for x in histories} == {
+            str(event["external_event_id"]) for event in events
+        }
+        assert {x.processed_status for x in histories}.issubset({"APPLIED", "STALE"})
+        assert mirror.state == "ACTIVE"
+        assert mirror.last_provider_event_sequence == 2
+        assert mirror.guarantee_case_id == guarantee.id
+        persisted_guarantee = await session.get(GuaranteeCase, guarantee.id)
+        assert persisted_guarantee is not None
+        assert persisted_guarantee.state == "ISSUED"
+        assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
+        assert int(
+            await session.scalar(
+                select(func.count())
+                .select_from(InboxMessage)
+                .where(InboxMessage.id.in_(inbox_ids), InboxMessage.processed_at.is_not(None))
+            )
+            or 0
+        ) == 2
+
+
+@pytest.mark.integration
+async def test_competing_lender_loan_ids_cannot_double_link_same_guarantee(
+    settings: Settings, database, clean_sprint13_lender_tables
+) -> None:
+    _, provider, guarantee = await _seed_context(database)
+    app, client = await _app_client(settings)
+    app.state.lender_adapter_registry.register(provider.id, TestLenderAdapter(provider.id))
+    messages = []
+    async with client:
+        for number in range(2):
+            payload = {
+                **_raw_event(
+                    provider,
+                    status="approved",
+                    event_id=f"competing-{number}-{uuid4()}",
+                    sequence=1,
+                    guarantee_id=guarantee.id,
+                ),
+                "external_loan_id": f"competing-loan-{number}-{uuid4()}",
+            }
+            response = await client.post(
+                f"/api/v1/integrations/lenders/{provider.id}/events",
+                headers={"x-test-signature": "valid"},
+                json=payload,
+            )
+            assert response.status_code == 202, response.text
+            messages.append(UUID(response.json()["inbox_message_id"]))
+    results = await asyncio.wait_for(
+        asyncio.gather(
+            *(
+                process_inbox_message_once(
+                    database, message_id=message_id, handler=process_lender_inbox_message
+                )
+                for message_id in messages
+            ),
+            return_exceptions=True,
+        ),
+        timeout=15,
+    )
+    assert sum(not isinstance(x, BaseException) and x.processed for x in results) == 1
+    errors = [x for x in results if isinstance(x, BaseException)]
+    assert len(errors) == 1
+    assert isinstance(errors[0], ExternalLoanError)
+    assert errors[0].code == "LENDER_GUARANTEE_LINK_CONFLICT"
+    async with database.session_factory() as session:
+        mirrors = (
+            await session.scalars(
+                select(ExternalLoanMirror).where(
+                    ExternalLoanMirror.guarantee_case_id == guarantee.id
+                )
+            )
+        ).all()
+        assert len(mirrors) == 1
+        assert (
+            int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0)
+            == 1
+        )
+        assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
+        assert (
+            int(
+                await session.scalar(
+                    select(func.count())
+                    .select_from(InboxMessage)
+                    .where(InboxMessage.id.in_(messages), InboxMessage.processed_at.is_not(None))
+                )
+                or 0
+            )
+            == 1
+        )
