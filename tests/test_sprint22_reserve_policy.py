@@ -153,7 +153,7 @@ def test_requirement_registry_has_no_default_or_fallback_evaluator() -> None:
     with pytest.raises(ReservePolicyEvaluationError) as exc:
         registry.evaluate(
             raw_definition=_requirement_definition(),
-            evidence=_evidence(),
+            evidence=_requirement_evidence(),
             effective_at=datetime.now(UTC),
         )
 
