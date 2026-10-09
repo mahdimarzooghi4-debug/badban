@@ -90,6 +90,16 @@ async def create_reserve_metrics_snapshot(
     source_rows: list[dict[str, str]] = []
 
     for posting, journal_entry_id in rows:
+        if (
+            posting.participant_id is not None
+            or posting.asset_position_id is not None
+            or posting.economic_owner_type == "PARTICIPANT"
+        ):
+            raise ReserveMetricsError(
+                "RESERVE_METRICS_SOURCE_OWNERSHIP_INVALID",
+                "Participant-owned or AssetPosition-linked value cannot be counted as general reserve",
+            )
+
         source_journal_ids.add(str(journal_entry_id))
         source_posting_ids.append(str(posting.id))
         if posting.account_code == RESERVE_CASH_ACCOUNT:
@@ -105,6 +115,18 @@ async def create_reserve_metrics_snapshot(
                 "debit_amount": format(posting.debit_amount, "f"),
                 "credit_amount": format(posting.credit_amount, "f"),
                 "currency": posting.currency,
+                "economic_owner_type": posting.economic_owner_type,
+                "economic_owner_id": (
+                    str(posting.economic_owner_id)
+                    if posting.economic_owner_id is not None
+                    else ""
+                ),
+                "program_id": str(posting.program_id) if posting.program_id is not None else "",
+                "reserve_account_id": (
+                    str(posting.reserve_account_id)
+                    if posting.reserve_account_id is not None
+                    else ""
+                ),
             }
         )
 
