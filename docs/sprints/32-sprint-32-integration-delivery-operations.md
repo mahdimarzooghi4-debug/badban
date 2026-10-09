@@ -1,7 +1,7 @@
 # Sprint 32 — Integration Delivery Operations (BL-041)
 
 - **Date:** 2026-10-09
-- **Status:** Code package, exact-SHA CI and automated Technical Code Review pending
+- **Status:** Code and automated Technical Code Review complete; Draft/Open PR #35 unmerged
 - **Base:** Sprint 31 PR #34, exact-head CI #452 SUCCESS
 - **Scope:** Backend-only governed operational inspection of existing transactional Outbox/Inbox
 
@@ -28,3 +28,10 @@ Response is an allowlist of delivery metadata only: no Outbox/Inbox payload, pay
 ## Deferred
 
 BL-020 contracts, actual provider credentials, integration transport certification, production alert thresholds, broker delivery assertions and finance transitions remain deferred. This package reports persisted facts only. No Merge, Stage/QA, Release, Production or Figma.
+
+## Completion evidence
+
+- Reviewed Code HEAD: `80a25f905eff87328449c8f6b3e9f08587ea3d93`
+- Full Code CI #456 SUCCESS: 323 tests passed (1 warning), Quality + Secret Scan green
+- [Automated Technical Code Review](./32-sprint-32-code-review.md)
+- Final documentation HEAD requires separate CI; PR stays Draft/Open without Merge or Stage.
