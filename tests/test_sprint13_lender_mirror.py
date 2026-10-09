@@ -1160,12 +1160,12 @@ async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
         assert corrected.json()["processed_status"] == "CORRECTED"
         assert (await client.get(path)).status_code == 401
         assert (await client.get(path, headers=denied_auth)).status_code == 403
-        assert (await client.get(path + f"/{ids_in_order[0]}", headers=denied_auth)).status_code == 403
+        assert (
+            await client.get(path + f"/{ids_in_order[0]}", headers=denied_auth)
+        ).status_code == 403
         assert (await client.get(path, headers=auth, params={"limit": 0})).status_code == 422
         assert (await client.get(path, headers=auth, params={"limit": 101})).status_code == 422
-        foreign = await client.get(
-            path, headers=auth, params={"after": str(foreign_cursor)}
-        )
+        foreign = await client.get(path, headers=auth, params={"after": str(foreign_cursor)})
         assert foreign.status_code == 422
         assert foreign.json()["error"]["code"] == "LENDER_EVENT_CURSOR_INVALID"
         cross_loan = await client.get(
@@ -1173,13 +1173,17 @@ async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
         )
         assert cross_loan.status_code == 404
         assert cross_loan.json()["error"]["code"] == "LENDER_EVENT_NOT_FOUND"
-        assert (await client.get(f"/api/v1/external-loans/{uuid4()}/events", headers=auth)).status_code == 404
+        assert (
+            await client.get(f"/api/v1/external-loans/{uuid4()}/events", headers=auth)
+        ).status_code == 404
     assert set(app.openapi()["paths"][f"/api/v1/external-loans/{{loan_id}}/events"]) == {"get"}
     async with database.session_factory() as session:
         stored = await session.get(GuaranteeCase, guarantee.id)
         assert stored is not None and stored.state == "ISSUED"
         assert int(await session.scalar(select(func.count()).select_from(JournalEntry)) or 0) == 0
-        assert int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0) == 6
+        assert (
+            int(await session.scalar(select(func.count()).select_from(ExternalLoanEvent)) or 0) == 6
+        )
 
 
 @pytest.mark.integration
