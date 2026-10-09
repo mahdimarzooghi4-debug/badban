@@ -150,9 +150,12 @@ def _capability(kind: str) -> SourceCapability:
 def test_five_source_contracts_verify_provenance_and_stable_identity(kind):
     target = _target(kind)
     snapshot = _snapshot(kind)
-    assert verify_source_snapshot(
-        target=target, scope=SCOPE, capability=_capability(kind), snapshot=snapshot
-    ) == snapshot
+    assert (
+        verify_source_snapshot(
+            target=target, scope=SCOPE, capability=_capability(kind), snapshot=snapshot
+        )
+        == snapshot
+    )
     assert stable_key(snapshot.records[0])
     assert canonical_fields(snapshot.records[0])
 
@@ -170,7 +173,9 @@ def test_source_identity_shape_rejects_wrong_or_ambiguous_ownership(kind):
 
 
 @pytest.mark.parametrize("kind", list(_CLASSES))
-@pytest.mark.parametrize("mutation", ["hash", "source", "scope", "schema", "future", "missing_evidence"])
+@pytest.mark.parametrize(
+    "mutation", ["hash", "source", "scope", "schema", "future", "missing_evidence"]
+)
 def test_tampered_source_snapshots_fail_validation(kind, mutation):
     data = _snapshot(kind).model_dump(mode="json")
     if mutation == "hash":
@@ -208,12 +213,15 @@ def test_tampered_source_snapshots_fail_validation(kind, mutation):
 
 
 @pytest.mark.parametrize("kind", list(_CLASSES))
-@pytest.mark.parametrize("field,value", [
-    ("contract_version", "unexpected"),
-    ("mapping_version", "untrusted"),
-    ("schema_version", "reconciliation-source-v2"),
-    ("normalization_version", "unapproved"),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("contract_version", "unexpected"),
+        ("mapping_version", "untrusted"),
+        ("schema_version", "reconciliation-source-v2"),
+        ("normalization_version", "unapproved"),
+    ],
+)
 def test_source_capability_version_mismatch_fails_closed(kind, field, value):
     cap = _capability(kind)
     replacement = {**cap.__dict__, field: value}
