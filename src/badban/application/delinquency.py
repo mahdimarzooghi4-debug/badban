@@ -50,9 +50,15 @@ class DelinquencyEvidence:
     adapter_mapping_version: str
     inbound_normalization_version: str
     provider_event_sequence: int | None
+    processed_status: str
 
     @classmethod
-    def from_lender_event(cls, event: NormalizedLenderEvent) -> DelinquencyEvidence:
+    def from_lender_event(
+        cls,
+        event: NormalizedLenderEvent,
+        *,
+        processed_status: str,
+    ) -> DelinquencyEvidence:
         return cls(
             provider_id=event.provider_id,
             external_event_id=event.external_event_id,
@@ -67,6 +73,7 @@ class DelinquencyEvidence:
             adapter_mapping_version=event.adapter_mapping_version,
             inbound_normalization_version=event.inbound_normalization_version,
             provider_event_sequence=event.provider_event_sequence,
+            processed_status=processed_status,
         )
 
 
@@ -164,10 +171,34 @@ def _validate_evidence(evidence: DelinquencyEvidence) -> None:
             "DELINQUENCY_EVIDENCE_INSUFFICIENT",
             "Authoritative lender event identity is required",
         )
-    if not evidence.payload_hash.strip():
+    if evidence.event_type != "LOAN_DELINQUENT" or not (
+        evidence.delinquency_state is not None and evidence.delinquency_state.strip()
+    ):
         raise DelinquencyEvaluationError(
             "DELINQUENCY_EVIDENCE_INSUFFICIENT",
-            "Authoritative lender payload hash is required",
+            "Applied lender-authoritative delinquency evidence is required",
+        )
+    if evidence.processed_status not in {"APPLIED", "CORRECTED"}:
+        raise DelinquencyEvaluationError(
+            "DELINQUENCY_EVIDENCE_INSUFFICIENT",
+            "STALE or HISTORY_ONLY lender events cannot satisfy delinquency evaluation",
+        )
+    if len(evidence.payload_hash) != 64 or any(
+        character not in "0123456789abcdefABCDEF" for character in evidence.payload_hash
+    ):
+        raise DelinquencyEvaluationError(
+            "DELINQUENCY_EVIDENCE_INSUFFICIENT",
+            "Authoritative lender payload hash must be a SHA-256 hex digest",
+        )
+    lineage_values = {
+        "provider_contract_version": evidence.provider_contract_version,
+        "adapter_mapping_version": evidence.adapter_mapping_version,
+        "inbound_normalization_version": evidence.inbound_normalization_version,
+    }
+    if any(not value.strip() for value in lineage_values.values()):
+        raise DelinquencyEvaluationError(
+            "DELINQUENCY_EVIDENCE_INSUFFICIENT",
+            "Lender processing lineage versions are required",
         )
     if any(not reference.strip() for reference in evidence.evidence_references):
         raise DelinquencyEvaluationError(
