@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -59,8 +60,8 @@ class ReserveMetricsView(BaseModel):
     actor_type: str
     actor_id: UUID
     correlation_id: UUID
-    evaluated_at: object
-    created_at: object
+    evaluated_at: datetime
+    created_at: datetime
     reserve_metrics_reference: str
 
 
