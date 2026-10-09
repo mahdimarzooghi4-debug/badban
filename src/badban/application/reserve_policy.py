@@ -139,14 +139,20 @@ def _exact_non_negative_decimal(
             error_code,
             f"{field} must be a finite non-negative Decimal",
         )
+    if value == 0:
+        return value
     _sign, digits, exponent = value.as_tuple()
     if not isinstance(exponent, int):
         raise ReservePolicyEvaluationError(
             error_code,
             f"{field} must have a finite decimal exponent",
         )
-    scale = max(0, -exponent)
-    integer_digits = max(0, len(digits) - scale)
+    if exponent >= 0:
+        scale = 0
+        integer_digits = len(digits) + exponent
+    else:
+        scale = -exponent
+        integer_digits = max(0, len(digits) - scale)
     if scale > 18 or integer_digits > 20:
         raise ReservePolicyEvaluationError(
             error_code,
