@@ -461,7 +461,8 @@ Failure leaves no partial reservation/control effect.
 **Priority:** P1  
 **Type:** Integration Capability  
 **Depends on:** BL-001, BL-003, BL-017, BL-018  
-**Traceability:** Technical 09 §19
+**Traceability:** Technical 09 §19  
+**Delivery Status:** Sprint 15 Code + Code Review complete on PR #18; merge pending explicit approval
 
 **Acceptance Criteria**
 
