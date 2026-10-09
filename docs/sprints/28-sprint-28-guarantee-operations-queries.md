@@ -1,7 +1,7 @@
 # Sprint 28 — Governed Guarantee Operations Query Foundation
 
 - **Date:** 2026-10-09
-- **Status:** Code & Review pending exact-head CI
+- **Status:** Code + Technical Code Review COMPLETE / Merge Pending Explicit Approval
 - **Scope:** Accepted Technical 07 §19 and Technical 11 scoped-read contract
 - **Base:** Sprint 27 Draft PR #30 (green CI #433)
 - **Code:** Backend only; no Figma, Stage, QA, Release, or Production
@@ -37,3 +37,10 @@ BL-020 reservation is still Code-blocked by explicit multi-asset capacity,
 allocation/holds/expiry/locking, legal and Risk Snapshot business rules.
 Other financial dependencies remain unchanged; no assumptions/fabricated
 source observations or real-money behavior.
+
+## Final Verification
+
+- Exact reviewed code HEAD: `cf88bff62b332eb3cb8d36668c3e0d2c4648cc9b`
+- Full code CI #438: SUCCESS (311 tests, Quality and Secret Scan)
+- [Technical Code Review](./28-sprint-28-code-review.md)
+- PR #31 remains Draft/Open; no Merge, Stage, QA, Release, Production or Figma.
