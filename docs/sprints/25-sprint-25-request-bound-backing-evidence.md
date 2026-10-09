@@ -1,6 +1,6 @@
 # Sprint 25 — Request-bound Backing Evidence Foundation
 
-- **Status:** Code / review pending exact-head green CI
+- **Status:** Code + Technical Code Review Complete / Merge Pending Explicit Approval
 - **Date:** 2026-10-09
 - **Authorization:** Decision 0052 (technical evidence scope only)
 - **Base:** Sprint 24 PR #27, Draft/Open
@@ -26,3 +26,10 @@ BL-020 reservation Code Authorization still requires signed-off executable
 allocation/hold and expiry policies, risk snapshot freshness/qualification
 and atomic persistence/maker-checker/rollback lineage. Sprint 25 does not
 close any of these business-policy gaps.
+
+## Code / Review Gate
+
+- Final reviewed code HEAD: `e38c02f40d2f03a240635aceb2f024eb5df534ea`
+- CI #418: SUCCESS (secret-scan, quality, full tests and container build)
+- [Sprint 25 Technical Code Review](./25-sprint-25-code-review.md)
+- PR #28 remains Draft/Open; no merge/Stage/QA/Release/Production approval.
