@@ -14,6 +14,7 @@ from badban.application.reserve_policy import (
     ReservePolicyDefinition,
     ReservePolicyEvaluationError,
     ReserveRequirementDefinitionRegistry,
+    ReserveRequirementEvidence,
     parse_reserve_policy_definition,
 )
 from badban.infrastructure.persistence.models import GuaranteeReserveMetricsSnapshot
@@ -27,13 +28,13 @@ class FixedRequirementEvaluator:
     def __init__(self, result: Decimal) -> None:
         self.result = result
         self.last_definition: ReservePolicyDefinition | None = None
-        self.last_evidence: ReserveMetricsEvidence | None = None
+        self.last_evidence: ReserveRequirementEvidence | None = None
 
     def evaluate(
         self,
         *,
         definition: ReservePolicyDefinition,
-        evidence: ReserveMetricsEvidence,
+        evidence: ReserveRequirementEvidence,
         effective_at: datetime,
     ) -> Decimal:
         assert effective_at.tzinfo is not None
@@ -78,6 +79,21 @@ def _eligibility_definition() -> dict[str, Any]:
         "definition_version": "1",
         "payload": {"fixture_reference": "test-only"},
     }
+
+
+def _requirement_evidence() -> ReserveRequirementEvidence:
+    return ReserveRequirementEvidence(
+        input_values={
+            "total_active_exposure": Decimal("100"),
+            "portfolio_delinquency": Decimal("2"),
+        },
+        authoritative_input_references=(
+            "portfolio-risk-source:test",
+            "delinquency-metrics:test",
+        ),
+        evidence_version="TEST_REQUIREMENT_EVIDENCE_V1",
+        evaluated_at=datetime.now(UTC),
+    )
 
 
 def _evidence() -> ReserveMetricsEvidence:
@@ -151,7 +167,7 @@ def test_requirement_registry_is_explicit_and_exact_decimal() -> None:
 
     result = registry.evaluate(
         raw_definition=_requirement_definition(),
-        evidence=_evidence(),
+        evidence=_requirement_evidence(),
         effective_at=datetime.now(UTC),
     )
 
@@ -159,8 +175,11 @@ def test_requirement_registry_is_explicit_and_exact_decimal() -> None:
     assert result.evaluator_version == "TEST_REQUIREMENT_V1"
     assert evaluator.last_definition is not None
     assert evaluator.last_evidence is not None
-    assert evaluator.last_evidence.cash_control_balance == Decimal("100")
-    assert evaluator.last_evidence.designated_balance == Decimal("80")
+    assert evaluator.last_evidence.input_values["total_active_exposure"] == Decimal("100")
+    assert evaluator.last_evidence.authoritative_input_references == (
+        "portfolio-risk-source:test",
+        "delinquency-metrics:test",
+    )
 
 
 def test_eligibility_registry_keeps_source_balances_separate() -> None:
@@ -226,11 +245,14 @@ def test_invalid_evaluator_outputs_fail_closed(bad_result: Decimal) -> None:
     assert exc.value.code == "RESERVE_POLICY_RESULT_INVALID"
 
 
-def test_invalid_metrics_evidence_fails_before_evaluator_execution() -> None:
+def test_invalid_requirement_evidence_fails_before_evaluator_execution() -> None:
     registry = ReserveRequirementDefinitionRegistry()
     evaluator = FixedRequirementEvaluator(Decimal("10"))
     registry.register(evaluator)
-    invalid = replace(_evidence(), cash_control_balance=Decimal("-1"))
+    invalid = replace(
+        _requirement_evidence(),
+        input_values={"total_active_exposure": Decimal("-1")},
+    )
 
     with pytest.raises(ReservePolicyEvaluationError) as exc:
         registry.evaluate(
@@ -241,6 +263,23 @@ def test_invalid_metrics_evidence_fails_before_evaluator_execution() -> None:
 
     assert exc.value.code == "RESERVE_POLICY_EVIDENCE_INVALID"
     assert evaluator.last_definition is None
+
+
+def test_invalid_metrics_evidence_fails_before_eligibility_evaluator() -> None:
+    registry = ReserveEligibilityDefinitionRegistry()
+    evaluator = FixedEligibilityEvaluator(Decimal("10"))
+    registry.register(evaluator)
+    invalid = replace(_evidence(), cash_control_balance=Decimal("-1"))
+
+    with pytest.raises(ReservePolicyEvaluationError) as exc:
+        registry.evaluate(
+            raw_definition=_eligibility_definition(),
+            evidence=invalid,
+            effective_at=datetime.now(UTC),
+        )
+
+    assert exc.value.code == "RESERVE_POLICY_EVIDENCE_INVALID"
+    assert evaluator.last_evidence is None
 
 
 def test_metrics_reference_must_bind_exact_snapshot() -> None:
@@ -302,7 +341,7 @@ def test_timezone_aware_effective_time_is_required() -> None:
     with pytest.raises(ReservePolicyEvaluationError) as exc:
         registry.evaluate(
             raw_definition=_requirement_definition(),
-            evidence=_evidence(),
+            evidence=_requirement_evidence(),
             effective_at=datetime(2026, 10, 9, 12, 0, 0),
         )
 
