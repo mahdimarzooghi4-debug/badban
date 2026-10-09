@@ -689,7 +689,8 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Priority:** P2  
 **Type:** Domain/Integration Capability  
 **Depends on:** BL-025, BL-024  
-**Traceability:** Technical 03, 08
+**Traceability:** Technical 03, 08  
+**Delivery Status:** Sprint 20 delinquency evaluator/registry foundation Code + Code Review complete on PR #23; BL-034 transition remains blocked pending an accepted executable product delinquency definition type and authoritative evidence contract
 
 **Acceptance Criteria**
 
