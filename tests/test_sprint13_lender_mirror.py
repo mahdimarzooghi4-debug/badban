@@ -201,7 +201,7 @@ async def clean_sprint13_lender_tables(database):
                 "legal_authorizations, legal_entities, journal_postings, journal_entries, "
                 "participation_episodes, role_grants, audit_events, evidence_references, "
                 "programs, participants, identities, idempotency_records, "
-                "outbox_messages, inbox_messages "
+                "outbox_messages, inbox_messages, lender_inbox_scan_checkpoints "
                 "RESTART IDENTITY CASCADE"
             )
         )

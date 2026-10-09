@@ -7,7 +7,8 @@ from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.integration_events import (
@@ -28,6 +29,7 @@ from badban.infrastructure.persistence.models import (
     ExternalLoanMirror,
     GuaranteeCase,
     InboxMessage,
+    LenderInboxScanCheckpoint,
     OutboxMessage,
 )
 from badban.security.audit import append_audit
@@ -566,6 +568,73 @@ async def process_lender_inbox_message(
     )
 
 
+_LENDER_SCAN_STREAM_KEY = "lender-inbox:v1"
+
+
+async def _select_pending_lender_inbox_ids(
+    database: Database,
+    *,
+    batch_size: int,
+) -> list[UUID]:
+    """Durable round-robin over immutable (received_at,id) order.
+
+    A PostgreSQL row lock serializes cursor movement across worker replicas.
+    The cursor commits before handlers run, so a failed/poison event cannot
+    pin subsequent healthy messages behind the same page indefinitely.
+    Delivery still uses process_inbox_message_once's row lock and
+    business-effect transaction. Scanning neither acknowledges nor drops
+    failed messages, and applies no retry/dead-letter threshold.
+    """
+    async with database.session_factory() as session:
+        async with session.begin():
+            await session.execute(
+                insert(LenderInboxScanCheckpoint)
+                .values(stream_key=_LENDER_SCAN_STREAM_KEY)
+                .on_conflict_do_nothing(index_elements=["stream_key"])
+            )
+            checkpoint = await session.scalar(
+                select(LenderInboxScanCheckpoint)
+                .where(LenderInboxScanCheckpoint.stream_key == _LENDER_SCAN_STREAM_KEY)
+                .with_for_update()
+            )
+            if checkpoint is None:
+                raise RuntimeError("Lender inbox scan checkpoint could not be locked")
+
+            base = (
+                select(InboxMessage.id, InboxMessage.received_at)
+                .where(
+                    InboxMessage.processed_at.is_(None),
+                    InboxMessage.source_id.like(f"{_LENDER_SOURCE_PREFIX}%"),
+                )
+                .order_by(InboxMessage.received_at, InboxMessage.id)
+            )
+            position = (
+                (checkpoint.last_received_at, checkpoint.last_message_id)
+                if checkpoint.last_received_at is not None
+                and checkpoint.last_message_id is not None
+                else None
+            )
+            if position is None:
+                selected = (await session.execute(base.limit(batch_size))).all()
+            else:
+                current = tuple_(InboxMessage.received_at, InboxMessage.id)
+                selected = (
+                    await session.execute(base.where(current > tuple_(*position)).limit(batch_size))
+                ).all()
+                if len(selected) < batch_size:
+                    earlier = (
+                        await session.execute(
+                            base.where(current <= tuple_(*position)).limit(batch_size - len(selected))
+                        )
+                    ).all()
+                    selected.extend(earlier)
+
+            if selected:
+                checkpoint.last_message_id = selected[-1][0]
+                checkpoint.last_received_at = selected[-1][1]
+            return [row[0] for row in selected]
+
+
 async def process_pending_lender_inbox_batch(
     database: Database,
     *,
@@ -574,18 +643,7 @@ async def process_pending_lender_inbox_batch(
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
 
-    async with database.session_factory() as session:
-        message_ids = (
-            await session.scalars(
-                select(InboxMessage.id)
-                .where(
-                    InboxMessage.processed_at.is_(None),
-                    InboxMessage.source_id.like(f"{_LENDER_SOURCE_PREFIX}%"),
-                )
-                .order_by(InboxMessage.received_at, InboxMessage.id)
-                .limit(batch_size)
-            )
-        ).all()
+    message_ids = await _select_pending_lender_inbox_ids(database, batch_size=batch_size)
 
     processed = 0
     failed = 0
