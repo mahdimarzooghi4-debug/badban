@@ -3,7 +3,7 @@
 - **Date:** 2026-10-09
 - **Scope:** Backend BL-041 and BL-051 — at-least-once Outbox safety hardening
 - **Base:** Sprint 33 PR #36, final HEAD `3d344b8db6e5341723023357dd78198bd9dedb83`, exact-head CI #463 SUCCESS
-- **State:** Draft PR; code, full CI, automated Technical Code Review pending
+- **State:** Code and automated Technical Code Review complete; Draft/Open PR #37; unmerged
 
 ## Issue and exact limited contract
 
@@ -40,3 +40,10 @@ are allowed by at-least-once semantics.
   retry threshold, alert threshold, financial logic, guarantee/risk command,
   Stage, QA, Release or Production deployment.
 - Backend code, tests and documentation only; no migration or Figma.
+
+## Code acceptance evidence
+
+- Reviewed code HEAD: `6841ec73d8b2fc93ea16a19f4970b35a0c4438b6`
+- [Full Code CI #465](https://github.com/mahdimarzooghi4-debug/badban/actions/runs/37943183676): SUCCESS; 329 tests passed (1 warning); Quality and Secret Scan green
+- [Automated Technical Code Review](./34-sprint-34-code-review.md)
+- Final documentation HEAD requires separate exact-head CI; no Merge, Stage, QA, Release or Production.
