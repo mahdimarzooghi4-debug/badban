@@ -238,7 +238,7 @@ def test_invalid_evaluator_outputs_fail_closed(bad_result: Decimal) -> None:
     with pytest.raises(ReservePolicyEvaluationError) as exc:
         registry.evaluate(
             raw_definition=_requirement_definition(),
-            evidence=_evidence(),
+            evidence=_requirement_evidence(),
             effective_at=datetime.now(UTC),
         )
 
