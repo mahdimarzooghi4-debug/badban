@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -198,6 +200,16 @@ async def read_backing_source_inventory(
             .where(ParticipationEpisode.id == episode_id)
         )
     ).all()
+    return build_backing_source_inventory(rows, episode_id=episode_id, program_id=program_id)
+
+
+def build_backing_source_inventory(
+    rows: Sequence[Any],
+    *,
+    episode_id: UUID,
+    program_id: UUID,
+) -> BackingSourceInventory:
+    """Build the same read-only typed inventory from one coherent SELECT result."""
     if not rows:
         raise BackingInventoryError(
             "BACKING_SOURCE_EPISODE_NOT_FOUND", "ParticipationEpisode source does not exist"

@@ -58,3 +58,14 @@ tests, implementation and code review before the first reservation command.
 Until that gate, **BL-020 is NOT Code-ready**, and dependent BL-021/023/026
 remain blocked. Stage is reauthorized by Decision 0033 as a process gate but
 not executed by this document.
+
+## 5. Sprint 25 evidence bridge (still read-only)
+
+The one-statement internal request-bound evidence view can now retrieve the
+exact REQUESTED GuaranteeCase, captured CreditProductVersion and its provider
+plus all persisted episode backing/valuation sources together. It rejects
+contradictory request/captured product or source lineage and carries a
+deterministic observation fingerprint. This is *not* source qualification,
+capacity reservation, a legal approval, a cryptographic source attestation,
+a hold or a concurrency lock. Missing executable allocation, expiry, freshness,
+risk-gate and transaction definitions above continue to block BL-020.
