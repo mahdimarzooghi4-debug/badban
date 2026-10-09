@@ -184,7 +184,7 @@ async def test_delivery_observations_paging_filters_and_summary(
             headers=_headers("delivery-auditor"),
         )
         assert filtered.status_code == 200
-        assert [item["id"] for item in filtered.json()["items"]] == [str(ids["DEAD_LETTERED"]) ]
+        assert [item["id"] for item in filtered.json()["items"]] == [str(ids["DEAD_LETTERED"])]
         wrong_cursor = await client.get(
             f"/api/v1/integration-delivery/outbox?status=DEAD_LETTERED&after={ids['QUEUED']}",
             headers=_headers("delivery-auditor"),
