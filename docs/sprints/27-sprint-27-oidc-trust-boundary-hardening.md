@@ -1,7 +1,7 @@
 # Sprint 27 — OIDC Trust Boundary Hardening
 
 - **Date:** 2026-10-09
-- **Status:** Code / Technical Review pending full exact-head CI
+- **Status:** Code + Technical Code Review COMPLETE / Merge Pending Explicit Approval
 - **Scope:** BL-048 identity/security correctness slice; no provider credential rotation
 - **Base:** Sprint 26 PR #29, Draft/Open
 - **Accepted Contract:** Technical 11 and Technical 12 §§8, 14, 18, 21, 35, 38, 41
@@ -36,3 +36,10 @@
   replay/security pen-testing) remain incomplete.
 - No financial mutation, risk approval, reserve, API bypass, Merge,
   Stage, QA, Release, Production or Figma.
+
+## Exact-head Code Review and CI
+
+- Reviewed code SHA: `f569982389870b5afaa09d81326120cb7ac6c769`
+- Full CI #432: SUCCESS, 305 tests passed, Quality and Secret Scan successful.
+- [Detailed Technical Code Review](./27-sprint-27-code-review.md)
+- PR #30 remains Draft/Open; no Merge, Stage, QA, Release or Production.
