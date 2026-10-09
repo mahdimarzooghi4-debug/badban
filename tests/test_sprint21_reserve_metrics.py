@@ -218,6 +218,54 @@ async def test_reserve_snapshot_keeps_cash_and_designated_balances_separate(
 
 
 @pytest.mark.integration
+async def test_reserve_snapshot_rejects_participant_owned_value_on_reserve_account(
+    settings: Settings,
+    database,
+    clean_sprint21_tables,
+) -> None:
+    legal_entity, finance = await _legal_entity_and_identity(
+        database,
+        subject="sprint21-finance-participant-reserve",
+        role=ROLE_FINANCE_RECONCILIATION,
+    )
+    await _post(
+        database,
+        legal_entity_id=legal_entity.id,
+        actor_id=finance.id,
+        event_id="participant-misposted-reserve",
+        lines=[
+            JournalLine(
+                account_code="1020.GUARANTEE_RESERVE_CASH_CONTROL",
+                economic_owner_type="PARTICIPANT",
+                debit_amount=Decimal("25"),
+            ),
+            JournalLine(
+                account_code="2000.PARTICIPANT_PAYABLE_BALANCE",
+                economic_owner_type="PARTICIPANT",
+                credit_amount=Decimal("25"),
+            ),
+        ],
+    )
+
+    async with await _client(settings) as client:
+        response = await client.post(
+            "/api/v1/finance/reserve-metrics/snapshots",
+            headers={"Authorization": f"Bearer {finance.external_subject}"},
+            json={"legal_entity_id": str(legal_entity.id), "currency": "IRR"},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "RESERVE_METRICS_SOURCE_OWNERSHIP_INVALID"
+
+    async with database.session_factory() as session:
+        count = int(
+            await session.scalar(select(func.count()).select_from(GuaranteeReserveMetricsSnapshot))
+            or 0
+        )
+    assert count == 0
+
+
+@pytest.mark.integration
 async def test_reserve_snapshot_ignores_prepared_and_changes_on_new_posted_source(
     settings: Settings,
     database,
