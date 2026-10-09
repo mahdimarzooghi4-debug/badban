@@ -141,7 +141,7 @@ def test_registry_preserves_exact_evaluation_vocabulary(result: str) -> None:
     registry = DelinquencyDefinitionRegistry()
     evaluator = FixedResultEvaluator(result)
     registry.register(evaluator)
-    evidence = DelinquencyEvidence.from_lender_event(_event())
+    evidence = DelinquencyEvidence.from_lender_event(_event(), processed_status="APPLIED")
     effective_at = datetime.now(UTC)
 
     evaluated = registry.evaluate(
@@ -169,7 +169,7 @@ def test_registry_rejects_unsupported_evaluator_result() -> None:
     with pytest.raises(DelinquencyEvaluationError) as exc:
         registry.evaluate(
             raw_definition=_raw_definition(),
-            evidence=DelinquencyEvidence.from_lender_event(_event()),
+            evidence=DelinquencyEvidence.from_lender_event(_event(), processed_status="APPLIED"),
             effective_at=datetime.now(UTC),
         )
 
@@ -178,7 +178,7 @@ def test_registry_rejects_unsupported_evaluator_result() -> None:
 
 def test_evidence_is_derived_only_from_normalized_lender_lineage() -> None:
     event = _event()
-    evidence = DelinquencyEvidence.from_lender_event(event)
+    evidence = DelinquencyEvidence.from_lender_event(event, processed_status="APPLIED")
 
     assert evidence.provider_id == event.provider_id
     assert evidence.external_event_id == event.external_event_id
@@ -193,13 +193,14 @@ def test_evidence_is_derived_only_from_normalized_lender_lineage() -> None:
     assert evidence.adapter_mapping_version == event.adapter_mapping_version
     assert evidence.inbound_normalization_version == event.inbound_normalization_version
     assert evidence.provider_event_sequence == event.provider_event_sequence
+    assert evidence.processed_status == "APPLIED"
 
 
 def test_registry_fails_closed_on_insufficient_or_invalid_evidence() -> None:
     registry = DelinquencyDefinitionRegistry()
     evaluator = FixedResultEvaluator("SATISFIED")
     registry.register(evaluator)
-    valid = DelinquencyEvidence.from_lender_event(_event())
+    valid = DelinquencyEvidence.from_lender_event(_event(), processed_status="APPLIED")
     invalid = DelinquencyEvidence(
         provider_id=valid.provider_id,
         external_event_id=valid.external_event_id,
@@ -214,6 +215,7 @@ def test_registry_fails_closed_on_insufficient_or_invalid_evidence() -> None:
         adapter_mapping_version=valid.adapter_mapping_version,
         inbound_normalization_version=valid.inbound_normalization_version,
         provider_event_sequence=valid.provider_event_sequence,
+        processed_status=valid.processed_status,
     )
 
     with pytest.raises(DelinquencyEvaluationError) as exc:
@@ -227,6 +229,100 @@ def test_registry_fails_closed_on_insufficient_or_invalid_evidence() -> None:
     assert evaluator.last_definition is None
 
 
+@pytest.mark.parametrize("processed_status", ["STALE", "HISTORY_ONLY"])
+def test_registry_rejects_non_applied_lender_history(processed_status: str) -> None:
+    registry = DelinquencyDefinitionRegistry()
+    evaluator = FixedResultEvaluator("SATISFIED")
+    registry.register(evaluator)
+
+    with pytest.raises(DelinquencyEvaluationError) as exc:
+        registry.evaluate(
+            raw_definition=_raw_definition(),
+            evidence=DelinquencyEvidence.from_lender_event(
+                _event(),
+                processed_status=processed_status,
+            ),
+            effective_at=datetime.now(UTC),
+        )
+
+    assert exc.value.code == "DELINQUENCY_EVIDENCE_INSUFFICIENT"
+    assert evaluator.last_definition is None
+
+
+def test_registry_requires_applied_delinquency_event_not_other_lender_event() -> None:
+    registry = DelinquencyDefinitionRegistry()
+    evaluator = FixedResultEvaluator("SATISFIED")
+    registry.register(evaluator)
+    valid = DelinquencyEvidence.from_lender_event(
+        _event(),
+        processed_status="APPLIED",
+    )
+    invalid = DelinquencyEvidence(
+        provider_id=valid.provider_id,
+        external_event_id=valid.external_event_id,
+        event_type="LOAN_APPROVED",
+        external_loan_id=valid.external_loan_id,
+        event_time=valid.event_time,
+        received_at=valid.received_at,
+        delinquency_state=None,
+        evidence_references=valid.evidence_references,
+        payload_hash=valid.payload_hash,
+        provider_contract_version=valid.provider_contract_version,
+        adapter_mapping_version=valid.adapter_mapping_version,
+        inbound_normalization_version=valid.inbound_normalization_version,
+        provider_event_sequence=valid.provider_event_sequence,
+        processed_status="APPLIED",
+    )
+
+    with pytest.raises(DelinquencyEvaluationError) as exc:
+        registry.evaluate(
+            raw_definition=_raw_definition(),
+            evidence=invalid,
+            effective_at=datetime.now(UTC),
+        )
+
+    assert exc.value.code == "DELINQUENCY_EVIDENCE_INSUFFICIENT"
+    assert evaluator.last_definition is None
+
+
+def test_registry_rejects_invalid_processing_lineage_and_payload_hash() -> None:
+    registry = DelinquencyDefinitionRegistry()
+    evaluator = FixedResultEvaluator("SATISFIED")
+    registry.register(evaluator)
+    valid = DelinquencyEvidence.from_lender_event(
+        _event(),
+        processed_status="APPLIED",
+    )
+
+    invalid_hash = DelinquencyEvidence(
+        **{
+            **valid.__dict__,
+            "payload_hash": "not-a-sha256",
+        }
+    )
+    with pytest.raises(DelinquencyEvaluationError) as hash_exc:
+        registry.evaluate(
+            raw_definition=_raw_definition(),
+            evidence=invalid_hash,
+            effective_at=datetime.now(UTC),
+        )
+    assert hash_exc.value.code == "DELINQUENCY_EVIDENCE_INSUFFICIENT"
+
+    invalid_lineage = DelinquencyEvidence(
+        **{
+            **valid.__dict__,
+            "provider_contract_version": "",
+        }
+    )
+    with pytest.raises(DelinquencyEvaluationError) as lineage_exc:
+        registry.evaluate(
+            raw_definition=_raw_definition(),
+            evidence=invalid_lineage,
+            effective_at=datetime.now(UTC),
+        )
+    assert lineage_exc.value.code == "DELINQUENCY_EVIDENCE_INSUFFICIENT"
+
+
 def test_registry_requires_timezone_aware_effective_timestamp() -> None:
     registry = DelinquencyDefinitionRegistry()
     registry.register(FixedResultEvaluator("NOT_SATISFIED"))
@@ -234,7 +330,7 @@ def test_registry_requires_timezone_aware_effective_timestamp() -> None:
     with pytest.raises(DelinquencyEvaluationError) as exc:
         registry.evaluate(
             raw_definition=_raw_definition(),
-            evidence=DelinquencyEvidence.from_lender_event(_event()),
+            evidence=DelinquencyEvidence.from_lender_event(_event(), processed_status="APPLIED"),
             effective_at=datetime(2026, 10, 9, 12, 0, 0),
         )
 
