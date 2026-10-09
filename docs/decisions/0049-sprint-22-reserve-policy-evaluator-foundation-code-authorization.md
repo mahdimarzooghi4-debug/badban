@@ -29,9 +29,11 @@ Therefore no implementation may hard-code:
 - target/warning/hard-minimum coverage thresholds;
 - default reserve-eligibility composition.
 
-## Evidence Source
+## Evidence Sources
 
-Evaluator evidence must originate from an exact Sprint 21 `GuaranteeReserveMetricsSnapshot`.
+Reserve requirement evaluation uses explicit named exact-decimal input values, a versioned evidence contract, and non-blank authoritative input references. This foundation does not invent those upstream metric producers.
+
+Reserve eligibility evaluation must originate from an exact Sprint 21 `GuaranteeReserveMetricsSnapshot`.
 
 Cash-control and designated balances remain separate.
 
