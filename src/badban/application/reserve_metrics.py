@@ -97,7 +97,8 @@ async def create_reserve_metrics_snapshot(
         ):
             raise ReserveMetricsError(
                 "RESERVE_METRICS_SOURCE_OWNERSHIP_INVALID",
-                "Participant-owned or AssetPosition-linked value cannot be counted as general reserve",
+                "Participant-owned or AssetPosition-linked value "
+                "cannot be counted as general reserve",
             )
 
         source_journal_ids.add(str(journal_entry_id))
