@@ -1136,7 +1136,7 @@ async def test_lender_event_history_scopes_provider_and_paginates_by_event_time(
         collected: list[str] = []
         cursor = None
         while True:
-            parameters: dict[str, object] = {"limit": 2}
+            parameters: dict[str, str | int] = {"limit": 2}
             if cursor is not None:
                 parameters["after"] = cursor
             response = await client.get(path, headers=auth, params=parameters)
