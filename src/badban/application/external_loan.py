@@ -619,7 +619,11 @@ async def _select_pending_lender_inbox_ids(
             else:
                 current = tuple_(InboxMessage.received_at, InboxMessage.id)
                 selected = list(
-                    (await session.execute(base.where(current > tuple_(*position)).limit(batch_size))).all()
+                    (
+                        await session.execute(
+                            base.where(current > tuple_(*position)).limit(batch_size)
+                        )
+                    ).all()
                 )
                 if len(selected) < batch_size:
                     earlier = (
