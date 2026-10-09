@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select, tuple_
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.integration_events import (
@@ -27,6 +29,7 @@ from badban.infrastructure.persistence.models import (
     ExternalLoanMirror,
     GuaranteeCase,
     InboxMessage,
+    LenderInboxScanCheckpoint,
     OutboxMessage,
 )
 from badban.security.audit import append_audit
@@ -65,6 +68,20 @@ class LenderInboxBatchResult:
 
 def lender_source_id(provider_id: UUID) -> str:
     return f"{_LENDER_SOURCE_PREFIX}{provider_id}"
+
+
+def _lender_mirror_lock_key(provider_id: UUID, external_loan_id: str) -> int:
+    """Deterministic transaction lock scoped to one provider and external loan.
+
+    A SELECT ... FOR UPDATE cannot serialize the creation of a row that does
+    not exist. Use one PostgreSQL transaction advisory lock before the mirror
+    lookup, independently of worker replica and Python process.
+    """
+    loan_identity = external_loan_id.encode("utf-8")
+    digest = hashlib.sha256(
+        b"badban:lender:mirror:v1:" + provider_id.bytes + loan_identity
+    ).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)
 
 
 def _safe_event_payload(event: NormalizedLenderEvent) -> dict[str, object]:
@@ -191,7 +208,9 @@ async def _validate_guarantee_link(
 ) -> None:
     if guarantee_case_id is None:
         return
-    guarantee = await session.get(GuaranteeCase, guarantee_case_id)
+    guarantee = await session.scalar(
+        select(GuaranteeCase).where(GuaranteeCase.id == guarantee_case_id).with_for_update()
+    )
     if guarantee is None:
         raise ExternalLoanError(
             "GUARANTEE_CASE_NOT_FOUND",
@@ -201,6 +220,16 @@ async def _validate_guarantee_link(
         raise ExternalLoanError(
             "EVENT_SCOPE_INVALID",
             "GuaranteeCase belongs to a different lender provider",
+        )
+    existing_id = await session.scalar(
+        select(ExternalLoanMirror.id).where(
+            ExternalLoanMirror.guarantee_case_id == guarantee_case_id
+        )
+    )
+    if existing_id is not None:
+        raise ExternalLoanError(
+            "LENDER_GUARANTEE_LINK_CONFLICT",
+            "The GuaranteeCase is already linked to a different External Loan",
         )
 
 
@@ -335,6 +364,17 @@ async def apply_normalized_lender_event(
     provider = await session.get(CreditProvider, event.provider_id)
     if provider is None:
         raise ExternalLoanError("PROVIDER_NOT_FOUND", "Lender provider does not exist")
+
+    # Serialize first insertion and subsequent updates across worker replicas.
+    # The transaction that locks the Inbox row owns this advisory lock too;
+    # the database releases it automatically on commit or rollback.
+    await session.scalar(
+        select(
+            func.pg_advisory_xact_lock(
+                _lender_mirror_lock_key(event.provider_id, event.external_loan_id)
+            )
+        )
+    )
 
     mirror = await session.scalar(
         select(ExternalLoanMirror)
@@ -528,6 +568,79 @@ async def process_lender_inbox_message(
     )
 
 
+_LENDER_SCAN_STREAM_KEY = "lender-inbox:v1"
+
+
+async def _select_pending_lender_inbox_ids(
+    database: Database,
+    *,
+    batch_size: int,
+) -> list[UUID]:
+    """Durable round-robin over immutable (received_at,id) order.
+
+    A PostgreSQL row lock serializes cursor movement across worker replicas.
+    The cursor commits before handlers run, so a failed/poison event cannot
+    pin subsequent healthy messages behind the same page indefinitely.
+    Delivery still uses process_inbox_message_once's row lock and
+    business-effect transaction. Scanning neither acknowledges nor drops
+    failed messages, and applies no retry/dead-letter threshold.
+    """
+    async with database.session_factory() as session:
+        async with session.begin():
+            await session.execute(
+                insert(LenderInboxScanCheckpoint)
+                .values(stream_key=_LENDER_SCAN_STREAM_KEY)
+                .on_conflict_do_nothing(index_elements=["stream_key"])
+            )
+            checkpoint = await session.scalar(
+                select(LenderInboxScanCheckpoint)
+                .where(LenderInboxScanCheckpoint.stream_key == _LENDER_SCAN_STREAM_KEY)
+                .with_for_update()
+            )
+            if checkpoint is None:
+                raise RuntimeError("Lender inbox scan checkpoint could not be locked")
+
+            base = (
+                select(InboxMessage.id, InboxMessage.received_at)
+                .where(
+                    InboxMessage.processed_at.is_(None),
+                    InboxMessage.source_id.like(f"{_LENDER_SOURCE_PREFIX}%"),
+                )
+                .order_by(InboxMessage.received_at, InboxMessage.id)
+            )
+            position = (
+                (checkpoint.last_received_at, checkpoint.last_message_id)
+                if checkpoint.last_received_at is not None
+                and checkpoint.last_message_id is not None
+                else None
+            )
+            if position is None:
+                selected = (await session.execute(base.limit(batch_size))).all()
+            else:
+                current = tuple_(InboxMessage.received_at, InboxMessage.id)
+                selected = list(
+                    (
+                        await session.execute(
+                            base.where(current > tuple_(*position)).limit(batch_size)
+                        )
+                    ).all()
+                )
+                if len(selected) < batch_size:
+                    earlier = (
+                        await session.execute(
+                            base.where(current <= tuple_(*position)).limit(
+                                batch_size - len(selected)
+                            )
+                        )
+                    ).all()
+                    selected.extend(earlier)
+
+            if selected:
+                checkpoint.last_message_id = selected[-1][0]
+                checkpoint.last_received_at = selected[-1][1]
+            return [row[0] for row in selected]
+
+
 async def process_pending_lender_inbox_batch(
     database: Database,
     *,
@@ -536,18 +649,7 @@ async def process_pending_lender_inbox_batch(
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
 
-    async with database.session_factory() as session:
-        message_ids = (
-            await session.scalars(
-                select(InboxMessage.id)
-                .where(
-                    InboxMessage.processed_at.is_(None),
-                    InboxMessage.source_id.like(f"{_LENDER_SOURCE_PREFIX}%"),
-                )
-                .order_by(InboxMessage.received_at, InboxMessage.id)
-                .limit(batch_size)
-            )
-        ).all()
+    message_ids = await _select_pending_lender_inbox_ids(database, batch_size=batch_size)
 
     processed = 0
     failed = 0
