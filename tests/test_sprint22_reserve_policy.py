@@ -334,6 +334,47 @@ def test_evidence_from_snapshot_preserves_exact_lineage() -> None:
     assert evidence.algorithm_version == snapshot.algorithm_version
 
 
+def test_requirement_evidence_text_failures_use_evidence_error_code() -> None:
+    registry = ReserveRequirementDefinitionRegistry()
+    evaluator = FixedRequirementEvaluator(Decimal("10"))
+    registry.register(evaluator)
+
+    for invalid in (
+        replace(_requirement_evidence(), evidence_version=""),
+        replace(
+            _requirement_evidence(),
+            input_values={"": Decimal("1")},
+        ),
+    ):
+        with pytest.raises(ReservePolicyEvaluationError) as exc:
+            registry.evaluate(
+                raw_definition=_requirement_definition(),
+                evidence=invalid,
+                effective_at=datetime.now(UTC),
+            )
+        assert exc.value.code == "RESERVE_POLICY_EVIDENCE_INVALID"
+        assert evaluator.last_definition is None
+
+
+def test_metrics_lineage_text_failures_use_evidence_error_code() -> None:
+    registry = ReserveEligibilityDefinitionRegistry()
+    evaluator = FixedEligibilityEvaluator(Decimal("10"))
+    registry.register(evaluator)
+
+    for invalid in (
+        replace(_evidence(), algorithm_code=""),
+        replace(_evidence(), algorithm_version=""),
+    ):
+        with pytest.raises(ReservePolicyEvaluationError) as exc:
+            registry.evaluate(
+                raw_definition=_eligibility_definition(),
+                evidence=invalid,
+                effective_at=datetime.now(UTC),
+            )
+        assert exc.value.code == "RESERVE_POLICY_EVIDENCE_INVALID"
+        assert evaluator.last_evidence is None
+
+
 def test_timezone_aware_effective_time_is_required() -> None:
     registry = ReserveRequirementDefinitionRegistry()
     registry.register(FixedRequirementEvaluator(Decimal("10")))
