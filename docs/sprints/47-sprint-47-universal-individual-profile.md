@@ -11,13 +11,14 @@ Allow an ordinary individual to enter Badban through a verified national ID whil
 ## Scope
 
 - Resolve the authenticated participant to the unique record matching the verified OIDC national ID.
+- Provision a least-privilege participant identity for a verified OIDC subject when absent.
 - Create the individual profile automatically when that record does not exist.
-- Make creation safe under concurrent requests and audit it.
+- Make identity/profile creation safe under concurrent requests and audit it.
 - Keep program enrollment, capital assignment, and service eligibility separate from profile creation.
 
 ## Acceptance Criteria
 
-1. Only a `PARTICIPANT` identity with a non-empty verified national ID can resolve or create the profile.
+1. A new participant identity is created only when the trusted issuer supplies a non-empty verified national ID; existing identities retain their assigned type and status.
 2. Existing records are reused; concurrent first requests do not create duplicate profiles.
 3. The response contains no national ID.
 4. Profile creation does not create a participation episode, capital position, entitlement, or guarantee.
