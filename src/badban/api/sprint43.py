@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -473,3 +473,67 @@ async def approve_period_entitlement(
     )
     await session.commit()
     return SupportEntitlementView.model_validate(item)
+
+
+
+class SupportCasePage(BaseModel):
+    items: list[SupportCaseView]
+
+
+class SupportEntitlementPage(BaseModel):
+    items: list[SupportEntitlementView]
+
+
+@router.get("/cases", response_model=SupportCasePage)
+async def list_support_cases(
+    participant_id: UUID | None = None,
+    lifecycle_status: Literal["DRAFT", "ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"] | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SupportCasePage:
+    await _authorize(session, principal, correlation_id, "POST_EXIT_SUPPORT_CASE_READ")
+    filters = []
+    if participant_id is not None:
+        filters.append(PostExitSupportCase.participant_id == participant_id)
+    if lifecycle_status is not None:
+        filters.append(PostExitSupportCase.lifecycle_status == lifecycle_status)
+    rows = (
+        await session.scalars(
+            select(PostExitSupportCase)
+            .where(*filters)
+            .order_by(PostExitSupportCase.created_at, PostExitSupportCase.id)
+            .limit(limit)
+        )
+    ).all()
+    return SupportCasePage(items=[SupportCaseView.model_validate(row) for row in rows])
+
+
+@router.get("/cases/{case_id}/entitlements", response_model=SupportEntitlementPage)
+async def list_case_entitlements(
+    case_id: UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SupportEntitlementPage:
+    await _authorize(
+        session, principal, correlation_id, "POST_EXIT_ENTITLEMENT_READ", str(case_id)
+    )
+    if await session.get(PostExitSupportCase, case_id) is None:
+        raise ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Post-exit support case was not found")
+    rows = (
+        await session.scalars(
+            select(PostExitSupportEntitlement)
+            .where(PostExitSupportEntitlement.support_case_id == case_id)
+            .order_by(
+                PostExitSupportEntitlement.period_sequence,
+                PostExitSupportEntitlement.id,
+            )
+            .limit(limit)
+        )
+    ).all()
+    return SupportEntitlementPage(
+        items=[SupportEntitlementView.model_validate(row) for row in rows]
+    )
