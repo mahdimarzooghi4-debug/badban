@@ -1,6 +1,6 @@
 # Sprint 36 — Verified Source Acquisition Boundary
 
-- **Status:** Code authorized; Draft PR pending implementation/review
+- **Status:** Implemented and merged to `main` via PR #40 on 2026-10-25; exact-head CI #492 passed
 - **Date:** 2026-10-25
 - **Decision:** [0054 — Verified Source Acquisition Boundary](../decisions/0054-sprint-36-verified-source-acquisition-code-authorization.md)
 - **Backlog:** BL-042 technical source-boundary work only
