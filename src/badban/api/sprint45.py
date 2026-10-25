@@ -152,13 +152,17 @@ async def get_financial_case(
     ).all()
     support_ids = [case.id for case in support_cases]
     support_entitlements = (
-        await session.scalars(
-            select(PostExitSupportEntitlement)
-            .where(PostExitSupportEntitlement.support_case_id.in_(support_ids))
-            .order_by(PostExitSupportEntitlement.period_sequence)
-            .limit(limit)
-        )
-    ).all() if support_ids else []
+        (
+            await session.scalars(
+                select(PostExitSupportEntitlement)
+                .where(PostExitSupportEntitlement.support_case_id.in_(support_ids))
+                .order_by(PostExitSupportEntitlement.period_sequence)
+                .limit(limit)
+            )
+        ).all()
+        if support_ids
+        else []
+    )
     by_case: dict[UUID, list[EntitlementSummary]] = {}
     for item in support_entitlements:
         by_case.setdefault(item.support_case_id, []).append(
