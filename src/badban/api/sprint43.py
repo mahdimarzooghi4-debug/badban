@@ -288,6 +288,12 @@ async def create_period_entitlement(
         raise ApiError(
             409, "SUPPORT_CASE_NOT_ACTIVE", "Entitlements require an active support case"
         )
+    if datetime.now(UTC) < case.support_start_at:
+        raise ApiError(
+            409,
+            "SUPPORT_WINDOW_NOT_STARTED",
+            "Entitlements cannot be created before the policy-defined support start",
+        )
     if body.period_sequence > case.duration_months:
         raise ApiError(
             422, "PERIOD_OUTSIDE_SUPPORT_WINDOW", "Period sequence exceeds the support window"
