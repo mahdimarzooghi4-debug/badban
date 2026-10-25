@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Literal
@@ -33,6 +34,14 @@ from badban.security.authorization import (
 )
 
 router = APIRouter(prefix="/api/v1/admin/post-exit-support", tags=["post-exit-support"])
+
+
+def _add_months(value: datetime, months: int) -> datetime:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
 
 
 class SupportCaseCreate(BaseModel):
@@ -86,12 +95,19 @@ class SupportEntitlementCreate(BaseModel):
 
     period_sequence: int = Field(ge=1, le=36)
     period_reference: str = Field(min_length=1, max_length=120)
+    period_at: datetime
     amount: Decimal = Field(gt=0, max_digits=38, decimal_places=18)
     currency: str = Field(min_length=1, max_length=16)
     policy_version_reference: str = Field(min_length=1, max_length=200)
     calculation_reference: str = Field(min_length=1, max_length=500)
     eligibility_evidence_reference: str = Field(min_length=1, max_length=500)
     source_posting_ids: list[UUID] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_period_at(self) -> SupportEntitlementCreate:
+        if self.period_at.tzinfo is None or self.period_at.utcoffset() is None:
+            raise ValueError("period_at must be timezone-aware")
+        return self
 
 
 class SupportEntitlementView(BaseModel):
@@ -101,6 +117,7 @@ class SupportEntitlementView(BaseModel):
     support_case_id: UUID
     period_sequence: int
     period_reference: str
+    period_at: datetime
     amount: Decimal
     currency: str
     policy_version_reference: str
@@ -288,11 +305,19 @@ async def create_period_entitlement(
         raise ApiError(
             409, "SUPPORT_CASE_NOT_ACTIVE", "Entitlements require an active support case"
         )
-    if datetime.now(UTC) < case.support_start_at:
+    now = datetime.now(UTC)
+    if now < case.support_start_at:
         raise ApiError(
             409,
             "SUPPORT_WINDOW_NOT_STARTED",
             "Entitlements cannot be created before the policy-defined support start",
+        )
+    support_end_at = _add_months(case.support_start_at, case.duration_months)
+    if not case.support_start_at <= body.period_at <= support_end_at:
+        raise ApiError(
+            422,
+            "PERIOD_OUTSIDE_SUPPORT_WINDOW",
+            "Period date must fall within the policy-defined support window",
         )
     if body.period_sequence > case.duration_months:
         raise ApiError(
@@ -375,6 +400,7 @@ async def create_period_entitlement(
         support_case_id=case.id,
         period_sequence=body.period_sequence,
         period_reference=body.period_reference,
+        period_at=body.period_at,
         amount=body.amount,
         currency=body.currency,
         policy_version_reference=body.policy_version_reference,
