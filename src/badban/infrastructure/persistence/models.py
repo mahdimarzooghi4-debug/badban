@@ -1883,3 +1883,141 @@ class MonthlyPensionFundingAllocation(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class PostExitSupportCase(VersionedMixin, Base):
+    __tablename__ = "post_exit_support_cases"
+    __table_args__ = (
+        UniqueConstraint(
+            "participant_id",
+            "exit_event_reference",
+            name="uq_post_exit_participant_exit_event",
+        ),
+        CheckConstraint(
+            "duration_months > 0 AND duration_months <= 36",
+            name="ck_post_exit_duration_months",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','COMPLETED','CANCELLED')",
+            name="ck_post_exit_case_status",
+        ),
+        CheckConstraint(
+            "activated_by IS NULL OR activated_by <> created_by",
+            name="ck_post_exit_case_maker_checker",
+        ),
+        Index(
+            "ix_post_exit_case_participant_status",
+            "participant_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    service_catalogue_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("service_catalogue_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    exit_event_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    exit_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    exit_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    support_start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    duration_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    eligibility_decision_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    activated_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class PostExitSupportEntitlement(VersionedMixin, Base):
+    __tablename__ = "post_exit_support_entitlements"
+    __table_args__ = (
+        UniqueConstraint(
+            "support_case_id",
+            "period_sequence",
+            name="uq_post_exit_case_period_sequence",
+        ),
+        CheckConstraint(
+            "period_sequence > 0 AND period_sequence <= 36",
+            name="ck_post_exit_period_sequence",
+        ),
+        CheckConstraint("amount > 0", name="ck_post_exit_entitlement_amount_positive"),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','CANCELLED')",
+            name="ck_post_exit_entitlement_status",
+        ),
+        CheckConstraint(
+            "approved_by IS NULL OR approved_by <> created_by",
+            name="ck_post_exit_entitlement_maker_checker",
+        ),
+        Index(
+            "ix_post_exit_entitlement_case_status",
+            "support_case_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    support_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("post_exit_support_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    period_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    calculation_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    eligibility_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class PostExitSupportFundingAllocation(Base):
+    __tablename__ = "post_exit_support_funding_allocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "entitlement_id",
+            "source_journal_posting_id",
+            name="uq_post_exit_entitlement_source",
+        ),
+        CheckConstraint("amount > 0", name="ck_post_exit_allocation_amount_positive"),
+        Index("ix_post_exit_funding_source", "source_journal_posting_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    entitlement_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("post_exit_support_entitlements.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_journal_posting_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("journal_postings.id", ondelete="RESTRICT"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
