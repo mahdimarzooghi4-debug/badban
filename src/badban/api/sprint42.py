@@ -20,6 +20,7 @@ from badban.infrastructure.persistence.models import (
     MonthlyPensionEntitlement,
     MonthlyPensionFundingAllocation,
     Participant,
+    ParticipationEpisode,
     ServiceCatalogueVersion,
 )
 from badban.security.audit import append_audit
@@ -39,6 +40,8 @@ class EntitlementCreate(BaseModel):
 
     service_catalogue_version_id: UUID
     participant_id: UUID
+    program_id: UUID
+    participation_episode_id: UUID
     period_reference: str = Field(min_length=1, max_length=120)
     amount: Decimal = Field(gt=0, max_digits=38, decimal_places=18)
     currency: str = Field(min_length=1, max_length=16)
@@ -54,6 +57,8 @@ class EntitlementView(BaseModel):
     id: UUID
     service_catalogue_version_id: UUID
     participant_id: UUID
+    program_id: UUID | None
+    participation_episode_id: UUID | None
     period_reference: str
     amount: Decimal
     currency: str
@@ -119,6 +124,20 @@ async def create_entitlement(
         )
     if await session.get(Participant, body.participant_id) is None:
         raise ApiError(404, "PARTICIPANT_NOT_FOUND", "Participant was not found")
+
+    episode = await session.scalar(
+        select(ParticipationEpisode).where(
+            ParticipationEpisode.id == body.participation_episode_id,
+            ParticipationEpisode.participant_id == body.participant_id,
+            ParticipationEpisode.program_id == body.program_id,
+        )
+    )
+    if episode is None:
+        raise ApiError(
+            422,
+            "PARTICIPATION_EPISODE_SCOPE_MISMATCH",
+            "The participant episode must belong to the selected program",
+        )
     idem, replay = await acquire_idempotency(
         session,
         scope="monthly-pension-entitlement:create",
@@ -130,7 +149,8 @@ async def create_entitlement(
     if (
         await session.scalar(
             select(MonthlyPensionEntitlement.id).where(
-                MonthlyPensionEntitlement.participant_id == body.participant_id,
+                MonthlyPensionEntitlement.participation_episode_id
+                == body.participation_episode_id,
                 MonthlyPensionEntitlement.period_reference == body.period_reference,
             )
         )
@@ -150,6 +170,7 @@ async def create_entitlement(
                 JournalPosting.id.in_(body.source_posting_ids),
                 JournalPosting.account_code == "2010.LIVELIHOOD_PAYABLE",
                 JournalPosting.participant_id == body.participant_id,
+                JournalPosting.program_id == body.program_id,
                 JournalPosting.currency == body.currency,
                 JournalEntry.state == "POSTED",
                 JournalEntry.posting_template_reference == "RETURN_ALLOCATION@1",
@@ -202,6 +223,8 @@ async def create_entitlement(
     entitlement = MonthlyPensionEntitlement(
         service_catalogue_version_id=service.id,
         participant_id=body.participant_id,
+        program_id=body.program_id,
+        participation_episode_id=body.participation_episode_id,
         period_reference=body.period_reference,
         amount=body.amount,
         currency=body.currency,
@@ -242,6 +265,8 @@ async def create_entitlement(
         evidence_reference=body.eligibility_evidence_reference,
         scope={
             "participant_id": str(body.participant_id),
+            "program_id": str(body.program_id),
+            "participation_episode_id": str(body.participation_episode_id),
             "period_reference": body.period_reference,
         },
     )
