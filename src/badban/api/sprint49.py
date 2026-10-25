@@ -508,16 +508,16 @@ async def list_lender_guarantees(
                 external_guarantee_reference=case.legal_guarantee_external_id,
                 case_state=case.state,
                 requested_principal=_amount(case.requested_principal),
-                reserved_guarantee_amount=_amount(case.reserved_guarantee_amount),
-                issued_guarantee_amount=_amount(case.issued_guarantee_amount),
+                reserved_guarantee_amount=_optional_amount(case.reserved_guarantee_amount),
+                issued_guarantee_amount=_optional_amount(case.issued_guarantee_amount),
                 current_guarantee_exposure=_amount(case.current_guarantee_exposure),
                 guarantee_mode=case.guarantee_mode,
                 reservation_expires_at=case.reservation_expires_at,
                 currency=product.currency,
                 external_loan_id=loan.external_loan_id if loan else None,
                 loan_state=loan.state if loan else None,
-                original_principal=_amount(loan.original_principal) if loan else None,
-                outstanding_principal=_amount(loan.outstanding_principal) if loan else None,
+                original_principal=_optional_amount(loan.original_principal) if loan else None,
+                outstanding_principal=_optional_amount(loan.outstanding_principal) if loan else None,
                 loan_currency=loan.currency if loan else None,
                 disbursed_at=loan.disbursed_at if loan else None,
                 settled_at=loan.settled_at if loan else None,
@@ -531,5 +531,9 @@ async def list_lender_guarantees(
     )
 
 
-def _amount(value: Decimal | None) -> str | None:
+def _amount(value: Decimal) -> str:
+    return format(value, "f")
+
+
+def _optional_amount(value: Decimal | None) -> str | None:
     return format(value, "f") if value is not None else None
