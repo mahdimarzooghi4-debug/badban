@@ -140,7 +140,7 @@ def build_internal_asset_inventory_snapshot(
         raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
     if len({record.asset_position_id for record in records}) != len(records):
         raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
-    if len(records) > 10000:
+    if len(records) > 1000:
         raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
 
     evidence = tuple(sorted(f"asset-position:{record.asset_position_id}" for record in records))
