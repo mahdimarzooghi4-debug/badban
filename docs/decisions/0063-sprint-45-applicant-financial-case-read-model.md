@@ -8,7 +8,7 @@
 
 Expose a read-only `/api/v1/applicant/financial-case` view for the participant resolved from the verified OIDC national-ID claim. The view joins only that participant's guarantee cases, lender loan mirrors, monthly pension entitlements, post-exit support cases, and their period entitlements.
 
-Present financial measures in separate fields and currency buckets. Principal outstanding comes from lender loan mirrors; guarantee exposure comes from guarantee cases; realized return reported here is limited to posted return allocations for support; allocated support comes from the service funding allocations. No aggregate may combine currencies or conflate principal with return allocations.
+Present financial measures in separate fields and currency buckets. Principal outstanding comes from lender loan mirrors; guarantee exposure comes from guarantee cases; realized return reported here is limited to the net value of posted return allocations for support, including posted reversals; allocated support comes from the service funding allocations. No aggregate may combine currencies or conflate principal with return allocations. A lender mirror is labeled as recorded, not as independently verified.
 
 ## Boundaries
 
