@@ -507,7 +507,6 @@ async def approve_period_entitlement(
     return SupportEntitlementView.model_validate(item)
 
 
-
 class SupportCaseStatusChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
