@@ -74,6 +74,7 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("support_case_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("period_sequence", sa.Integer(), nullable=False),
+        sa.Column("period_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("period_reference", sa.String(length=120), nullable=False),
         sa.Column("amount", sa.Numeric(38, 18), nullable=False),
         sa.Column("currency", sa.String(length=16), nullable=False),
