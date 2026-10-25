@@ -17,10 +17,10 @@ from badban.application.idempotency import acquire_idempotency, complete_idempot
 from badban.infrastructure.persistence.models import (
     JournalEntry,
     JournalPosting,
+    Participant,
     PostExitSupportCase,
     PostExitSupportEntitlement,
     PostExitSupportFundingAllocation,
-    Participant,
     ServiceCatalogueVersion,
 )
 from badban.security.audit import append_audit
@@ -236,9 +236,7 @@ async def activate_support_case(
         session, principal, correlation_id, "POST_EXIT_SUPPORT_CASE_ACTIVATE", str(case_id)
     )
     case = await session.scalar(
-        select(PostExitSupportCase)
-        .where(PostExitSupportCase.id == case_id)
-        .with_for_update()
+        select(PostExitSupportCase).where(PostExitSupportCase.id == case_id).with_for_update()
     )
     if case is None:
         raise ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Post-exit support case was not found")
@@ -282,16 +280,18 @@ async def create_period_entitlement(
         session, principal, correlation_id, "POST_EXIT_ENTITLEMENT_CREATE", str(case_id)
     )
     case = await session.scalar(
-        select(PostExitSupportCase)
-        .where(PostExitSupportCase.id == case_id)
-        .with_for_update()
+        select(PostExitSupportCase).where(PostExitSupportCase.id == case_id).with_for_update()
     )
     if case is None:
         raise ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Post-exit support case was not found")
     if case.lifecycle_status != "ACTIVE":
-        raise ApiError(409, "SUPPORT_CASE_NOT_ACTIVE", "Entitlements require an active support case")
+        raise ApiError(
+            409, "SUPPORT_CASE_NOT_ACTIVE", "Entitlements require an active support case"
+        )
     if body.period_sequence > case.duration_months:
-        raise ApiError(422, "PERIOD_OUTSIDE_SUPPORT_WINDOW", "Period sequence exceeds the support window")
+        raise ApiError(
+            422, "PERIOD_OUTSIDE_SUPPORT_WINDOW", "Period sequence exceeds the support window"
+        )
     if body.policy_version_reference != case.policy_version_reference:
         raise ApiError(
             422,
@@ -327,7 +327,8 @@ async def create_period_entitlement(
         raise ApiError(
             422,
             "INVALID_FUNDING_SOURCE",
-            "Every source must be a posted future-financial return allocation for this participant and currency",
+            "Every source must be a posted future-financial return allocation for this participant "
+            "and currency",
         )
     existing = dict(
         (posting_id, amount)
