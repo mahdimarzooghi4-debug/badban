@@ -1737,3 +1737,63 @@ class ExternalEvidenceSource(VersionedMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class ServiceCatalogueVersion(VersionedMixin, Base):
+    """Versioned catalogue entry for a Badban participant service."""
+
+    __tablename__ = "service_catalogue_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "service_code",
+            "version_number",
+            name="uq_service_catalogue_code_version",
+        ),
+        CheckConstraint(
+            "service_code IN ('LOAN_GUARANTEE','MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_service_catalogue_service_code",
+        ),
+        CheckConstraint(
+            "version_number > 0",
+            name="ck_service_catalogue_version_positive",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','RETIRED')",
+            name="ck_service_catalogue_status",
+        ),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_service_catalogue_effective_window",
+        ),
+        CheckConstraint(
+            "max_duration_months IS NULL OR (max_duration_months > 0 AND max_duration_months <= 36)",
+            name="ck_service_catalogue_duration_bound",
+        ),
+        CheckConstraint(
+            "(service_code = 'POST_EXIT_SUPPORT' AND max_duration_months IS NOT NULL) OR "
+            "(service_code <> 'POST_EXIT_SUPPORT' AND max_duration_months IS NULL)",
+            name="ck_service_catalogue_duration_service",
+        ),
+        Index(
+            "ix_service_catalogue_visibility",
+            "lifecycle_status",
+            "effective_from",
+            "effective_to",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    service_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(2000), nullable=False, default="")
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    policy_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    max_duration_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
