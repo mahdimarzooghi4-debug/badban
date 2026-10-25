@@ -1,3 +1,17 @@
+## Addendum — Configurable external evidence sources
+
+No external source has been selected or connected yet. The system must support registering and adding sources later rather than depending on one hard-coded provider.
+
+- Configure sources by evidence purpose (for example valuation or restriction/encumbrance) and supported asset type. An asset type may have more than one source; a vehicle may, for example, be checked against two valuation sources.
+- Keep source configuration separate from reservation logic. A common adapter contract must return the source identity, queried asset identity, observation time, response status, and evidence reference. Provider-specific adapters may be added behind that contract.
+- Store credentials as environment-scoped secret references; never in source configuration payloads, logs, or evidence snapshots.
+- Capture each source response separately with provenance and freshness metadata. Do not replace one source's response with another.
+- A policy must define how multiple valuation results are accepted (for example, selected source, priority, or agreement rule). Do not average or choose the “first successful” response by default. Conflicting, stale, missing, or unavailable required results fail closed until an explicit rule resolves them.
+- For restrictions/encumbrances, any confirmed blocking response blocks the asset. Missing or unavailable required checks also block it.
+- Adding a source requires an authorized configuration change and an adapter implementation if it does not follow the common contract. Registering a source alone does not make its result authoritative.
+
+This design supports future multiple-source queries without claiming that any real external connection exists today.
+
 ## Addendum — Business answers recorded 2026-10-25
 
 Business has confirmed the following BL-020 rules:
