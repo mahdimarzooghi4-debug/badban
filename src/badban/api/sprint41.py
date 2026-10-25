@@ -176,7 +176,11 @@ async def create_service_version(
         await session.flush()
     except IntegrityError as exc:
         await session.rollback()
-        raise ApiError(409, "SERVICE_VERSION_EXISTS", "Service catalogue version already exists") from exc
+        raise ApiError(
+            409,
+            "SERVICE_VERSION_EXISTS",
+            "Service catalogue version already exists",
+        ) from exc
 
     view = _view(record)
     append_audit(
