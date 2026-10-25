@@ -103,3 +103,15 @@ Sprint 04 Code is not yet authorized.
 - [Sprint 36 — Verified Source Acquisition Boundary](./36-sprint-36-verified-source-acquisition.md) — **Code authorized; Draft PR pending implementation/review**
 - Decision 0054 authorizes only a read-only acquisition and verification boundary for explicitly registered sources.
 - No new source integrations, database writes, comparison rules, or financial behavior are authorized by this Sprint.
+
+## Sprint 37
+
+- [Sprint 37 — Internal Posted-Journal Source](./37-sprint-37-internal-posted-journal-source.md) — **Code authorized; stacked Draft PR pending implementation/review**
+- Decision 0055 authorizes only read-only source extraction from actual posted journal facts, with exact Program and Legal Entity lineage.
+- External sources without an identified authority remain unavailable; BL-020 remains blocked on explicit policy inputs.
+
+## Sprint 38
+
+- [Sprint 38 — Internal Asset Inventory Source](./38-sprint-38-internal-asset-inventory-source.md) — **Implemented; exact-head CI passed; Draft PR pending code review**
+- Decision 0056 authorizes a program-scoped, read-only snapshot of Badban's own persisted asset positions.
+- The internal snapshot remains distinct from custody and collateral-registry evidence; no comparisons or financial outcomes are included.

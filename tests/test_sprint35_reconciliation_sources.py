@@ -93,6 +93,7 @@ def _record(kind: str):
         observed_at=NOW,
         account_code="1000",
         currency="IRR",
+        legal_entity_id=UUID("00000000-0000-0000-0000-000000000032"),
         economic_owner_type="PROGRAM",
         economic_owner_id=None,
         participant_id=None,
@@ -126,7 +127,9 @@ def _snapshot(kind: str, *, records=None):
         snapshot_at=NOW,
         received_at=NOW + timedelta(minutes=1),
         source_reference="provider-audit-1",
-        schema_version="reconciliation-source-v1",
+        schema_version=(
+            "reconciliation-source-v2" if kind == "LEDGER" else "reconciliation-source-v1"
+        ),
         contract_version="provider-1",
         mapping_version="mapping-1",
         normalization_version=None,
@@ -149,6 +152,9 @@ def _capability(kind: str) -> SourceCapability:
         reconciliation_type=cast(SourceType, kind),
         contract_version="provider-1",
         mapping_version="mapping-1",
+        schema_version=(
+            "reconciliation-source-v2" if kind == "LEDGER" else "reconciliation-source-v1"
+        ),
     )
 
 
@@ -224,7 +230,7 @@ def test_tampered_source_snapshots_fail_validation(kind, mutation):
     [
         ("contract_version", "unexpected"),
         ("mapping_version", "untrusted"),
-        ("schema_version", "reconciliation-source-v2"),
+        ("schema_version", "reconciliation-source-v99"),
         ("normalization_version", "unapproved"),
     ],
 )
