@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from uuid import UUID
-from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -38,7 +37,6 @@ institution_router = APIRouter(
     prefix="/api/v1/support-institution",
     tags=["support-institution"],
 )
-
 
 class ProgramRoleGrantCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
