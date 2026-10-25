@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -12,11 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
 from badban.api.errors import ApiError
 from badban.infrastructure.persistence.models import (
+    AssetPosition,
+    AssetType,
+    CreditProductVersion,
+    ExternalLoanMirror,
+    GuaranteeCase,
     Identity,
     Participant,
     ParticipationEpisode,
     Program,
     RoleGrant,
+    ValuationObservation,
 )
 from badban.security.audit import append_audit
 from badban.security.authorization import (
@@ -117,6 +124,58 @@ class SupportedPeopleView(BaseModel):
     items: list[SupportedPersonView]
     limit: int
     offset: int
+
+
+
+class SupportedAssetValuationView(BaseModel):
+    id: UUID
+    source_name: str
+    source_reference: str
+    source_version_reference: str | None
+    observed_at: datetime
+    freshness_status: str
+    valuation_currency: str
+    unit_price: Decimal
+    gross_market_value: Decimal
+    valid_until: datetime | None
+
+
+class SupportedAssetPositionView(BaseModel):
+    id: UUID
+    asset_code: str
+    asset_name: str
+    ownership_funding_type: str
+    quantity: Decimal
+    unit_code: str
+    lifecycle_status: str
+    valuation_observations: list[SupportedAssetValuationView]
+
+
+class SupportedGuaranteeView(BaseModel):
+    id: UUID
+    provider_id: UUID
+    state: str
+    requested_principal: Decimal
+    reserved_guarantee_amount: Decimal | None
+    issued_guarantee_amount: Decimal | None
+    current_guarantee_exposure: Decimal
+    guarantee_mode: str
+    currency: str
+    loan_state: str | None
+    outstanding_principal: Decimal | None
+    loan_currency: str | None
+    last_synced_at: datetime | None
+    reconciliation_status: str | None
+
+
+class SupportedFinancialCaseView(BaseModel):
+    program_id: UUID
+    participant_id: UUID
+    episode_id: UUID
+    assets: list[SupportedAssetPositionView]
+    guarantees: list[SupportedGuaranteeView]
+    profit_share_status: Literal["NOT_AVAILABLE_FOR_PROGRAM_SCOPE"]
+
 
 
 async def _authorize_global_governance(
@@ -538,4 +597,192 @@ async def read_program_beneficiaries(
         ],
         limit=limit,
         offset=offset,
+    )
+
+
+
+@institution_router.get(
+    "/programs/{program_id}/beneficiaries/{participant_id}/episodes/{episode_id}/financial-case",
+    response_model=SupportedFinancialCaseView,
+)
+async def read_program_beneficiary_financial_case(
+    program_id: UUID,
+    participant_id: UUID,
+    episode_id: UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SupportedFinancialCaseView:
+    try:
+        await authorize(
+            session,
+            principal=principal,
+            roles={ROLE_SUPPORT_INSTITUTION_OPERATOR},
+            scope_type=SCOPE_PROGRAM,
+            scope_id=program_id,
+            allow_global=False,
+            action="SUPPORT_INSTITUTION_BENEFICIARY_FINANCIAL_CASE_READ",
+            target_type="SupportingInstitutionProgram",
+            target_id=str(program_id),
+            correlation_id=correlation_id,
+        )
+    except AuthorizationDenied as exc:
+        raise ApiError(
+            403, exc.code, "Program-scoped supporting institution access is required"
+        ) from exc
+
+    episode = await session.scalar(
+        select(ParticipationEpisode).where(
+            ParticipationEpisode.id == episode_id,
+            ParticipationEpisode.program_id == program_id,
+            ParticipationEpisode.participant_id == participant_id,
+        )
+    )
+    program = await session.get(Program, program_id)
+    if (
+        episode is None
+        or program is None
+        or program.status != "ACTIVE"
+        or program.legal_entity_id is None
+    ):
+        raise ApiError(
+            404,
+            "SUPPORTING_BENEFICIARY_NOT_FOUND",
+            "Beneficiary episode was not found in this active program",
+        )
+
+    asset_rows = (
+        await session.execute(
+            select(AssetPosition, AssetType)
+            .join(AssetType, AssetType.id == AssetPosition.asset_type_id)
+            .where(
+                AssetPosition.program_id == program_id,
+                AssetPosition.participation_episode_id == episode_id,
+            )
+            .order_by(AssetPosition.created_at.desc(), AssetPosition.id)
+            .limit(limit)
+        )
+    ).all()
+    position_ids = [position.id for position, _asset_type in asset_rows]
+    valuation_rows = []
+    if position_ids:
+        valuation_rows = (
+            await session.scalars(
+                select(ValuationObservation)
+                .where(ValuationObservation.asset_position_id.in_(position_ids))
+                .order_by(
+                    ValuationObservation.observed_at.desc(),
+                    ValuationObservation.id,
+                )
+                .limit(500)
+            )
+        ).all()
+
+    valuations_by_position: dict[UUID, list[SupportedAssetValuationView]] = {}
+    for observation in valuation_rows:
+        valuations_by_position.setdefault(observation.asset_position_id, []).append(
+            SupportedAssetValuationView(
+                id=observation.id,
+                source_name=observation.source_name,
+                source_reference=observation.source_reference,
+                source_version_reference=observation.source_version_reference,
+                observed_at=observation.observed_at,
+                freshness_status=observation.freshness_status,
+                valuation_currency=observation.valuation_currency,
+                unit_price=observation.unit_price,
+                gross_market_value=observation.gross_market_value,
+                valid_until=observation.valid_until,
+            )
+        )
+
+    guarantee_rows = (
+        await session.execute(
+            select(GuaranteeCase, CreditProductVersion, ExternalLoanMirror)
+            .join(
+                ParticipationEpisode,
+                ParticipationEpisode.id == GuaranteeCase.participation_episode_id,
+            )
+            .join(
+                CreditProductVersion,
+                CreditProductVersion.id == GuaranteeCase.credit_product_version_id,
+            )
+            .outerjoin(
+                ExternalLoanMirror,
+                (ExternalLoanMirror.id == GuaranteeCase.external_loan_mirror_id)
+                & (ExternalLoanMirror.provider_id == GuaranteeCase.provider_id),
+            )
+            .where(
+                ParticipationEpisode.id == episode_id,
+                ParticipationEpisode.program_id == program_id,
+                ParticipationEpisode.participant_id == participant_id,
+                GuaranteeCase.participation_episode_id == episode_id,
+                CreditProductVersion.provider_id == GuaranteeCase.provider_id,
+            )
+            .order_by(GuaranteeCase.created_at.desc(), GuaranteeCase.id)
+            .limit(limit)
+        )
+    ).all()
+
+    append_audit(
+        session,
+        aggregate_type="SupportingInstitutionBeneficiaryFinancialCase",
+        aggregate_id=str(episode_id),
+        aggregate_version=None,
+        action="SUPPORT_INSTITUTION_BENEFICIARY_FINANCIAL_CASE_READ",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={
+            "program_id": str(program_id),
+            "participant_id": str(participant_id),
+            "episode_id": str(episode_id),
+            "asset_count": len(asset_rows),
+            "guarantee_count": len(guarantee_rows),
+        },
+    )
+    await session.commit()
+
+    return SupportedFinancialCaseView(
+        program_id=program_id,
+        participant_id=participant_id,
+        episode_id=episode_id,
+        assets=[
+            SupportedAssetPositionView(
+                id=position.id,
+                asset_code=asset_type.asset_code,
+                asset_name=asset_type.name,
+                ownership_funding_type=position.ownership_funding_type,
+                quantity=position.quantity,
+                unit_code=position.unit_code,
+                lifecycle_status=position.lifecycle_status,
+                valuation_observations=valuations_by_position.get(position.id, []),
+            )
+            for position, asset_type in asset_rows
+        ],
+        guarantees=[
+            SupportedGuaranteeView(
+                id=case.id,
+                provider_id=case.provider_id,
+                state=case.state,
+                requested_principal=case.requested_principal,
+                reserved_guarantee_amount=case.reserved_guarantee_amount,
+                issued_guarantee_amount=case.issued_guarantee_amount,
+                current_guarantee_exposure=case.current_guarantee_exposure,
+                guarantee_mode=case.guarantee_mode,
+                currency=product.currency,
+                loan_state=loan.state if loan is not None else None,
+                outstanding_principal=(
+                    loan.outstanding_principal if loan is not None else None
+                ),
+                loan_currency=loan.currency if loan is not None else None,
+                last_synced_at=loan.last_synced_at if loan is not None else None,
+                reconciliation_status=(
+                    loan.reconciliation_status if loan is not None else None
+                ),
+            )
+            for case, product, loan in guarantee_rows
+        ],
+        profit_share_status="NOT_AVAILABLE_FOR_PROGRAM_SCOPE",
     )
