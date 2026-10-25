@@ -45,6 +45,7 @@ from badban.infrastructure.persistence.database import Database
 from badban.observability import configure_logging, configure_tracing
 from badban.security.oidc import OidcTokenVerifier
 
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or get_settings()
     configure_logging(resolved)
