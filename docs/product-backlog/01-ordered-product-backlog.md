@@ -1092,7 +1092,7 @@ Let authorized operators configure multiple external evidence sources by purpose
 - no reservation or financial state change is part of this capability;
 - arbitrary provider URLs are not accepted; outbound destinations are constrained.
 
-**Delivery Status:** Proposed in Sprint 40; no Code Authorization.
+**Delivery Status:** Sprint 40 Code in progress under Decision 0058. Initial increment adds draft-only source registration/listing and a provider-neutral multi-source adapter contract. Live source activation, external providers, durable response history, and valuation selection remain pending.
 
 ---
 
