@@ -13,6 +13,7 @@ from badban.application.internal_ledger_source import (
     InternalPostedJournalSource,
     build_posted_journal_snapshot,
 )
+from badban.application.journal import JournalLine, post_journal
 from badban.application.reconciliation_sources import (
     ReconciliationSourceAcquisitionError,
     ReconciliationSourceRegistry,
@@ -20,6 +21,7 @@ from badban.application.reconciliation_sources import (
     SourceTarget,
     acquire_verified_snapshot,
 )
+from badban.infrastructure.persistence.models import Identity, LegalEntity, Program
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
 PROGRAM_ID = UUID("00000000-0000-0000-0000-000000000037")
@@ -171,3 +173,101 @@ def test_source_with_only_other_program_rows_is_unavailable():
             snapshot_at=NOW,
             received_at=NOW,
         )
+
+
+@pytest.mark.integration
+async def test_internal_ledger_source_reads_program_scoped_posted_journal(
+    database,
+    clean_sprint07_guarantee_tables,
+):
+    identity = Identity(
+        identity_type="TEST",
+        external_subject=f"sprint37-ledger-{uuid4()}",
+        status="ACTIVE",
+    )
+    legal_entity = LegalEntity(
+        legal_name="Sprint 37 Ledger Source",
+        registration_identifier=f"SPRINT37-{uuid4()}",
+        entity_type="TEST",
+        status="ACTIVE",
+        created_by=uuid4(),
+    )
+    program = Program(
+        code=f"SPRINT37-{uuid4()}",
+        name="Sprint 37 ledger source test",
+        status="ACTIVE",
+        legal_entity_id=legal_entity.id,
+        created_by=uuid4(),
+    )
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            session.add_all([identity, legal_entity, program])
+
+    async with database.session_factory() as session:
+        async with session.begin():
+            await post_journal(
+                session,
+                business_event_type="SPRINT37_LEDGER_SOURCE",
+                business_event_id=f"cash-in-{uuid4()}",
+                legal_entity_id=legal_entity.id,
+                currency="IRR",
+                idempotency_key=f"sprint37-cash-in-{uuid4()}",
+                actor_reference=identity.id,
+                correlation_id=uuid4(),
+                lines=[
+                    JournalLine(
+                        account_code="1000.SETTLEMENT_CASH_CONTROL",
+                        economic_owner_type="PROGRAM",
+                        program_id=program.id,
+                        debit_amount=Decimal("100"),
+                    ),
+                    JournalLine(
+                        account_code="2030.PROGRAM_CAPITAL_BALANCE",
+                        economic_owner_type="PROGRAM",
+                        program_id=program.id,
+                        credit_amount=Decimal("100"),
+                    ),
+                ],
+            )
+            await post_journal(
+                session,
+                business_event_type="SPRINT37_LEDGER_SOURCE",
+                business_event_id=f"cash-out-{uuid4()}",
+                legal_entity_id=legal_entity.id,
+                currency="IRR",
+                idempotency_key=f"sprint37-cash-out-{uuid4()}",
+                actor_reference=identity.id,
+                correlation_id=uuid4(),
+                lines=[
+                    JournalLine(
+                        account_code="1000.SETTLEMENT_CASH_CONTROL",
+                        economic_owner_type="PROGRAM",
+                        program_id=program.id,
+                        credit_amount=Decimal("30"),
+                    ),
+                    JournalLine(
+                        account_code="1010.PROGRAM_CASH_CONTROL",
+                        economic_owner_type="PROGRAM",
+                        program_id=program.id,
+                        debit_amount=Decimal("30"),
+                    ),
+                ],
+            )
+
+    async with database.session_factory() as session:
+        source = InternalPostedJournalSource(session, program_id=program.id)
+        snapshot = await source.fetch_reconciliation_snapshot(
+            _target_for(program.id), {"program_id": str(program.id)}
+        )
+
+    balances = {record.account_code: record.balance for record in snapshot.records}
+    assert balances["1000.SETTLEMENT_CASH_CONTROL"] == "70.000000000000000000"
+    assert balances["1010.PROGRAM_CASH_CONTROL"] == "30.000000000000000000"
+    assert balances["2030.PROGRAM_CAPITAL_BALANCE"] == "100.000000000000000000"
+    assert all(record.legal_entity_id == legal_entity.id for record in snapshot.records)
+    assert len(snapshot.evidence_references) == 2
+
+
+def _target_for(program_id: UUID) -> SourceTarget:
+    return SourceTarget(reconciliation_type="LEDGER", program_id=program_id)
