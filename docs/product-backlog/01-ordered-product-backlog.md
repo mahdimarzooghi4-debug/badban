@@ -5,7 +5,8 @@
 - **Stage:** Scrum/Product Backlog
 - **Scope:** Decision 0016 bounded external-lender pilot
 - **Entry Gate:** Decision 0018
-- **Sprint / Code Authorization:** NOT YET GRANTED
+- **Sprint Planning:** Authorized by Decision 0019
+- **Current Sprint / Code Authorization:** No new Sprint authorized by this backlog; completed delivery is recorded in `docs/sprints/README.md`
 
 ## 1. Ordering Principle
 
@@ -416,7 +417,7 @@ Additionally:
 **Type:** Financial-Control Capability  
 **Depends on:** BL-015, BL-019, BL-004  
 **Traceability:** Technical 03, 04, 07  
-**Delivery Status:** Code deferred by Decision 0032 until BL-032 provides the required authoritative portfolio-risk PASS gate; no implicit/synthetic GREEN or PASS permitted
+**Delivery Status:** BLOCKED pending the explicit allocation, restriction/exposure source, risk-qualification, and valuation/provider/legal evidence decisions listed in `docs/product-backlog/06-bl020-contract-dossier-2026-10-09.md`. BL-032 is implemented; its existence does not define a qualifying risk state or snapshot freshness. Missing/unknown evidence fails closed.
 
 **Acceptance Criteria**
 
