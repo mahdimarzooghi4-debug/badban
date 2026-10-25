@@ -1,3 +1,30 @@
+## Addendum — Configurable external evidence sources
+
+No external source has been selected or connected yet. The system must support registering and adding sources later rather than depending on one hard-coded provider.
+
+- Configure sources by evidence purpose (for example valuation or restriction/encumbrance) and supported asset type. An asset type may have more than one source; a vehicle may, for example, be checked against two valuation sources.
+- Keep source configuration separate from reservation logic. A common adapter contract must return the source identity, queried asset identity, observation time, response status, and evidence reference. Provider-specific adapters may be added behind that contract.
+- Store credentials as environment-scoped secret references; never in source configuration payloads, logs, or evidence snapshots.
+- Capture each source response separately with provenance and freshness metadata. Do not replace one source's response with another.
+- A policy must define how multiple valuation results are accepted (for example, selected source, priority, or agreement rule). Do not average or choose the “first successful” response by default. Conflicting, stale, missing, or unavailable required results fail closed until an explicit rule resolves them.
+- For restrictions/encumbrances, any confirmed blocking response blocks the asset. Missing or unavailable required checks also block it.
+- Adding a source requires an authorized configuration change and an adapter implementation if it does not follow the common contract. Registering a source alone does not make its result authoritative.
+
+This design supports future multiple-source queries without claiming that any real external connection exists today.
+
+## Addendum — Business answers recorded 2026-10-25
+
+Business has confirmed the following BL-020 rules:
+
+- Select eligible asset positions in their stored order, taking capacity from the first eligible position and moving to the next only if needed. Use a stable ordering (creation time, then position ID as tie-breaker) so repeated evaluations produce the same sequence.
+- A new reservation is allowed only when the applicable portfolio risk state is GREEN. AMBER and RED do not qualify.
+- Asset restriction / existing-encumbrance status must be checked against an external authoritative source. Unknown, unavailable, or inconclusive results block reservation.
+- Valuation must be obtained from an external source; an internal recorded observation alone is not accepted as the price authority.
+
+The confirmed 72-hour duration from successful reservation, represented as a UTC instant, remains in force. Existing constraints remain: multi-lender, multi-asset, Direct Lending disabled, one Gold asset type, and maker-checker.
+
+Still needed before a live reservation path can be implemented: identify the authoritative external source(s) and their query/evidence contract for restrictions/encumbrances and valuation, and define the required freshness/window for those responses and the GREEN risk snapshot. Provider/product/legal authorization must also resolve to current accepted evidence. Until those are wired and validated, reservation remains fail-closed. This addendum records business rules; it does not authorize code, external calls, or financial mutation.
+
 # BL-020 Decision-Ready Contract Dossier — Technical Review
 
 ## Addendum — 2026-10-25
