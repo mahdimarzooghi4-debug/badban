@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 8756)
-Total output lines: 1115
-
 # Badban Ordered Product Backlog — Bounded External-Lender Pilot
 
 - **Status:** Accepted
@@ -522,7 +519,110 @@ Failure leaves no partial reservation/control effect.
 
 **Acceptance Criteria**
 
-- lender is explicit lender of re…756 tokens truncated…nces exactly;
+- lender is explicit lender of record;
+- provider + external loan ID is unique;
+- original and outstanding principal use exact decimals;
+- provider-authoritative state changes are applied only from authenticated normalized facts;
+- historical/correction events remain auditable.
+
+---
+
+### BL-026 — Activate Guaranteed External Loan
+
+**Priority:** P1  
+**Type:** Golden-Path Capability  
+**Depends on:** BL-023, BL-024, BL-025, BL-020  
+**Traceability:** Decision 0009; Technical 03, 07 §18, 08 §19
+
+**Acceptance Criteria**
+
+Activation requires:
+
+- GuaranteeCase state ISSUED;
+- authoritative lender disbursement evidence;
+- external loan ID;
+- valid legal/provider state;
+- no blocking reconciliation condition;
+- exact invariant:
+  `External Loan Principal = Issued Guarantee Amount`.
+
+On success:
+
+- external loan mirror becomes ACTIVE;
+- reserved backing becomes ENCUMBERED;
+- guarantee becomes ACTIVE;
+- decision/audit/outbox records are produced atomically.
+
+Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
+
+---
+
+## 9. P2 — Repayment, Exposure Reduction, and Release
+
+### BL-027 — Process Lender Repayment
+
+**Priority:** P2  
+**Type:** Domain/Integration Capability  
+**Depends on:** BL-025, BL-026  
+**Traceability:** Technical 03, 08 §20
+
+**Acceptance Criteria**
+
+- provider event is inbox-deduplicated;
+- outstanding principal reduces exactly once;
+- duplicate callback cannot duplicate repayment effect;
+- correction/reversal uses explicit provider/domain correction path;
+- no Badban cash journal is created merely because lender received repayment.
+
+---
+
+### BL-028 — Declining Guarantee Exposure Reduction
+
+**Priority:** P2  
+**Type:** Financial-Control Capability  
+**Depends on:** BL-027  
+**Traceability:** Technical 03, 05
+
+**Acceptance Criteria**
+
+- only authoritative eligible repayment can reduce declining exposure;
+- fixed guarantee mode does not reduce unless captured rule permits;
+- released backing matches approved exposure-reduction rule;
+- control/memorandum records remain balanced/traceable;
+- product/guarantee captured rule version is used, not current latest policy.
+
+---
+
+### BL-029 — Loan Settlement / Guarantee Release / Closure
+
+**Priority:** P2  
+**Type:** Domain Capability  
+**Depends on:** BL-027, BL-028  
+**Traceability:** Technical 03
+
+**Acceptance Criteria**
+
+- RELEASED/CLOSED requires authoritative repayment/settlement evidence;
+- remaining exposure is zero as required;
+- backing release is complete;
+- no unresolved claim or blocking reconciliation remains;
+- closure never relies only on UI/read-model state.
+
+---
+
+## 10. P1/P2 — Ledger, Risk, and Reserve
+
+### BL-030 — Append-Only Journal Engine
+
+**Priority:** P1  
+**Type:** Financial Platform Capability  
+**Depends on:** BL-004, BL-007  
+**Traceability:** Decision 0015; Technical 05  
+**Delivery Status:** Code + Code Review complete in Sprint 08; merged to `main` as PR #10; post-merge CI #218 green; Stage is separately governed by Decision 0033
+
+**Acceptance Criteria**
+
+- every POSTED journal balances exactly;
 - balances are derived from postings;
 - posted journal rows are immutable;
 - corrections use linked reversal/adjustment;
