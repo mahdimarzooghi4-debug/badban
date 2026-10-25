@@ -197,3 +197,10 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Adds a governance-only queue to propose and review evidence-backed program/episode links for legacy monthly pension and post-exit records.
 - A different global governance approver must approve or reject; approval updates the benefit record and both actions are audited.
 - No automatic mapping or backfill.
+
+
+## Sprint 54
+
+- [Sprint 54 — Admin Legacy Benefit Lineage Review Workspace](./54-sprint-54-admin-lineage-review-workspace.md) — **Code in progress; Decision 0072 authorizes bounded scope**
+- Adds a dedicated workspace entry for the legacy benefit lineage queue to the admin workspace index.
+- Discovery is limited to active global governance approvers; each queue endpoint continues to enforce its own authorization.
