@@ -193,7 +193,7 @@ async def create_service_version(
         outcome="SUCCEEDED",
         reason_code=None,
         scope={"service_code": record.service_code, "lifecycle_status": "DRAFT"},
-        evidence_references=[record.policy_version_reference],
+        evidence_reference=record.policy_version_reference,
     )
     complete_idempotency(idem, status_code=201, response_payload=view.model_dump(mode="json"))
     await session.commit()
