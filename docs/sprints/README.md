@@ -118,6 +118,6 @@ Sprint 04 Code is not yet authorized.
 
 ## Sprint 39
 
-- [Sprint 39 — Internal Valuation Observation Source](./39-sprint-39-internal-valuation-observation-source.md) — **Implemented; CI recorded on PR #43; Draft PR pending code review**
+- [Sprint 39 — Internal Valuation Observation Source](./39-sprint-39-internal-valuation-observation-source.md) — **Merged to main via PR #45; exact-head CI #508 and post-merge main CI #512 passed**
 - Decision 0057 authorizes preserving recorded valuation observations and freshness labels as internal stored facts only.
 - No provider verification, freshness determination, valuation selection, or financial outcome is included.
