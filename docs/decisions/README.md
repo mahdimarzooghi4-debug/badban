@@ -82,3 +82,4 @@ Each decision should include:
 
 - [0054 — Sprint 36 Verified Source Acquisition Boundary](./0054-sprint-36-verified-source-acquisition-code-authorization.md) — **Accepted; code scope only**
 - [0055 — Sprint 37 Internal Posted-Journal Source](./0055-sprint-37-internal-posted-journal-source.md) — **Accepted; code scope only**
+- [0056 — Sprint 38 Internal Asset Inventory Source](./0056-sprint-38-internal-asset-inventory-source.md) — **Accepted; code scope only**
