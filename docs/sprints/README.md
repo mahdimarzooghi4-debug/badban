@@ -137,5 +137,5 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 ## Sprint 44
 
 - [Sprint 44 — Automatic Applicant Identity Link](./44-sprint-44-automatic-applicant-identity-link.md) — **Code in progress; Decision 0062 authorizes bounded scope**
-- Resolves a verified OIDC `participant_reference` claim to one participant record without asking the applicant to select or enter a record.
-- The external identity provider must issue that claim after its own participant authentication checks; applicant financial summaries remain the next BL-057 slice.
+- Resolves a verified OIDC `national_id` claim to one participant record without asking the applicant to select or enter a record, and does not return the national ID.
+- The external identity provider must issue the claim after its participant identity checks; applicant financial summaries remain the next BL-057 slice.
