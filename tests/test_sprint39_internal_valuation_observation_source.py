@@ -145,6 +145,18 @@ def test_valuation_snapshot_rejects_wrong_program_future_time_and_duplicates():
     assert duplicate.value.code == "SOURCE_CONTRACT_INVALID"
 
 
+def test_valuation_snapshot_rejects_more_evidence_than_contract_allows():
+    records = [_record() for _ in range(1001)]
+    with pytest.raises(ReconciliationSourceAcquisitionError) as exc:
+        build_internal_valuation_snapshot(
+            records,
+            program_id=PROGRAM_ID,
+            snapshot_at=NOW,
+            received_at=NOW,
+        )
+    assert exc.value.code == "SOURCE_CONTRACT_INVALID"
+
+
 @pytest.mark.integration
 async def test_internal_valuation_source_reads_program_scoped_observations(
     database,
