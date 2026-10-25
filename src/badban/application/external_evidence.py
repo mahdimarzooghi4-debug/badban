@@ -52,13 +52,21 @@ class EvidenceContract(BaseModel):
             elif self.evidence_purpose == "RESTRICTION":
                 if self.restriction_state is None:
                     raise ValueError("restriction evidence needs an explicit state")
-                if self.source_value is not None or self.currency is not None:
-                    raise ValueError("restriction evidence contains valuation fields")
+                if (
+                    self.source_value is not None
+                    or self.currency is not None
+                    or self.encumbrance_state is not None
+                ):
+                    raise ValueError("restriction evidence contains unrelated fields")
             elif self.evidence_purpose == "ENCUMBRANCE":
                 if self.encumbrance_state is None:
                     raise ValueError("encumbrance evidence needs an explicit state")
-                if self.source_value is not None or self.currency is not None:
-                    raise ValueError("encumbrance evidence contains valuation fields")
+                if (
+                    self.source_value is not None
+                    or self.currency is not None
+                    or self.restriction_state is not None
+                ):
+                    raise ValueError("encumbrance evidence contains unrelated fields")
         else:
             if self.error_code is None:
                 raise ValueError("unavailable or invalid evidence needs a stable error code")
@@ -92,6 +100,7 @@ class EvidenceSourceDefinition:
     asset_type_id: UUID
     contract_version: str
     schema_version: str
+    lifecycle_status: Literal["DRAFT", "ACTIVE", "SUSPENDED"]
 
     @classmethod
     def from_record(cls, source: ExternalEvidenceSource) -> EvidenceSourceDefinition:
@@ -103,6 +112,7 @@ class EvidenceSourceDefinition:
             asset_type_id=source.asset_type_id,
             contract_version=source.contract_version,
             schema_version=source.schema_version,
+            lifecycle_status=source.lifecycle_status,  # type: ignore[arg-type]
         )
 
 
@@ -164,12 +174,20 @@ async def acquire_from_sources(
     """
     ordered = tuple(sorted(sources, key=lambda item: (item.source_key, str(item.source_id))))
     if any(
-        source.asset_type_id != request.asset_type_id
+        source.lifecycle_status != "ACTIVE"
+        or source.asset_type_id != request.asset_type_id
         or source.evidence_purpose != request.evidence_purpose
         for source in ordered
     ):
         return tuple(
-            _failure(source, request, "SOURCE_CONTRACT_INVALID") for source in ordered
+            _failure(
+                source,
+                request,
+                "SOURCE_UNAVAILABLE"
+                if source.lifecycle_status != "ACTIVE"
+                else "SOURCE_CONTRACT_INVALID",
+            )
+            for source in ordered
         )
 
     async def acquire_one(source: EvidenceSourceDefinition) -> EvidenceContract:
