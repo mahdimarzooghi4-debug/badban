@@ -507,6 +507,65 @@ async def approve_period_entitlement(
     return SupportEntitlementView.model_validate(item)
 
 
+
+class SupportCaseStatusChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_status: Literal["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"]
+    decision_reference: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/cases/{case_id}/status", response_model=SupportCaseView)
+async def change_support_case_status(
+    case_id: UUID,
+    body: SupportCaseStatusChange,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SupportCaseView:
+    await _authorize(
+        session, principal, correlation_id, "POST_EXIT_SUPPORT_CASE_STATUS_CHANGE", str(case_id)
+    )
+    case = await session.scalar(
+        select(PostExitSupportCase).where(PostExitSupportCase.id == case_id).with_for_update()
+    )
+    if case is None:
+        raise ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Post-exit support case was not found")
+    allowed = {
+        "ACTIVE": {"SUSPENDED", "COMPLETED", "CANCELLED"},
+        "SUSPENDED": {"ACTIVE", "COMPLETED", "CANCELLED"},
+    }
+    if body.target_status not in allowed.get(case.lifecycle_status, set()):
+        raise ApiError(
+            409,
+            "INVALID_SUPPORT_CASE_TRANSITION",
+            "Requested support case status transition is not allowed",
+        )
+    if case.created_by == principal.identity_id:
+        raise ApiError(
+            403,
+            "MAKER_CHECKER_REQUIRED",
+            "The case creator cannot change the case status",
+        )
+    previous_status = case.lifecycle_status
+    case.lifecycle_status = body.target_status
+    append_audit(
+        session,
+        aggregate_type="PostExitSupportCase",
+        aggregate_id=str(case.id),
+        aggregate_version=case.version,
+        action="POST_EXIT_SUPPORT_CASE_STATUS_CHANGE",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        evidence_reference=body.decision_reference,
+        scope={"previous_status": previous_status, "new_status": body.target_status},
+    )
+    await session.commit()
+    return SupportCaseView.model_validate(case)
+
+
 class SupportCasePage(BaseModel):
     items: list[SupportCaseView]
 
