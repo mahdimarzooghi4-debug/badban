@@ -30,6 +30,7 @@ from badban.api.sprint42 import router as sprint42_router
 from badban.api.sprint43 import router as sprint43_router
 from badban.api.sprint44 import router as sprint44_router
 from badban.api.sprint45 import router as sprint45_router
+from badban.api.sprint46 import router as sprint46_router
 from badban.api.v1 import router as v1_router
 from badban.application.external_evidence import EvidenceAdapterRegistry
 from badban.application.lender_adapter import LenderAdapterRegistry
@@ -86,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sprint43_router)
     app.include_router(sprint44_router)
     app.include_router(sprint45_router)
+    app.include_router(sprint46_router)
     configure_tracing(app, resolved)
     return app
 
