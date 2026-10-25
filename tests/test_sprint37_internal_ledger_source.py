@@ -73,7 +73,8 @@ class _Session:
         self.rows = rows
 
     async def execute(self, _statement):
-        return SimpleNamespace(all=lambda: self.rows)
+        snapshot_at = datetime.now(UTC)
+        return SimpleNamespace(all=lambda: [(*row, snapshot_at) for row in self.rows])
 
 
 def _target() -> SourceTarget:
