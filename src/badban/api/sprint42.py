@@ -82,8 +82,25 @@ async def create_entitlement(
 ) -> EntitlementView:
     await _authorize(session, principal, correlation_id, "MONTHLY_PENSION_ENTITLEMENT_CREATE")
     service = await session.get(ServiceCatalogueVersion, body.service_catalogue_version_id)
-    if service is None or service.service_code != "MONTHLY_PENSION" or service.lifecycle_status != "ACTIVE":
-        raise ApiError(409, "MONTHLY_PENSION_SERVICE_UNAVAILABLE", "An active monthly pension service version is required")
+    now = datetime.now(UTC)
+    if (
+        service is None
+        or service.service_code != "MONTHLY_PENSION"
+        or service.lifecycle_status != "ACTIVE"
+        or service.effective_from > now
+        or (service.effective_to is not None and service.effective_to <= now)
+    ):
+        raise ApiError(
+            409,
+            "MONTHLY_PENSION_SERVICE_UNAVAILABLE",
+            "An active, effective monthly pension service version is required",
+        )
+    if body.policy_version_reference != service.policy_version_reference:
+        raise ApiError(
+            422,
+            "POLICY_VERSION_MISMATCH",
+            "Entitlement policy reference must match the selected service version",
+        )
     if await session.get(Participant, body.participant_id) is None:
         raise ApiError(404, "PARTICIPANT_NOT_FOUND", "Participant was not found")
     idem, replay = await acquire_idempotency(
