@@ -33,9 +33,15 @@ class EvidenceContract(BaseModel):
     currency: str | None = Field(default=None, min_length=1, max_length=16)
     restriction_state: RestrictionState | None = None
     encumbrance_state: RestrictionState | None = None
-    error_code: Literal[
-        "SOURCE_UNAVAILABLE", "SOURCE_TIMEOUT", "SOURCE_TRANSPORT_ERROR", "SOURCE_CONTRACT_INVALID"
-    ] | None = None
+    error_code: (
+        Literal[
+            "SOURCE_UNAVAILABLE",
+            "SOURCE_TIMEOUT",
+            "SOURCE_TRANSPORT_ERROR",
+            "SOURCE_CONTRACT_INVALID",
+        ]
+        | None
+    ) = None
 
     @model_validator(mode="after")
     def validate_purpose_payload(self) -> EvidenceContract:
