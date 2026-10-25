@@ -22,13 +22,13 @@ class ApplicantParticipantView(BaseModel):
     lifecycle_status: str
 
 
-@router.get("/participant", response_model=ApplicantParticipantView)
-async def get_linked_participant(
+@router.post("/participant", response_model=ApplicantParticipantView)
+async def ensure_individual_profile(
     principal: Principal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session),
     correlation_id: UUID = Depends(get_correlation_id),
 ) -> ApplicantParticipantView:
-    """Resolve or create the individual profile from a verified OIDC national ID."""
+    """Create or resolve an individual profile from a verified OIDC national ID."""
     if principal.identity_type != "PARTICIPANT" or not principal.national_id:
         raise ApiError(
             403,
@@ -69,6 +69,33 @@ async def get_linked_participant(
             scope={"creation_source": "VERIFIED_OIDC_NATIONAL_ID"},
         )
         await session.commit()
+    return ApplicantParticipantView(
+        participant_id=participant.id,
+        lifecycle_status=participant.lifecycle_status,
+    )
+
+
+@router.get("/participant", response_model=ApplicantParticipantView)
+async def get_linked_participant(
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+) -> ApplicantParticipantView:
+    """Read the caller's existing profile without creating or changing state."""
+    if principal.identity_type != "PARTICIPANT" or not principal.national_id:
+        raise ApiError(
+            403,
+            "PARTICIPANT_LINK_UNAVAILABLE",
+            "The authenticated account has no trusted participant reference",
+        )
+    participant = await session.scalar(
+        select(Participant).where(Participant.external_reference == principal.national_id)
+    )
+    if participant is None:
+        raise ApiError(
+            404,
+            "PARTICIPANT_RECORD_NOT_FOUND",
+            "No Badban participant record matches the authenticated account",
+        )
     return ApplicantParticipantView(
         participant_id=participant.id,
         lifecycle_status=participant.lifecycle_status,
