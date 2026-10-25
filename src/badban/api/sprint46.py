@@ -244,7 +244,9 @@ async def approve_service_role_grant(
     await _authorize_global_governance(
         session, principal, correlation_id, "SERVICE_ROLE_GRANT_APPROVE", str(grant_id)
     )
-    grant = await session.scalar(select(RoleGrant).where(RoleGrant.id == grant_id).with_for_update())
+    grant = await session.scalar(
+        select(RoleGrant).where(RoleGrant.id == grant_id).with_for_update()
+    )
     service_code = _service_code_for_scope(grant.scope_id) if grant is not None else None
     if (
         grant is None
@@ -254,9 +256,13 @@ async def approve_service_role_grant(
     ):
         raise ApiError(404, "SERVICE_ROLE_GRANT_NOT_FOUND", "Service role grant was not found")
     if grant.status != "REQUESTED":
-        raise ApiError(409, "SERVICE_ROLE_GRANT_NOT_REQUESTED", "Only a requested grant can be approved")
+        raise ApiError(
+            409, "SERVICE_ROLE_GRANT_NOT_REQUESTED", "Only a requested grant can be approved"
+        )
     if grant.granted_by == principal.identity_id:
-        raise ApiError(403, "MAKER_CHECKER_REQUIRED", "The requester cannot approve the service role grant")
+        raise ApiError(
+            403, "MAKER_CHECKER_REQUIRED", "The requester cannot approve the service role grant"
+        )
     grant.status = "ACTIVE"
     grant.version += 1
     append_audit(
@@ -293,7 +299,9 @@ async def revoke_service_role_grant(
     await _authorize_global_governance(
         session, principal, correlation_id, "SERVICE_ROLE_GRANT_REVOKE", str(grant_id)
     )
-    grant = await session.scalar(select(RoleGrant).where(RoleGrant.id == grant_id).with_for_update())
+    grant = await session.scalar(
+        select(RoleGrant).where(RoleGrant.id == grant_id).with_for_update()
+    )
     service_code = _service_code_for_scope(grant.scope_id) if grant is not None else None
     if (
         grant is None
@@ -303,7 +311,9 @@ async def revoke_service_role_grant(
     ):
         raise ApiError(404, "SERVICE_ROLE_GRANT_NOT_FOUND", "Service role grant was not found")
     if grant.status not in {"REQUESTED", "ACTIVE"}:
-        raise ApiError(409, "SERVICE_ROLE_GRANT_NOT_REVOCABLE", "Grant is no longer active or pending")
+        raise ApiError(
+            409, "SERVICE_ROLE_GRANT_NOT_REVOCABLE", "Grant is no longer active or pending"
+        )
     grant.status = "REVOKED"
     grant.version += 1
     append_audit(
@@ -336,9 +346,14 @@ async def read_service_work_queue(
         rows = (
             await session.execute(
                 select(GuaranteeCase, ParticipationEpisode, Participant, ExternalLoanMirror)
-                .join(ParticipationEpisode, GuaranteeCase.participation_episode_id == ParticipationEpisode.id)
+                .join(
+                    ParticipationEpisode,
+                    GuaranteeCase.participation_episode_id == ParticipationEpisode.id,
+                )
                 .join(Participant, ParticipationEpisode.participant_id == Participant.id)
-                .outerjoin(ExternalLoanMirror, ExternalLoanMirror.guarantee_case_id == GuaranteeCase.id)
+                .outerjoin(
+                    ExternalLoanMirror, ExternalLoanMirror.guarantee_case_id == GuaranteeCase.id
+                )
                 .order_by(GuaranteeCase.created_at, GuaranteeCase.id)
                 .limit(limit)
             )
@@ -409,7 +424,9 @@ async def read_service_work_queue(
                 "currency": entitlement.currency if entitlement else None,
                 "entitlement_status": entitlement.lifecycle_status if entitlement else None,
                 "calculation_reference": entitlement.calculation_reference if entitlement else None,
-                "eligibility_evidence_reference": entitlement.eligibility_evidence_reference if entitlement else None,
+                "eligibility_evidence_reference": entitlement.eligibility_evidence_reference
+                if entitlement
+                else None,
             }
             for case, entitlement in rows
         ]
