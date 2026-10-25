@@ -10,6 +10,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -223,6 +224,12 @@ class ParticipationEpisode(VersionedMixin, Base):
             "participant_id",
             "program_id",
             "status",
+        ),
+        UniqueConstraint(
+            "id",
+            "participant_id",
+            "program_id",
+            name="uq_participation_episode_identity_program",
         ),
     )
 
@@ -1806,9 +1813,24 @@ class MonthlyPensionEntitlement(VersionedMixin, Base):
     __tablename__ = "monthly_pension_entitlements"
     __table_args__ = (
         UniqueConstraint(
-            "participant_id",
+            "participation_episode_id",
             "period_reference",
-            name="uq_monthly_pension_participant_period",
+            name="uq_monthly_pension_episode_period",
+        ),
+        CheckConstraint(
+            "(participation_episode_id IS NULL AND program_id IS NULL) OR "
+            "(participation_episode_id IS NOT NULL AND program_id IS NOT NULL)",
+            name="ck_monthly_pension_program_episode_pair",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_monthly_pension_episode_program",
         ),
         CheckConstraint("amount > 0", name="ck_monthly_pension_amount_positive"),
         CheckConstraint(
@@ -1824,6 +1846,12 @@ class MonthlyPensionEntitlement(VersionedMixin, Base):
             "participant_id",
             "lifecycle_status",
         ),
+        Index(
+            "ix_monthly_pension_program_episode_status",
+            "program_id",
+            "participation_episode_id",
+            "lifecycle_status",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -1835,6 +1863,10 @@ class MonthlyPensionEntitlement(VersionedMixin, Base):
     participant_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
     )
+    participation_episode_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    program_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
     currency: Mapped[str] = mapped_column(String(16), nullable=False)
@@ -1889,9 +1921,24 @@ class PostExitSupportCase(VersionedMixin, Base):
     __tablename__ = "post_exit_support_cases"
     __table_args__ = (
         UniqueConstraint(
-            "participant_id",
+            "participation_episode_id",
             "exit_event_reference",
-            name="uq_post_exit_participant_exit_event",
+            name="uq_post_exit_episode_exit_event",
+        ),
+        CheckConstraint(
+            "(participation_episode_id IS NULL AND program_id IS NULL) OR "
+            "(participation_episode_id IS NOT NULL AND program_id IS NOT NULL)",
+            name="ck_post_exit_program_episode_pair",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_post_exit_episode_program",
         ),
         CheckConstraint(
             "duration_months > 0 AND duration_months <= 36",
@@ -1910,6 +1957,12 @@ class PostExitSupportCase(VersionedMixin, Base):
             "participant_id",
             "lifecycle_status",
         ),
+        Index(
+            "ix_post_exit_case_program_episode_status",
+            "program_id",
+            "participation_episode_id",
+            "lifecycle_status",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -1921,6 +1974,10 @@ class PostExitSupportCase(VersionedMixin, Base):
     participant_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
     )
+    participation_episode_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    program_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     exit_event_reference: Mapped[str] = mapped_column(String(255), nullable=False)
     exit_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
     exit_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
