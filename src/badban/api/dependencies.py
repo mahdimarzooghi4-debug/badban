@@ -47,10 +47,10 @@ async def get_current_principal(
         identity_id=identity.id,
         external_subject=identity.external_subject,
         identity_type=identity.identity_type,
-        participant_reference=(
-            claims.get(request.app.state.settings.oidc_participant_reference_claim)
+        national_id=(
+            claims.get(request.app.state.settings.oidc_national_id_claim)
             if isinstance(
-                claims.get(request.app.state.settings.oidc_participant_reference_claim), str
+                claims.get(request.app.state.settings.oidc_national_id_claim), str
             )
             else None
         ),
