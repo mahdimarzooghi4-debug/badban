@@ -190,3 +190,10 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 52 — Service Program Lineage](./52-sprint-52-service-program-lineage.md) — **Code in progress; Decision 0070 authorizes bounded scope**
 - Adds verified program and participation-episode lineage to monthly pension and post-exit records, and exposes only matching records in the support institution financial case.
 - Does not infer lineage for legacy rows; program return allocations are labeled at participant/program scope.
+
+## Sprint 53
+
+- [Sprint 53 — Legacy Benefit Lineage Review](./53-sprint-53-legacy-benefit-lineage-review.md) — **Code in progress; Decision 0071 authorizes bounded scope**
+- Adds a governance-only queue to propose and review evidence-backed program/episode links for legacy monthly pension and post-exit records.
+- A different global governance approver must approve or reject; approval updates the benefit record and both actions are audited.
+- No automatic mapping or backfill.
