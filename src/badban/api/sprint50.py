@@ -13,7 +13,12 @@ from badban.api.dependencies import get_correlation_id, get_current_principal, g
 from badban.api.sprint46 import SERVICE_ROLE_MATRIX, _service_scope_id
 from badban.infrastructure.persistence.models import RoleGrant
 from badban.security.audit import append_audit
-from badban.security.authorization import ROLE_GOVERNANCE_APPROVER, SCOPE_GLOBAL, SCOPE_SERVICE, Principal
+from badban.security.authorization import (
+    ROLE_GOVERNANCE_APPROVER,
+    SCOPE_GLOBAL,
+    SCOPE_SERVICE,
+    Principal,
+)
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin-workspace"])
 
