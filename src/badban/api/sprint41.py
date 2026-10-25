@@ -137,9 +137,7 @@ async def create_service_version(
     correlation_id: UUID = Depends(get_correlation_id),
     idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
 ) -> ServiceCatalogueView:
-    await _authorize_admin(
-        session, principal, correlation_id, "SERVICE_CATALOGUE_VERSION_CREATE"
-    )
+    await _authorize_admin(session, principal, correlation_id, "SERVICE_CATALOGUE_VERSION_CREATE")
     idem, replay = await acquire_idempotency(
         session,
         scope="service-catalogue:create",
@@ -211,9 +209,7 @@ async def list_admin_service_versions(
     session: AsyncSession = Depends(get_session),
     correlation_id: UUID = Depends(get_correlation_id),
 ) -> ServiceCatalogueList:
-    await _authorize_admin(
-        session, principal, correlation_id, "SERVICE_CATALOGUE_ADMIN_READ"
-    )
+    await _authorize_admin(session, principal, correlation_id, "SERVICE_CATALOGUE_ADMIN_READ")
     result = await session.scalars(
         select(ServiceCatalogueVersion).order_by(
             ServiceCatalogueVersion.service_code,
