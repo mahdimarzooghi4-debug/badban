@@ -97,3 +97,9 @@ Sprint 04 Code is not yet authorized.
 - Decision 0040 authorizes BL-042 Core + lender reconciliation vertical slice only.
 - BL-043 resolution/block workflow remains out of scope.
 - Decision 0033 keeps Stage available, but backend-first strategy means Stage is not automatically run after this Sprint.
+
+## Sprint 36
+
+- [Sprint 36 — Verified Source Acquisition Boundary](./36-sprint-36-verified-source-acquisition.md) — **Code authorized; Draft PR pending implementation/review**
+- Decision 0054 authorizes only a read-only acquisition and verification boundary for explicitly registered sources.
+- No new source integrations, database writes, comparison rules, or financial behavior are authorized by this Sprint.
