@@ -81,9 +81,7 @@ def _service_scope_id(service_code: str) -> UUID:
 def _service_code_for_scope(scope_id: UUID | None) -> str | None:
     if scope_id is None:
         return None
-    return next(
-        (code for code in SERVICE_ROLE_MATRIX if _service_scope_id(code) == scope_id), None
-    )
+    return next((code for code in SERVICE_ROLE_MATRIX if _service_scope_id(code) == scope_id), None)
 
 
 class ServiceRoleGrantCreate(BaseModel):
@@ -192,7 +190,9 @@ async def request_service_role_grant(
     if target_identity is None or target_identity.status != "ACTIVE":
         raise ApiError(404, "IDENTITY_NOT_FOUND", "Identity was not found")
     if target_identity.identity_type not in HUMAN_IDENTITY_TYPES:
-        raise ApiError(422, "HUMAN_IDENTITY_REQUIRED", "Service role grants require a human identity")
+        raise ApiError(
+            422, "HUMAN_IDENTITY_REQUIRED", "Service role grants require a human identity"
+        )
     existing = await session.scalar(
         select(RoleGrant.id).where(
             RoleGrant.identity_id == body.identity_id,
