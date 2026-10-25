@@ -9,7 +9,7 @@
 
 Implement a distinct exit-linked support case and period entitlement lifecycle for POST_EXIT_SUPPORT. The case records an authoritative exit-event reference, the exit date supplied from verified evidence, eligibility decision references, and a policy-bounded support duration. Each period uses a caller-supplied period reference, sequence number, and timestamp. The timestamp must be within the policy-defined window calculated from the configured start date and duration. No payment cadence is inferred.
 
-The support window is at most 36 periods and cannot exceed the active catalogue version's max_duration_months. An authorized operator supplies the proposed period amount, calculation reference, policy reference, and eligibility evidence. The service does not infer entitlement or calculate a benefit formula.
+The support duration is at most 36 months and cannot exceed the active catalogue version's max_duration_months. Its calculated end must also fall no later than exit date plus the configured maximum. An authorized operator supplies the proposed period amount, calculation reference, policy reference, and eligibility evidence. The service does not infer entitlement or calculate a benefit formula.
 
 Each draft period entitlement must be fully backed by posted, unallocated RETURN_ALLOCATION@1 credits to 2020.FUTURE_FINANCIAL_ENTITLEMENT for the same participant and currency. A different authorized checker approves it. Approval does not initiate or assert payment.
 
