@@ -178,3 +178,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 50 — Role-Derived Admin Workspace Index](./50-sprint-50-admin-workspace-index.md) — **Code in progress; Decision 0068 authorizes bounded scope**
 - Returns only admin workspaces matching the caller's active service-scoped roles or global governance grant.
 - Underlying endpoints continue to enforce their own authorization.
+
+## Sprint 51
+
+- [Sprint 51 — Supporting Institution Financial Case](./51-sprint-51-supporting-institution-financial-case.md) — **Code in progress; Decision 0069 authorizes bounded scope**
+- Adds a read-only financial case limited to the exact participant episode and authorized program, showing attributed assets, recorded valuation observations, guarantee exposure, and lender-reported loan facts.
+- Profit-share, monthly pension, and post-exit figures remain unavailable until explicit program lineage exists; recorded valuations are shown as observations, not as selected quotes.
