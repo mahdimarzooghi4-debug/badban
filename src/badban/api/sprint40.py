@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
@@ -36,7 +37,12 @@ class SourceRegistrationCreate(BaseModel):
     adapter_key: str = Field(min_length=2, max_length=100, pattern=r"^[a-z0-9][a-z0-9._-]+$")
     contract_version: str = Field(min_length=1, max_length=80)
     schema_version: str = Field(min_length=1, max_length=80)
-    configuration_reference: str | None = Field(default=None, min_length=1, max_length=255)
+    configuration_reference: str | None = Field(
+        default=None,
+        min_length=12,
+        max_length=255,
+        pattern=r"^secret-ref:[a-z0-9][a-z0-9/_-]{0,230}$",
+    )
 
 
 class SourceRegistrationView(BaseModel):
@@ -157,7 +163,11 @@ async def register_source(
         created_by=principal.identity_id,
     )
     session.add(source)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ApiError(409, "SOURCE_ALREADY_REGISTERED", "Source key is already registered") from exc
     view = _view(source)
     append_audit(
         session,
