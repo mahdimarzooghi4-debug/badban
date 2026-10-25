@@ -34,7 +34,7 @@ class Principal:
     identity_id: UUID
     external_subject: str
     identity_type: str
-    participant_reference: str | None = None
+    national_id: str | None = None
 
 
 class AuthorizationDenied(RuntimeError):
