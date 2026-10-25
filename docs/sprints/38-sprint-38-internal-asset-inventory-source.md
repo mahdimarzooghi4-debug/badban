@@ -1,6 +1,6 @@
 # Sprint 38 — Internal Asset Inventory Source
 
-- **Status:** Implemented; exact-head CI passed; Draft PR pending code review
+- **Status:** Implemented and merged to `main` via PR #44 on 2026-10-25; exact-head CI #498 and combined CI #510 passed
 - **Date:** 2026-10-25
 - **Decision:** [0056 — Internal Asset Inventory Source](../decisions/0056-sprint-38-internal-asset-inventory-source.md)
 - **Base:** Sprint 37 PR #41 (`sprint-37-internal-ledger-source`)
