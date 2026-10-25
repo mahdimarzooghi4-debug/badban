@@ -34,9 +34,7 @@ async def get_linked_participant(
         )
 
     participant = await session.scalar(
-        select(Participant).where(
-            Participant.external_reference == principal.national_id
-        )
+        select(Participant).where(Participant.external_reference == principal.national_id)
     )
     if participant is None:
         raise ApiError(
