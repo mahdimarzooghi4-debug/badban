@@ -98,6 +98,22 @@ async def read_admin_workspace_index(
             )
         )
 
+        entries.append(
+            AdminWorkspaceEntry(
+                workspace_code="ADMIN_BENEFIT_LINEAGE_REVIEW",
+                scope_type=SCOPE_GLOBAL,
+                scope_id=None,
+                service_code=None,
+                role_codes=[ROLE_GOVERNANCE_APPROVER],
+                capabilities=[
+                    "READ_LEGACY_BENEFIT_LINEAGE_REVIEW_QUEUE",
+                    "REQUEST_LEGACY_BENEFIT_LINEAGE_REVIEW",
+                    "APPROVE_LEGACY_BENEFIT_LINEAGE_REVIEW",
+                    "REJECT_LEGACY_BENEFIT_LINEAGE_REVIEW",
+                ],
+            )
+        )
+
     append_audit(
         session,
         aggregate_type="AdminWorkspace",
