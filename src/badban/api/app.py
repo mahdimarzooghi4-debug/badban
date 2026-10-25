@@ -3,8 +3,6 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-
 from badban.api.errors import ApiError, api_error_handler
 from badban.api.health import router as health_router
 from badban.api.middleware import CorrelationIdMiddleware
@@ -37,7 +35,6 @@ from badban.api.sprint49 import admin_router as sprint49_admin_router
 from badban.api.sprint49 import lender_router as sprint49_lender_router
 from badban.api.sprint50 import router as sprint50_router
 from badban.api.sprint53 import router as sprint53_router
-from badban.api.sprint53 import router as sprint53_router
 from badban.api.v1 import router as v1_router
 from badban.application.external_evidence import EvidenceAdapterRegistry
 from badban.application.lender_adapter import LenderAdapterRegistry
@@ -45,6 +42,7 @@ from badban.config import Settings, get_settings
 from badban.infrastructure.persistence.database import Database
 from badban.observability import configure_logging, configure_tracing
 from badban.security.oidc import OidcTokenVerifier
+from fastapi import FastAPI
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
