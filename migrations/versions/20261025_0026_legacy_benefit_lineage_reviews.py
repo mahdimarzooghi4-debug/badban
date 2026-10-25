@@ -57,9 +57,7 @@ def upgrade() -> None:
             "reviewed_by IS NULL OR reviewed_by <> requested_by",
             name="ck_legacy_benefit_lineage_maker_checker",
         ),
-        sa.ForeignKeyConstraint(
-            ["participant_id"], ["participants.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["participant_id"], ["participants.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["participation_episode_id", "participant_id", "program_id"],
             [
@@ -70,12 +68,8 @@ def upgrade() -> None:
             ondelete="RESTRICT",
             name="fk_legacy_benefit_lineage_episode_program",
         ),
-        sa.ForeignKeyConstraint(
-            ["requested_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["reviewed_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["reviewed_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
