@@ -201,9 +201,7 @@ async def _authorize_global_governance(
             correlation_id=correlation_id,
         )
     except AuthorizationDenied as exc:
-        raise ApiError(
-            403, exc.code, "Global governance approval permission required"
-        ) from exc
+        raise ApiError(403, exc.code, "Global governance approval permission required") from exc
 
 
 @admin_router.get("/grants", response_model=SupportingRoleGrantListView)
@@ -287,9 +285,7 @@ async def request_supporting_institution_access(
         or identity.status != "ACTIVE"
         or identity.identity_type not in HUMAN_IDENTITY_TYPES
     ):
-        raise ApiError(
-            404, "HUMAN_IDENTITY_NOT_FOUND", "Active human identity was not found"
-        )
+        raise ApiError(404, "HUMAN_IDENTITY_NOT_FOUND", "Active human identity was not found")
     program = await session.get(Program, body.program_id)
     if program is None or program.status != "ACTIVE" or program.legal_entity_id is None:
         raise ApiError(
@@ -487,9 +483,7 @@ async def read_authorized_programs(
             scope={"scope_type": SCOPE_PROGRAM},
         )
         await session.commit()
-        raise ApiError(
-            403, "AUTHORIZATION_DENIED", "Human institution operator identity required"
-        )
+        raise ApiError(403, "AUTHORIZATION_DENIED", "Human institution operator identity required")
     now = datetime.now(UTC)
     programs = (
         await session.scalars(
@@ -787,14 +781,10 @@ async def read_program_beneficiary_financial_case(
                 guarantee_mode=case.guarantee_mode,
                 currency=product.currency,
                 loan_state=loan.state if loan is not None else None,
-                outstanding_principal=(
-                    loan.outstanding_principal if loan is not None else None
-                ),
+                outstanding_principal=(loan.outstanding_principal if loan is not None else None),
                 loan_currency=loan.currency if loan is not None else None,
                 last_synced_at=loan.last_synced_at if loan is not None else None,
-                reconciliation_status=(
-                    loan.reconciliation_status if loan is not None else None
-                ),
+                reconciliation_status=(loan.reconciliation_status if loan is not None else None),
             )
             for case, product, loan in guarantee_rows
         ],
