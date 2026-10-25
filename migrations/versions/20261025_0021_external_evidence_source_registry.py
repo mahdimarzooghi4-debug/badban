@@ -46,9 +46,7 @@ def upgrade() -> None:
             "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED')",
             name="ck_external_evidence_source_status",
         ),
-        sa.ForeignKeyConstraint(
-            ["asset_type_id"], ["asset_types.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["asset_type_id"], ["asset_types.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
