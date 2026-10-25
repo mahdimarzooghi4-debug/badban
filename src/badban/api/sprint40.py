@@ -23,7 +23,7 @@ from badban.security.authorization import (
     authorize,
 )
 
-router = APIRouter(prefix="/api/v1/evidence-sources", tags=["external-evidence-sources"])
+router = APIRouter(prefix="/api/v1/external-evidence-sources", tags=["external-evidence-sources"])
 EvidencePurpose = Literal["VALUATION", "RESTRICTION", "ENCUMBRANCE"]
 
 
