@@ -171,3 +171,10 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 49 — Lender Workspace](./49-sprint-49-lender-workspace.md) — **Code in progress; Decision 0067 authorizes bounded scope**
 - Provides exact-provider access to guarantee cases and already-recorded lender loan facts.
 - Keeps guarantee exposure separate from reported outstanding loan principal and excludes participant identity details.
+
+
+## Sprint 50
+
+- [Sprint 50 — Role-Derived Admin Workspace Index](./50-sprint-50-admin-workspace-index.md) — **Code in progress; Decision 0068 authorizes bounded scope**
+- Returns only admin workspaces matching the caller's active service-scoped roles or global governance grant.
+- Underlying endpoints continue to enforce their own authorization.
