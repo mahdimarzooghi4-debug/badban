@@ -22,9 +22,10 @@ Give each authenticated applicant one read-only view of their own three service 
 1. The endpoint accepts no participant ID/reference from the caller and scopes every query to the verified participant.
 2. Guarantee, monthly pension, and post-exit records are returned from their authoritative tables.
 3. Monetary measures remain separate and are grouped by currency.
-4. Only posted `RETURN_ALLOCATION@1` lines to the support buckets count as realized support return allocations.
+4. Only the net value of posted `RETURN_ALLOCATION@1` lines to the support buckets counts as realized support return allocations; posted reversals reduce the reported total.
 5. Payment amounts remain null and payment status is explicitly `NOT_CONFIGURED` until settlement evidence exists.
 6. Missing provider configuration is explicit, with no fabricated external values.
+7. A lender mirror is described as a recorded lender row, not as independently verified unless a reconciliation state says so.
 
 ## Gates
 
