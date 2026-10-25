@@ -184,3 +184,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 51 — Supporting Institution Financial Case](./51-sprint-51-supporting-institution-financial-case.md) — **Code in progress; Decision 0069 authorizes bounded scope**
 - Adds a read-only financial case limited to the exact participant episode and authorized program, showing attributed assets, recorded valuation observations, guarantee exposure, and lender-reported loan facts.
 - Profit-share, monthly pension, and post-exit figures remain unavailable until explicit program lineage exists; recorded valuations are shown as observations, not as selected quotes.
+
+## Sprint 52
+
+- [Sprint 52 — Service Program Lineage](./52-sprint-52-service-program-lineage.md) — **Code in progress; Decision 0070 authorizes bounded scope**
+- Adds verified program and participation-episode lineage to monthly pension and post-exit records, and exposes only matching records in the support institution financial case.
+- Does not infer lineage for legacy rows; program return allocations are labeled at participant/program scope.
