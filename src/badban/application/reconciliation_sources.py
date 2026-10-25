@@ -10,7 +10,13 @@ from badban.application.idempotency import canonical_request_hash
 from badban.application.lender_adapter import LenderReconciliationLoan
 
 type SourceType = Literal[
-    "LENDER", "GUARANTEE_ISSUER", "CUSTODY", "SETTLEMENT", "COLLATERAL_REGISTRY", "LEDGER"
+    "LENDER",
+    "GUARANTEE_ISSUER",
+    "CUSTODY",
+    "SETTLEMENT",
+    "COLLATERAL_REGISTRY",
+    "LEDGER",
+    "INTERNAL_ASSET_INVENTORY",
 ]
 type Text = Annotated[str, Field(min_length=1, max_length=500, pattern=r".*\S.*")]
 type Amount = Annotated[str, Field(pattern=r"^\d{1,20}(?:\.\d{1,18})?$", max_length=40)]
@@ -39,7 +45,7 @@ class SourceTarget(CanonicalModel):
             if self.reconciliation_type == "LENDER"
             else (
                 (False, False, True)
-                if self.reconciliation_type == "LEDGER"
+                if self.reconciliation_type in {"LEDGER", "INTERNAL_ASSET_INVENTORY"}
                 else (False, True, False)
             )
         )
@@ -138,6 +144,38 @@ class LedgerRecord(Record):
     balance: Balance
 
 
+class InternalAssetInventoryRecord(Record):
+    asset_position_id: UUID
+    position_version: int = Field(ge=1)
+    participation_episode_id: UUID
+    asset_type_id: UUID
+    asset_type_code: Text
+    asset_type_status: Text
+    program_id: UUID
+    ownership_funding_type: Literal["PARTICIPANT_OWNED", "PROGRAM_ATTRIBUTED"]
+    legal_owner_entity_id: UUID | None
+    legal_owner_participant_id: UUID | None
+    custodian_legal_entity_id: UUID | None
+    quantity: Amount
+    unit_code: Text
+    lifecycle_status: Text
+    source_reference: Text | None
+
+    @model_validator(mode="after")
+    def ownership_shape(self) -> InternalAssetInventoryRecord:
+        if self.ownership_funding_type == "PARTICIPANT_OWNED":
+            valid = (
+                self.legal_owner_participant_id is not None and self.legal_owner_entity_id is None
+            )
+        else:
+            valid = (
+                self.legal_owner_entity_id is not None and self.legal_owner_participant_id is None
+            )
+        if not valid:
+            raise ValueError("internal asset ownership lineage is inconsistent")
+        return self
+
+
 class Snapshot(CanonicalModel):
     source_id: UUID
     scope_definition: dict[str, str]
@@ -200,13 +238,19 @@ class LedgerSnapshot(Snapshot):
     records: tuple[LedgerRecord, ...] = Field(max_length=10000)
 
 
+class InternalAssetInventorySnapshot(Snapshot):
+    reconciliation_type: Literal["INTERNAL_ASSET_INVENTORY"]
+    records: tuple[InternalAssetInventoryRecord, ...] = Field(max_length=10000)
+
+
 type CanonicalSnapshot = Annotated[
     LenderSnapshot
     | IssuerSnapshot
     | CustodySnapshot
     | SettlementSnapshot
     | RegistrySnapshot
-    | LedgerSnapshot,
+    | LedgerSnapshot
+    | InternalAssetInventorySnapshot,
     Field(discriminator="reconciliation_type"),
 ]
 SNAPSHOT_ADAPTER: TypeAdapter[CanonicalSnapshot] = TypeAdapter(CanonicalSnapshot)
@@ -355,6 +399,8 @@ def stable_key(record: Record) -> str:
         return canonical_request_hash(
             record.model_dump(mode="json", exclude={"balance", "observed_at"})
         )
+    if isinstance(record, InternalAssetInventoryRecord):
+        return str(record.asset_position_id)
     raise ValueError("unsupported canonical record")
 
 
