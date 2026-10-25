@@ -22,9 +22,9 @@ type SourceType = Literal[
 type Text = Annotated[str, Field(min_length=1, max_length=500, pattern=r".*\S.*")]
 type Amount = Annotated[str, Field(pattern=r"^\d{1,20}(?:\.\d{1,18})?$", max_length=40)]
 type Balance = Annotated[str, Field(pattern=r"^-?\d{1,60}(?:\.\d{1,18})?$", max_length=80)]
-type PreciseBalance = Annotated[
+type PreciseAmount = Annotated[
     str,
-    Field(pattern=r"^-?\d{1,60}(?:\.\d{1,54})?$", max_length=116),
+    Field(pattern=r"^\d{1,60}(?:\.\d{1,54})?$", max_length=115),
 ]
 
 
@@ -194,7 +194,7 @@ class InternalValuationObservationRecord(Record):
     unit_price: Amount
     valuation_currency: Text
     fx_rate: Amount | None
-    gross_market_value: PreciseBalance
+    gross_market_value: PreciseAmount
     source_name: Text
     source_reference: Text
     source_version_reference: Text | None
