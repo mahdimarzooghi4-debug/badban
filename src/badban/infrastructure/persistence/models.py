@@ -1810,7 +1810,6 @@ class ServiceCatalogueVersion(VersionedMixin, Base):
     )
 
 
-
 class LegacyBenefitLineageReview(Base):
     __tablename__ = "legacy_benefit_lineage_reviews"
     __table_args__ = (
