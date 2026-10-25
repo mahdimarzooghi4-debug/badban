@@ -10,9 +10,9 @@ Automatically resolve an authenticated participant account to exactly one Badban
 
 ## Scope
 
-- Add a configurable OIDC participant-reference claim name with default `participant_reference`.
+- Add a configurable OIDC national-ID claim name with default `national_id`.
 - Carry the verified claim into the authenticated principal.
-- Add a self-scoped read endpoint that resolves only an exact `participants.external_reference` match.
+- Add a self-scoped read endpoint that resolves only an exact `participants.external_reference` match and never returns the national ID.
 - Fail closed for non-participant identities, missing claims, and unmatched participant records.
 - Document the required identity-provider claim contract.
 
