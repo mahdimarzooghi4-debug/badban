@@ -6,7 +6,7 @@
 - **Scope:** Decision 0016 bounded external-lender pilot
 - **Entry Gate:** Decision 0018
 - **Sprint Planning:** Authorized by Decision 0019
-- **Current Sprint / Code Authorization:** No new Sprint authorized by this backlog; completed delivery is recorded in `docs/sprints/README.md`
+- **Current Sprint / Code Authorization:** Sprint 40 Code authorized by Decision 0058; see `docs/sprints/README.md`
 
 ## 1. Ordering Principle
 
