@@ -61,6 +61,7 @@ class InternalValuationObservationSource(ReconciliationSourcePort):
                     ValuationObservation.observed_at,
                     ValuationObservation.id,
                 )
+                .limit(1001)
             )
         ).all()
         if not rows:
