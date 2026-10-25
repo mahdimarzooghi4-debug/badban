@@ -123,6 +123,7 @@ class RegistryRecord(Record):
 class LedgerRecord(Record):
     account_code: Text
     currency: Text
+    legal_entity_id: UUID
     economic_owner_type: Text
     economic_owner_id: UUID | None
     participant_id: UUID | None
@@ -195,6 +196,7 @@ class RegistrySnapshot(Snapshot):
 
 class LedgerSnapshot(Snapshot):
     reconciliation_type: Literal["LEDGER"]
+    schema_version: Literal["reconciliation-source-v2"]
     records: tuple[LedgerRecord, ...] = Field(max_length=10000)
 
 
@@ -318,6 +320,8 @@ async def acquire_verified_snapshot(
         raise ReconciliationSourceAcquisitionError(exc.code) from exc
     try:
         snapshot = await port.fetch_reconciliation_snapshot(target, dict(scope))
+    except ReconciliationSourceAcquisitionError:
+        raise
     except ReconciliationSourceUnavailable as exc:
         raise ReconciliationSourceAcquisitionError(exc.code) from exc
     except TimeoutError as exc:

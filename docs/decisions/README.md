@@ -81,3 +81,4 @@ Each decision should include:
 - [0040 — Sprint 14 Reconciliation Engine Core; Code Authorization](./0040-sprint-14-reconciliation-engine-core-code-authorization.md) — **Accepted**
 
 - [0054 — Sprint 36 Verified Source Acquisition Boundary](./0054-sprint-36-verified-source-acquisition-code-authorization.md) — **Accepted; code scope only**
+- [0055 — Sprint 37 Internal Posted-Journal Source](./0055-sprint-37-internal-posted-journal-source.md) — **Accepted; code scope only**
