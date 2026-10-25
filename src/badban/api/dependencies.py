@@ -49,9 +49,7 @@ async def get_current_principal(
         identity_type=identity.identity_type,
         national_id=(
             claims.get(request.app.state.settings.oidc_national_id_claim)
-            if isinstance(
-                claims.get(request.app.state.settings.oidc_national_id_claim), str
-            )
+            if isinstance(claims.get(request.app.state.settings.oidc_national_id_claim), str)
             else None
         ),
     )
