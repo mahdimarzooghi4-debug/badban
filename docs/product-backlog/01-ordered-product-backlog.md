@@ -1068,6 +1068,34 @@ All critical states, policy snapshots, provider evidence, ledger/control effects
 
 ---
 
+### BL-053 — Configurable External Evidence Source Registry
+
+**Priority:** P1  
+**Type:** Integration / Control Capability  
+**Depends on:** BL-004, BL-041, BL-044  
+**Traceability:** Technical 09, 10, 11
+
+**Goal**
+
+Let authorized operators configure multiple external evidence sources by purpose and supported asset type, and collect each source result independently through a versioned adapter contract.
+
+**Acceptance Criteria**
+
+- source definitions have explicit purpose, asset-type scope, lifecycle, versions, contract/schema version, and audit history;
+- multiple sources can be configured for the same purpose and asset type;
+- source activation and material changes require maker-checker;
+- credentials are secret-manager references scoped by environment;
+- provider-specific adapters use a common source/asset/time/status/evidence contract;
+- source acquisition records each response separately with provenance and freshness;
+- missing, unavailable, stale, malformed, or conflicting required evidence fails closed;
+- no default valuation selection, average, freshness threshold, or financial eligibility is invented;
+- no reservation or financial state change is part of this capability;
+- arbitrary provider URLs are not accepted; outbound destinations are constrained.
+
+**Delivery Status:** Proposed in Sprint 40; no Code Authorization.
+
+---
+
 ## 16. Future / Explicitly Deferred
 
 ### FUT-001 — Badban Direct Lending
@@ -1097,7 +1125,7 @@ BL-001 → BL-002 → BL-003 → BL-004 → BL-005
 → BL-031 → BL-033
 → BL-034 → BL-035 → BL-036 → BL-037
 → BL-038 → BL-039 → BL-040
-→ BL-042 → BL-043
+→ BL-042 → BL-053 → BL-043
 → BL-045 → BL-046 → BL-047
 → BL-048 → BL-049 → BL-050 → BL-051
 → BL-052
