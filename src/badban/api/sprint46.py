@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal
-from uuid import UUID, NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -15,8 +15,6 @@ from badban.infrastructure.persistence.models import (
     ExternalLoanMirror,
     GuaranteeCase,
     Identity,
-    JournalEntry,
-    JournalPosting,
     MonthlyPensionEntitlement,
     Participant,
     ParticipationEpisode,
@@ -26,6 +24,7 @@ from badban.infrastructure.persistence.models import (
 )
 from badban.security.audit import append_audit
 from badban.security.authorization import (
+    HUMAN_IDENTITY_TYPES,
     ROLE_AUDITOR,
     ROLE_FINANCE_RECONCILIATION,
     ROLE_GOVERNANCE_APPROVER,
@@ -35,7 +34,6 @@ from badban.security.authorization import (
     SCOPE_GLOBAL,
     SCOPE_SERVICE,
     AuthorizationDenied,
-    HUMAN_IDENTITY_TYPES,
     Principal,
     authorize,
 )
