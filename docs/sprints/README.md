@@ -157,3 +157,10 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 47 — Universal Individual Profile](./47-sprint-47-universal-individual-profile.md) — **Code in progress; Decision 0065 authorizes bounded scope**
 - Creates a self-scoped profile for an authenticated individual from the verified national-ID claim, reusing institution-introduced participant records.
 - Profile creation does not enroll the person in a program or grant financial services. Supporting institution workspaces remain program-scoped follow-up work.
+
+
+## Sprint 48
+
+- [Sprint 48 — Supporting Institution Workspace](./48-sprint-48-supporting-institution-workspace.md) — **Code in progress; Decision 0066 authorizes bounded scope**
+- Provides governance-reviewed, program-scoped operator grants and a read-only beneficiary list for the operator's authorized programs.
+- Beneficiary data excludes national IDs and financial case details; program enrollment and service decisions remain separate.
