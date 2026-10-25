@@ -133,7 +133,7 @@ def build_internal_valuation_snapshot(
         raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
     if len({record.observation_id for record in records}) != len(records):
         raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
-    if len(records) > 10000:
+    if len(records) > 1000:
         raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
 
     evidence = tuple(sorted(f"valuation-observation:{record.observation_id}" for record in records))
