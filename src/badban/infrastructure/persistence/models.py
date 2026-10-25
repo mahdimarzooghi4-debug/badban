@@ -1800,3 +1800,86 @@ class ServiceCatalogueVersion(VersionedMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class MonthlyPensionEntitlement(VersionedMixin, Base):
+    __tablename__ = "monthly_pension_entitlements"
+    __table_args__ = (
+        UniqueConstraint(
+            "participant_id",
+            "period_reference",
+            name="uq_monthly_pension_participant_period",
+        ),
+        CheckConstraint("amount > 0", name="ck_monthly_pension_amount_positive"),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','CANCELLED')",
+            name="ck_monthly_pension_status",
+        ),
+        CheckConstraint(
+            "approved_by IS NULL OR approved_by <> created_by",
+            name="ck_monthly_pension_maker_checker",
+        ),
+        Index(
+            "ix_monthly_pension_participant_status",
+            "participant_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    service_catalogue_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("service_catalogue_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    calculation_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    eligibility_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class MonthlyPensionFundingAllocation(Base):
+    __tablename__ = "monthly_pension_funding_allocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "entitlement_id",
+            "source_journal_posting_id",
+            name="uq_monthly_pension_entitlement_source",
+        ),
+        CheckConstraint("amount > 0", name="ck_monthly_pension_allocation_amount_positive"),
+        Index(
+            "ix_monthly_pension_funding_source",
+            "source_journal_posting_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    entitlement_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("monthly_pension_entitlements.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_journal_posting_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("journal_postings.id", ondelete="RESTRICT"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
