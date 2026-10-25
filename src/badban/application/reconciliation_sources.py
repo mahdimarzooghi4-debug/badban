@@ -17,10 +17,15 @@ type SourceType = Literal[
     "COLLATERAL_REGISTRY",
     "LEDGER",
     "INTERNAL_ASSET_INVENTORY",
+    "INTERNAL_VALUATION_OBSERVATION",
 ]
 type Text = Annotated[str, Field(min_length=1, max_length=500, pattern=r".*\S.*")]
 type Amount = Annotated[str, Field(pattern=r"^\d{1,20}(?:\.\d{1,18})?$", max_length=40)]
 type Balance = Annotated[str, Field(pattern=r"^-?\d{1,60}(?:\.\d{1,18})?$", max_length=80)]
+type PreciseAmount = Annotated[
+    str,
+    Field(pattern=r"^\d{1,60}(?:\.\d{1,54})?$", max_length=115),
+]
 
 
 class CanonicalModel(BaseModel):
@@ -45,7 +50,12 @@ class SourceTarget(CanonicalModel):
             if self.reconciliation_type == "LENDER"
             else (
                 (False, False, True)
-                if self.reconciliation_type in {"LEDGER", "INTERNAL_ASSET_INVENTORY"}
+                if self.reconciliation_type
+                in {
+                    "LEDGER",
+                    "INTERNAL_ASSET_INVENTORY",
+                    "INTERNAL_VALUATION_OBSERVATION",
+                }
                 else (False, True, False)
             )
         )
@@ -176,6 +186,24 @@ class InternalAssetInventoryRecord(Record):
         return self
 
 
+class InternalValuationObservationRecord(Record):
+    observation_id: UUID
+    asset_position_id: UUID
+    program_id: UUID
+    valued_quantity: Amount
+    unit_price: Amount
+    valuation_currency: Text
+    fx_rate: Amount | None
+    gross_market_value: PreciseAmount
+    source_name: Text
+    source_reference: Text
+    source_version_reference: Text | None
+    received_at: AwareDatetime
+    valid_until: AwareDatetime | None
+    freshness_status: Text
+    evidence_reference: Text | None
+
+
 class Snapshot(CanonicalModel):
     source_id: UUID
     scope_definition: dict[str, str]
@@ -243,6 +271,11 @@ class InternalAssetInventorySnapshot(Snapshot):
     records: tuple[InternalAssetInventoryRecord, ...] = Field(max_length=10000)
 
 
+class InternalValuationObservationSnapshot(Snapshot):
+    reconciliation_type: Literal["INTERNAL_VALUATION_OBSERVATION"]
+    records: tuple[InternalValuationObservationRecord, ...] = Field(max_length=10000)
+
+
 type CanonicalSnapshot = Annotated[
     LenderSnapshot
     | IssuerSnapshot
@@ -250,7 +283,8 @@ type CanonicalSnapshot = Annotated[
     | SettlementSnapshot
     | RegistrySnapshot
     | LedgerSnapshot
-    | InternalAssetInventorySnapshot,
+    | InternalAssetInventorySnapshot
+    | InternalValuationObservationSnapshot,
     Field(discriminator="reconciliation_type"),
 ]
 SNAPSHOT_ADAPTER: TypeAdapter[CanonicalSnapshot] = TypeAdapter(CanonicalSnapshot)
@@ -401,6 +435,8 @@ def stable_key(record: Record) -> str:
         )
     if isinstance(record, InternalAssetInventoryRecord):
         return str(record.asset_position_id)
+    if isinstance(record, InternalValuationObservationRecord):
+        return str(record.observation_id)
     raise ValueError("unsupported canonical record")
 
 
