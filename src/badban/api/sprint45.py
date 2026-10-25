@@ -11,7 +11,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_current_principal, get_session
-from badban.api.errors import ApiError
 from badban.api.sprint44 import get_linked_participant
 from badban.infrastructure.persistence.models import (
     CreditProductVersion,
