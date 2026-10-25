@@ -149,8 +149,7 @@ async def create_entitlement(
     if (
         await session.scalar(
             select(MonthlyPensionEntitlement.id).where(
-                MonthlyPensionEntitlement.participation_episode_id
-                == body.participation_episode_id,
+                MonthlyPensionEntitlement.participation_episode_id == body.participation_episode_id,
                 MonthlyPensionEntitlement.period_reference == body.period_reference,
             )
         )
