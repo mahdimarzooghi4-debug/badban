@@ -19,6 +19,7 @@ RestrictionState = Literal["CLEAR", "BLOCKED", "UNKNOWN"]
 class EvidenceContract(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    source_id: UUID
     asset_position_id: UUID
     asset_type_id: UUID
     evidence_purpose: EvidencePurpose
@@ -31,7 +32,7 @@ class EvidenceContract(BaseModel):
     source_value: Decimal | None = None
     currency: str | None = Field(default=None, min_length=1, max_length=16)
     restriction_state: RestrictionState | None = None
-    encumbrance_reference: str | None = Field(default=None, min_length=1, max_length=500)
+    encumbrance_state: RestrictionState | None = None
     error_code: Literal[
         "SOURCE_UNAVAILABLE", "SOURCE_TIMEOUT", "SOURCE_TRANSPORT_ERROR", "SOURCE_CONTRACT_INVALID"
     ] | None = None
@@ -46,7 +47,7 @@ class EvidenceContract(BaseModel):
             if self.evidence_purpose == "VALUATION":
                 if self.source_value is None or self.source_value <= 0 or self.currency is None:
                     raise ValueError("valid valuation evidence needs a positive value and currency")
-                if self.restriction_state is not None or self.encumbrance_reference is not None:
+                if self.restriction_state is not None or self.encumbrance_state is not None:
                     raise ValueError("valuation evidence contains unrelated restriction fields")
             elif self.evidence_purpose == "RESTRICTION":
                 if self.restriction_state is None:
@@ -54,8 +55,8 @@ class EvidenceContract(BaseModel):
                 if self.source_value is not None or self.currency is not None:
                     raise ValueError("restriction evidence contains valuation fields")
             elif self.evidence_purpose == "ENCUMBRANCE":
-                if self.encumbrance_reference is None:
-                    raise ValueError("encumbrance evidence needs an explicit reference or CLEAR marker")
+                if self.encumbrance_state is None:
+                    raise ValueError("encumbrance evidence needs an explicit state")
                 if self.source_value is not None or self.currency is not None:
                     raise ValueError("encumbrance evidence contains valuation fields")
         else:
@@ -68,7 +69,7 @@ class EvidenceContract(BaseModel):
                     self.source_value,
                     self.currency,
                     self.restriction_state,
-                    self.encumbrance_reference,
+                    self.encumbrance_state,
                 )
             ):
                 raise ValueError("failed evidence cannot carry authoritative facts")
@@ -137,6 +138,7 @@ def _failure(
     ],
 ) -> EvidenceContract:
     return EvidenceContract(
+        source_id=source.source_id,
         asset_position_id=request.asset_position_id,
         asset_type_id=request.asset_type_id,
         evidence_purpose=request.evidence_purpose,
@@ -185,7 +187,8 @@ async def acquire_from_sources(
         except Exception:
             return _failure(source, request, "SOURCE_CONTRACT_INVALID")
         if (
-            validated.asset_position_id != request.asset_position_id
+            validated.source_id != source.source_id
+            or validated.asset_position_id != request.asset_position_id
             or validated.asset_type_id != request.asset_type_id
             or validated.evidence_purpose != request.evidence_purpose
             or validated.contract_version != source.contract_version
