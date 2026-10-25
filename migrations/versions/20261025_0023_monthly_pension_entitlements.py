@@ -34,18 +34,36 @@ def upgrade() -> None:
         sa.Column("approved_by", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.CheckConstraint("amount > 0", name="ck_monthly_pension_amount_positive"),
-        sa.CheckConstraint("lifecycle_status IN ('DRAFT','APPROVED','CANCELLED')", name="ck_monthly_pension_status"),
-        sa.CheckConstraint("approved_by IS NULL OR approved_by <> created_by", name="ck_monthly_pension_maker_checker"),
-        sa.ForeignKeyConstraint(["service_catalogue_version_id"], ["service_catalogue_versions.id"], ondelete="RESTRICT"),
+        sa.CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','CANCELLED')", name="ck_monthly_pension_status"
+        ),
+        sa.CheckConstraint(
+            "approved_by IS NULL OR approved_by <> created_by",
+            name="ck_monthly_pension_maker_checker",
+        ),
+        sa.ForeignKeyConstraint(
+            ["service_catalogue_version_id"], ["service_catalogue_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["participant_id"], ["participants.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["approved_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("participant_id", "period_reference", name="uq_monthly_pension_participant_period"),
+        sa.UniqueConstraint(
+            "participant_id", "period_reference", name="uq_monthly_pension_participant_period"
+        ),
     )
-    op.create_index("ix_monthly_pension_participant_status", "monthly_pension_entitlements", ["participant_id", "lifecycle_status"])
+    op.create_index(
+        "ix_monthly_pension_participant_status",
+        "monthly_pension_entitlements",
+        ["participant_id", "lifecycle_status"],
+    )
 
     op.create_table(
         "monthly_pension_funding_allocations",
@@ -54,18 +72,39 @@ def upgrade() -> None:
         sa.Column("source_journal_posting_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("amount", sa.Numeric(38, 18), nullable=False),
         sa.Column("currency", sa.String(length=16), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.CheckConstraint("amount > 0", name="ck_monthly_pension_allocation_amount_positive"),
-        sa.ForeignKeyConstraint(["entitlement_id"], ["monthly_pension_entitlements.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["source_journal_posting_id"], ["journal_postings.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["entitlement_id"], ["monthly_pension_entitlements.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_journal_posting_id"], ["journal_postings.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("entitlement_id", "source_journal_posting_id", name="uq_monthly_pension_entitlement_source"),
+        sa.UniqueConstraint(
+            "entitlement_id",
+            "source_journal_posting_id",
+            name="uq_monthly_pension_entitlement_source",
+        ),
     )
-    op.create_index("ix_monthly_pension_funding_source", "monthly_pension_funding_allocations", ["source_journal_posting_id"])
+    op.create_index(
+        "ix_monthly_pension_funding_source",
+        "monthly_pension_funding_allocations",
+        ["source_journal_posting_id"],
+    )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_monthly_pension_funding_source", table_name="monthly_pension_funding_allocations")
+    op.drop_index(
+        "ix_monthly_pension_funding_source", table_name="monthly_pension_funding_allocations"
+    )
     op.drop_table("monthly_pension_funding_allocations")
-    op.drop_index("ix_monthly_pension_participant_status", table_name="monthly_pension_entitlements")
+    op.drop_index(
+        "ix_monthly_pension_participant_status", table_name="monthly_pension_entitlements"
+    )
     op.drop_table("monthly_pension_entitlements")
