@@ -145,3 +145,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 45 — Applicant Financial Case Read Model](./45-sprint-45-applicant-financial-case-read-model.md) — **Code in progress; Decision 0063 authorizes bounded scope**
 - Adds a self-scoped, read-only view of the three service lifecycles and separates financial measures by currency.
 - Payment and external pricing remain explicitly not configured until their evidence integrations exist.
+
+## Sprint 46
+
+- [Sprint 46 — Role-Scoped Admin Service Operations](./46-sprint-46-role-scoped-admin-operations.md) — **Code in progress; Decision 0064 authorizes bounded scope**
+- Adds separate read-only service queues and maker-checker managed service role grants.
+- Existing staff roles remain service-scoped; a global role alone does not grant these queues.
