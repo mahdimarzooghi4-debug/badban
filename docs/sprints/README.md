@@ -100,7 +100,7 @@ Sprint 04 Code is not yet authorized.
 
 ## Sprint 36
 
-- [Sprint 36 — Verified Source Acquisition Boundary](./36-sprint-36-verified-source-acquisition.md) — **Code authorized; Draft PR pending implementation/review**
+- [Sprint 36 — Verified Source Acquisition Boundary](./36-sprint-36-verified-source-acquisition.md) — **Merged to main via PR #40; CI #492 passed**
 - Decision 0054 authorizes only a read-only acquisition and verification boundary for explicitly registered sources.
 - No new source integrations, database writes, comparison rules, or financial behavior are authorized by this Sprint.
 
