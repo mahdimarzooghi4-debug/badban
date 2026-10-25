@@ -255,9 +255,7 @@ async def get_financial_case(
             currency=currency,
             outstanding_principal=values.get("outstanding_principal"),
             guarantee_exposure=values.get("guarantee_exposure"),
-            realized_return_allocated_to_support=values.get(
-                "realized_return_allocated_to_support"
-            ),
+            realized_return_allocated_to_support=values.get("realized_return_allocated_to_support"),
             allocated_support=values.get("allocated_support"),
         )
         for currency, values in sorted(totals.items())
