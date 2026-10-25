@@ -1766,7 +1766,8 @@ class ServiceCatalogueVersion(VersionedMixin, Base):
             name="ck_service_catalogue_effective_window",
         ),
         CheckConstraint(
-            "max_duration_months IS NULL OR (max_duration_months > 0 AND max_duration_months <= 36)",
+            "max_duration_months IS NULL OR "
+            "(max_duration_months > 0 AND max_duration_months <= 36)",
             name="ck_service_catalogue_duration_bound",
         ),
         CheckConstraint(
