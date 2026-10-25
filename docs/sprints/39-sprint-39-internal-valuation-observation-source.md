@@ -1,6 +1,6 @@
 # Sprint 39 — Internal Valuation Observation Source
 
-- **Status:** Code authorized; implementation in progress
+- **Status:** Implemented; final-head CI validation in progress; Draft PR pending code review
 - **Date:** 2026-10-25
 - **Decision:** [0057 — Internal Valuation Observation Source](../decisions/0057-sprint-39-internal-valuation-observation-source.md)
 - **Base:** Sprint 38 PR #42 (`sprint-38-internal-asset-inventory-source`)
@@ -39,3 +39,7 @@ freshness fields without promoting them to verified external facts.
 - PostgreSQL integration coverage confirms stored observation and program
   lineage are read without writes.
 - Keep the PR Draft/Open/unmerged through exact-head CI and code review.
+
+Implementation verification: four focused non-integration tests pass; Ruff,
+Pyright, format, and diff checks pass. Exact-head GitHub CI is running on the
+latest test correction. The PR remains Draft/Open/unmerged pending code review.
