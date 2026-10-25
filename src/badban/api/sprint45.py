@@ -217,7 +217,10 @@ async def get_financial_case(
 
     monthly_funded = (
         await session.execute(
-            select(MonthlyPensionFundingAllocation.currency, func.sum(MonthlyPensionFundingAllocation.amount))
+            select(
+                MonthlyPensionFundingAllocation.currency,
+                func.sum(MonthlyPensionFundingAllocation.amount),
+            )
             .join(
                 MonthlyPensionEntitlement,
                 MonthlyPensionFundingAllocation.entitlement_id == MonthlyPensionEntitlement.id,
@@ -228,7 +231,10 @@ async def get_financial_case(
     ).all()
     future_funded = (
         await session.execute(
-            select(PostExitSupportFundingAllocation.currency, func.sum(PostExitSupportFundingAllocation.amount))
+            select(
+                PostExitSupportFundingAllocation.currency,
+                func.sum(PostExitSupportFundingAllocation.amount),
+            )
             .join(
                 PostExitSupportEntitlement,
                 PostExitSupportFundingAllocation.entitlement_id == PostExitSupportEntitlement.id,
