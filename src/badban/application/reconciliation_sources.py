@@ -219,6 +219,19 @@ class SourceCapability:
     schema_version: str = "reconciliation-source-v1"
     normalization_version: str | None = None
 
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("contract_version", self.contract_version),
+            ("mapping_version", self.mapping_version),
+            ("schema_version", self.schema_version),
+        ):
+            if not value.strip() or len(value) > 80:
+                raise ValueError(f"{name} must be a non-empty version of at most 80 characters")
+        if self.normalization_version is not None and (
+            not self.normalization_version.strip() or len(self.normalization_version) > 80
+        ):
+            raise ValueError("normalization_version must be absent or a non-empty version")
+
 
 class ReconciliationSourceUnavailable(RuntimeError):
     def __init__(
@@ -228,7 +241,26 @@ class ReconciliationSourceUnavailable(RuntimeError):
         ] = "SOURCE_UNAVAILABLE",
     ) -> None:
         super().__init__(code)
+        self.code: Literal["SOURCE_UNAVAILABLE", "SOURCE_TIMEOUT", "SOURCE_TRANSPORT_ERROR"] = code
+
+
+class ReconciliationSourceAcquisitionError(RuntimeError):
+    def __init__(
+        self,
+        code: Literal[
+            "SOURCE_UNAVAILABLE",
+            "SOURCE_TIMEOUT",
+            "SOURCE_TRANSPORT_ERROR",
+            "SOURCE_CONTRACT_INVALID",
+        ],
+    ) -> None:
+        super().__init__(code)
         self.code = code
+        self.retryable = code in {
+            "SOURCE_UNAVAILABLE",
+            "SOURCE_TIMEOUT",
+            "SOURCE_TRANSPORT_ERROR",
+        }
 
 
 class ReconciliationSourcePort(Protocol):
@@ -241,20 +273,67 @@ class ReconciliationSourcePort(Protocol):
 
 class ReconciliationSourceRegistry:
     def __init__(self) -> None:
-        self._ports: dict[tuple[str, UUID], ReconciliationSourcePort] = {}
+        self._registrations: dict[
+            tuple[str, UUID], tuple[ReconciliationSourcePort, SourceCapability]
+        ] = {}
 
     def register(self, port: ReconciliationSourcePort) -> None:
         capability = port.capability()
         key = (capability.reconciliation_type, capability.source_id)
-        if key in self._ports:
+        if key in self._registrations:
             raise ValueError("source implementation already registered")
-        self._ports[key] = port
+        self._registrations[key] = (port, capability)
 
-    def resolve(self, target: SourceTarget) -> ReconciliationSourcePort:
+    def resolve_registration(
+        self, target: SourceTarget
+    ) -> tuple[ReconciliationSourcePort, SourceCapability]:
         try:
-            return self._ports[(target.reconciliation_type, target.identity)]
+            port, registered_capability = self._registrations[
+                (target.reconciliation_type, target.identity)
+            ]
         except KeyError as exc:
             raise ReconciliationSourceUnavailable() from exc
+        try:
+            current_capability = port.capability()
+        except Exception as exc:
+            raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID") from exc
+        if current_capability != registered_capability:
+            raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
+        return port, registered_capability
+
+    def resolve(self, target: SourceTarget) -> ReconciliationSourcePort:
+        return self.resolve_registration(target)[0]
+
+
+async def acquire_verified_snapshot(
+    registry: ReconciliationSourceRegistry,
+    *,
+    target: SourceTarget,
+    scope: dict[str, str],
+) -> CanonicalSnapshot:
+    """Acquire and verify one source snapshot without persisting or comparing it."""
+    try:
+        port, capability = registry.resolve_registration(target)
+    except ReconciliationSourceUnavailable as exc:
+        raise ReconciliationSourceAcquisitionError(exc.code) from exc
+    try:
+        snapshot = await port.fetch_reconciliation_snapshot(target, dict(scope))
+    except ReconciliationSourceUnavailable as exc:
+        raise ReconciliationSourceAcquisitionError(exc.code) from exc
+    except TimeoutError as exc:
+        raise ReconciliationSourceAcquisitionError("SOURCE_TIMEOUT") from exc
+    except Exception as exc:
+        raise ReconciliationSourceAcquisitionError("SOURCE_TRANSPORT_ERROR") from exc
+
+    try:
+        return verify_source_snapshot(
+            target=target,
+            scope=scope,
+            capability=capability,
+            snapshot=snapshot,
+        )
+    except (TypeError, ValueError) as exc:
+        raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID") from exc
 
 
 def stable_key(record: Record) -> str:

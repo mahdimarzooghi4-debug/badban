@@ -16,6 +16,7 @@ from badban.application.reconciliation_sources import (
     IssuerSnapshot,
     LedgerRecord,
     LedgerSnapshot,
+    ReconciliationSourceAcquisitionError,
     ReconciliationSourceRegistry,
     ReconciliationSourceUnavailable,
     RegistryRecord,
@@ -25,6 +26,7 @@ from badban.application.reconciliation_sources import (
     SourceCapability,
     SourceTarget,
     SourceType,
+    acquire_verified_snapshot,
     canonical_fields,
     stable_key,
     verify_source_snapshot,
@@ -308,3 +310,100 @@ def test_registry_is_explicit_and_fails_closed_on_missing_or_duplicate_port():
         registry.register(port)
     with pytest.raises(ReconciliationSourceUnavailable):
         registry.resolve(_target("SETTLEMENT"))
+
+
+@pytest.mark.parametrize("kind", list(_CLASSES))
+async def test_acquisition_returns_only_a_verified_registered_snapshot(kind):
+    registry = ReconciliationSourceRegistry()
+    port = _Port(_capability(kind))
+    registry.register(port)
+
+    snapshot = await acquire_verified_snapshot(
+        registry,
+        target=_target(kind),
+        scope=SCOPE,
+    )
+
+    assert snapshot.source_id == SOURCE_ID
+    assert snapshot.reconciliation_type == kind
+    assert snapshot.scope_definition == SCOPE
+    assert (
+        verify_source_snapshot(
+            target=_target(kind),
+            scope=SCOPE,
+            capability=_capability(kind),
+            snapshot=snapshot,
+        )
+        == snapshot
+    )
+
+
+async def test_acquisition_fails_closed_when_registered_capability_changes():
+    registry = ReconciliationSourceRegistry()
+    port = _Port(_capability("CUSTODY"))
+    registry.register(port)
+    port._cap = SourceCapability(
+        source_id=SOURCE_ID,
+        reconciliation_type="CUSTODY",
+        contract_version="provider-2",
+        mapping_version="mapping-1",
+    )
+
+    with pytest.raises(ReconciliationSourceAcquisitionError) as exc:
+        await acquire_verified_snapshot(registry, target=_target("CUSTODY"), scope=SCOPE)
+
+    assert exc.value.code == "SOURCE_CONTRACT_INVALID"
+    assert not exc.value.retryable
+
+
+async def test_acquisition_reports_unregistered_source_as_retryable_unavailable():
+    registry = ReconciliationSourceRegistry()
+
+    with pytest.raises(ReconciliationSourceAcquisitionError) as exc:
+        await acquire_verified_snapshot(registry, target=_target("SETTLEMENT"), scope=SCOPE)
+
+    assert exc.value.code == "SOURCE_UNAVAILABLE"
+    assert exc.value.retryable
+
+
+async def test_acquisition_does_not_return_a_tampered_snapshot():
+    class TamperedPort(_Port):
+        async def fetch_reconciliation_snapshot(self, target, scope):
+            return _snapshot("SETTLEMENT").model_copy(
+                update={"scope_definition": {"program": "other"}}
+            )
+
+    registry = ReconciliationSourceRegistry()
+    registry.register(TamperedPort(_capability("SETTLEMENT")))
+
+    with pytest.raises(ReconciliationSourceAcquisitionError) as exc:
+        await acquire_verified_snapshot(registry, target=_target("SETTLEMENT"), scope=SCOPE)
+
+    assert exc.value.code == "SOURCE_CONTRACT_INVALID"
+    assert not exc.value.retryable
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_code", "retryable"),
+    [
+        (ReconciliationSourceUnavailable(), "SOURCE_UNAVAILABLE", True),
+        (TimeoutError(), "SOURCE_TIMEOUT", True),
+        (RuntimeError("transport details must not leak"), "SOURCE_TRANSPORT_ERROR", True),
+    ],
+)
+async def test_acquisition_classifies_source_failures_without_exposing_details(
+    failure, expected_code, retryable
+):
+    class FailingPort(_Port):
+        async def fetch_reconciliation_snapshot(self, target, scope):
+            raise failure
+
+    registry = ReconciliationSourceRegistry()
+    registry.register(FailingPort(_capability("SETTLEMENT")))
+
+    with pytest.raises(ReconciliationSourceAcquisitionError) as exc:
+        await acquire_verified_snapshot(registry, target=_target("SETTLEMENT"), scope=SCOPE)
+
+    assert exc.value.code == expected_code
+    assert str(exc.value) == expected_code
+    assert exc.value.retryable is retryable
