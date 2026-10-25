@@ -138,4 +138,10 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 
 - [Sprint 44 — Automatic Applicant Identity Link](./44-sprint-44-automatic-applicant-identity-link.md) — **Code in progress; Decision 0062 authorizes bounded scope**
 - Resolves a verified OIDC `national_id` claim to one participant record without asking the applicant to select or enter a record, and does not return the national ID.
-- The external identity provider must issue the claim after its participant identity checks; applicant financial summaries remain the next BL-057 slice.
+- The external identity provider must issue the claim after its participant identity checks; this is the ownership foundation used by Sprint 45.
+
+## Sprint 45
+
+- [Sprint 45 — Applicant Financial Case Read Model](./45-sprint-45-applicant-financial-case-read-model.md) — **Code in progress; Decision 0063 authorizes bounded scope**
+- Adds a self-scoped, read-only view of the three service lifecycles and separates financial measures by currency.
+- Payment and external pricing remain explicitly not configured until their evidence integrations exist.
