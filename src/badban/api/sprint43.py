@@ -184,6 +184,16 @@ async def create_support_case(
             "SUPPORT_DURATION_EXCEEDS_POLICY",
             "Support duration exceeds the configured service maximum",
         )
+    if body.exit_at > now:
+        raise ApiError(422, "EXIT_EVENT_IN_FUTURE", "The exit event must already have occurred")
+    exit_deadline = _add_months(body.exit_at, service.max_duration_months)
+    support_end_at = _add_months(body.support_start_at, body.duration_months)
+    if support_end_at > exit_deadline:
+        raise ApiError(
+            422,
+            "SUPPORT_WINDOW_EXCEEDS_EXIT_LIMIT",
+            "The support window must end within the configured maximum after exit",
+        )
     if body.policy_version_reference != service.policy_version_reference:
         raise ApiError(
             422,
