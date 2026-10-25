@@ -126,3 +126,10 @@ Sprint 04 Code is not yet authorized.
 ## Status reconciliation — 2026-10-25
 
 The historical Sprint 04 proposal above was superseded by later accepted Sprint plans and delivery. Sprints 36–39 and their source acquisitions are merged to `main` (PRs #40, #44, #45; post-merge CI #512 green). The 2026-10-25 dossier addendum records the present BL-020 decision gates. No new Sprint has been authorized by this status correction; Stage, QA, Release Approval, and Production remain separate gates.
+
+
+## Sprint 40
+
+- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Proposed; Code not authorized**
+- BL-053 defines a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
+- No live sources are selected or connected. Conflicting/stale/unavailable evidence fails closed; valuation selection and reservation behavior remain out of scope.
