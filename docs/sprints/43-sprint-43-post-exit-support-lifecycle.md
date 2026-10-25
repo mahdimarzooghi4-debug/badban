@@ -31,7 +31,7 @@ Represent policy-bound transitional support after a participant's documented exi
 
 1. A support case references a verified exit-event evidence and a matching active/effective catalogue version.
 2. Duration is positive and no more than the configured maximum and 36 months.
-3. Period ordinals are 1 through the case duration; their timestamps must fall between support start and the computed end (start plus configured months); duplicate ordinals are rejected.
+3. Period ordinals are 1 through the case duration; their timestamps must fall between support start and computed end, and computed end must be no later than exit date plus the configured maximum; duplicate ordinals are rejected.
 4. A draft period requires posted RETURN_ALLOCATION@1 credits to 2020.FUTURE_FINANCIAL_ENTITLEMENT for its participant and currency.
 5. Fund allocation is atomic, source lines are locked, and total allocations never exceed the posted credit.
 6. Case activation/status changes and entitlement approval require authorized actors distinct from the case creator and produce audit events.
