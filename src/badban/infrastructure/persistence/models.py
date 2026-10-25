@@ -1825,7 +1825,7 @@ class LegacyBenefitLineageReview(Base):
         CheckConstraint(
             "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
             "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
-            "AND reviewed_at IS NOT NULL)",
+            "AND reviewed_at IS NOT NULL AND review_reason_reference IS NOT NULL)",
             name="ck_legacy_benefit_lineage_review_state",
         ),
         CheckConstraint(
