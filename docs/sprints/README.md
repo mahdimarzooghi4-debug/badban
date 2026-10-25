@@ -112,7 +112,7 @@ Sprint 04 Code is not yet authorized.
 
 ## Sprint 38
 
-- [Sprint 38 — Internal Asset Inventory Source](./38-sprint-38-internal-asset-inventory-source.md) — **Implemented; exact-head CI passed; Draft PR pending code review**
+- [Sprint 38 — Internal Asset Inventory Source](./38-sprint-38-internal-asset-inventory-source.md) — **Merged to main via PR #44; CI #498 and combined CI #510 passed**
 - Decision 0056 authorizes a program-scoped, read-only snapshot of Badban's own persisted asset positions.
 - The internal snapshot remains distinct from custody and collateral-registry evidence; no comparisons or financial outcomes are included.
 
