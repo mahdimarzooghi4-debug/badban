@@ -239,4 +239,4 @@ async def test_internal_valuation_source_reads_program_scoped_observations(
     assert len(snapshot.records) == 1
     assert snapshot.records[0].observation_id == observation_id
     assert snapshot.records[0].freshness_status == "STALE"
-    assert snapshot.records[0].gross_market_value == "56.375"
+    assert Decimal(snapshot.records[0].gross_market_value) == Decimal("56.375")
