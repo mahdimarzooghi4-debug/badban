@@ -104,7 +104,7 @@ async def _authorize_global_governance(
 
 async def _load_benefit(
     session: AsyncSession,
-    benefit_type: BenefitType,
+    benefit_type: str,
     benefit_record_id: UUID,
     *,
     lock: bool = False,
