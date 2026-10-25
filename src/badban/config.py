@@ -47,9 +47,7 @@ class Settings(BaseSettings):
     oidc_audience: str
     oidc_discovery_url: str | None = None
     oidc_jwks_cache_seconds: int = 300
-    oidc_national_id_claim: str = Field(
-        default="national_id", min_length=1, max_length=128
-    )
+    oidc_national_id_claim: str = Field(default="national_id", min_length=1, max_length=128)
 
     @model_validator(mode="after")
     def validate_runtime_security(self) -> Settings:
