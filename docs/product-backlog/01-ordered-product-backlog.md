@@ -832,7 +832,7 @@ Mismatch returns `LOAN_GUARANTEE_AMOUNT_MISMATCH` with no partial activation.
 **Type:** Control Capability  
 **Depends on:** BL-024, BL-025, BL-030, BL-041  
 **Traceability:** Technical 10  
-**Delivery Status:** Sprint 14 Core + lender vertical slice; Sprint 36 verified acquisition boundary; Sprint 37 internal posted-journal source; Sprint 38 internal asset-inventory source; Sprint 39 internal valuation-observation source implemented. PRs #40–#43 remain Draft/Open/unmerged pending review. Issuer, custody, settlement, and collateral-registry external sources remain fail-closed until authoritative systems and accepted source contracts exist.
+**Delivery Status:** Sprint 14 Core + lender vertical slice; Sprints 36–39 internal source-acquisition work implemented and merged to `main` on 2026-10-25 through PRs #40, #44, and #45 (original stacked PRs #41–#43 were first merged into parent branches). CI passed on exact source heads #492, #495, #498, #508; combined main-port CI #510 and post-merge main CI #512 passed. Issuer, custody, settlement, and collateral-registry external sources remain fail-closed until authoritative systems and accepted source contracts exist.
 
 **Acceptance Criteria**
 
