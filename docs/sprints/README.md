@@ -164,3 +164,10 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 48 — Supporting Institution Workspace](./48-sprint-48-supporting-institution-workspace.md) — **Code in progress; Decision 0066 authorizes bounded scope**
 - Provides governance-reviewed, program-scoped operator grants and a read-only beneficiary list for the operator's authorized programs.
 - Beneficiary data excludes national IDs and financial case details; program enrollment and service decisions remain separate.
+
+
+## Sprint 49
+
+- [Sprint 49 — Lender Workspace](./49-sprint-49-lender-workspace.md) — **Code in progress; Decision 0067 authorizes bounded scope**
+- Provides exact-provider access to guarantee cases and already-recorded lender loan facts.
+- Keeps guarantee exposure separate from reported outstanding loan principal and excludes participant identity details.
