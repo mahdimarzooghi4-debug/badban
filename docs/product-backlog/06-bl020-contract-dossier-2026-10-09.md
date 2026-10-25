@@ -1,5 +1,20 @@
 # BL-020 Decision-Ready Contract Dossier — Technical Review
 
+## Addendum — 2026-10-25
+
+Sprints 36–39 are now merged to `main` (final main CI #512 green). This completes the internal source-acquisition work but does not authorize BL-020 or establish that internal recorded valuation labels are independently verified external facts.
+
+Previously confirmed product constraints: multi-lender and multi-asset operation; Direct Lending disabled; one supported Gold asset type; maker-checker; a 72-hour reservation duration; portfolio risk states GREEN/AMBER/RED. This dossier records that the duration is 72 hours from successful reservation in UTC; it does not define the allocation algorithm or qualifying risk semantics.
+
+Still requiring explicit Business/Risk/Legal input before a reservation command can be implemented:
+
+- deterministic asset-position selection/order and whether a single reservation may split across positions with different owners or funding types;
+- canonical sources for active restrictions, holds, prior allocations and legal encumbrance; unknown/unavailable external facts remain fail-closed;
+- which risk states qualify for a new reservation, including AMBER treatment, and required snapshot scope/freshness/recheck semantics;
+- accepted valuation/provider/legal evidence needed to treat stored observations as eligible.
+
+Concurrency locking, idempotency, transaction shape, audit/outbox atomicity and rollback behavior remain engineering contracts to implement after those inputs are fixed. BL-020 remains blocked; no financial mutation is authorized by this addendum.
+
 - **Status:** BLOCKED / decision inputs required; no product Code Authorization
 - **Date:** 2026-10-09
 - **Repository evidence:** Technical 03/04/06/07; Decisions 0003/0008/0010;

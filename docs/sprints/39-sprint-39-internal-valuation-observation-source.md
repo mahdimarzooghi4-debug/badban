@@ -1,6 +1,6 @@
 # Sprint 39 — Internal Valuation Observation Source
 
-- **Status:** Implemented; CI validation is recorded on PR #43; Draft PR pending code review
+- **Status:** Implemented and merged to `main` via PR #45 on 2026-10-25; exact-head CI #508 and post-merge main CI #512 passed
 - **Date:** 2026-10-25
 - **Decision:** [0057 — Internal Valuation Observation Source](../decisions/0057-sprint-39-internal-valuation-observation-source.md)
 - **Base:** Sprint 38 PR #42 (`sprint-38-internal-asset-inventory-source`)
