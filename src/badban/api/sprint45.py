@@ -35,7 +35,7 @@ class GuaranteeCaseSummary(BaseModel):
     status: str
     requested_principal: Decimal
     guarantee_exposure: Decimal
-    lender_evidence_status: Literal["AVAILABLE", "NOT_RECORDED"]
+    lender_record_status: Literal["RECORDED", "NOT_RECORDED"]
     loan_state: str | None
     outstanding_principal: Decimal | None
     currency: str
@@ -114,7 +114,7 @@ async def get_financial_case(
             status=case.state,
             requested_principal=case.requested_principal,
             guarantee_exposure=case.current_guarantee_exposure,
-            lender_evidence_status="AVAILABLE" if loan is not None else "NOT_RECORDED",
+            lender_record_status="RECORDED" if loan is not None else "NOT_RECORDED",
             loan_state=loan.state if loan is not None else None,
             outstanding_principal=loan.outstanding_principal if loan is not None else None,
             currency=product.currency,
@@ -198,7 +198,10 @@ async def get_financial_case(
 
     return_rows = (
         await session.execute(
-            select(JournalPosting.currency, func.sum(JournalPosting.credit_amount))
+            select(
+                JournalPosting.currency,
+                func.sum(JournalPosting.credit_amount - JournalPosting.debit_amount),
+            )
             .join(JournalEntry, JournalPosting.journal_entry_id == JournalEntry.id)
             .where(
                 JournalPosting.participant_id == participant_id,
