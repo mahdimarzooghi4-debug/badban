@@ -1,6 +1,6 @@
 # Badban Sprints
 
-- **Delivery State:** Sprint 03 Code + Code Review Complete; Stage Deferred; Sprint 04 Proposed
+- **Delivery State:** Sprints 01–39 Code + Code Review complete and merged to `main`; next Sprint not authorized; Stage deferred
 - **Scope:** bounded external-lender pilot defined by Decision 0016
 - **Stage Environment:** currently unavailable / deferred by Decision 0023
 - **Real-Money / Production Authorization:** NOT GRANTED
@@ -121,3 +121,8 @@ Sprint 04 Code is not yet authorized.
 - [Sprint 39 — Internal Valuation Observation Source](./39-sprint-39-internal-valuation-observation-source.md) — **Merged to main via PR #45; exact-head CI #508 and post-merge main CI #512 passed**
 - Decision 0057 authorizes preserving recorded valuation observations and freshness labels as internal stored facts only.
 - No provider verification, freshness determination, valuation selection, or financial outcome is included.
+
+
+## Status reconciliation — 2026-10-25
+
+The historical Sprint 04 proposal above was superseded by later accepted Sprint plans and delivery. Sprints 36–39 and their source acquisitions are merged to `main` (PRs #40, #44, #45; post-merge CI #512 green). The 2026-10-25 dossier addendum records the present BL-020 decision gates. No new Sprint has been authorized by this status correction; Stage, QA, Release Approval, and Production remain separate gates.
