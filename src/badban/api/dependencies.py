@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.errors import ApiError
 from badban.infrastructure.persistence.models import Identity
