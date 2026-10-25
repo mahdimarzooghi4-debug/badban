@@ -41,7 +41,7 @@ Concurrency locking, idempotency, transaction shape, audit/outbox atomicity and 
 | --- | --- | --- |
 | Backing selection | Which and how many AssetPositions, stable allocation ordering, per-position capacity distribution, constraints on mixed ownership/funding | Choose first or largest position without approval |
 | Restriction/exposure sources | Canonical active restrictions and holds, partial allocations, legal encumbrance state, capacity units | Default missing exposures or holds to zero |
-| Expiry | The captured active policy parameter and computation basis for reservation expiry, timezone semantics and changes | Invent fixed TTL; client controls expiry |
+| Expiry | 72 hours from successful reservation; persist and compare the resulting instant in UTC | Client controls expiry or derives it from local time |
 | Risk gate | Matching policy scope, snapshot ID and age/freshness, risk state qualifying rule, recheck timing and source integrity | Implicit GREEN or stale risk PASS |
 | Provider/legal/valuation | Current authorized product/legal/custody state, accepted valuation selection/correction/freshness | Use any historical observation as current |
 | Concurrency | Which aggregate rows to lock and deterministic lock order; expected versions; idempotency replay scope | Race-prone read-then-write |
@@ -66,7 +66,9 @@ partial backing** and must not claim PASS.
 ## 4. Owners / unlock gate
 
 Business/Risk/Legal must explicitly define and accept the missing allocation,
-expiry and risk-qualification decisions, with source schema and versioning.
+restriction/exposure-source, risk-qualification and evidence-acceptance decisions,
+with source schema and versioning. Reservation duration is confirmed as 72 hours
+from successful reservation and represented as a UTC instant.
 Engineering then records matching Technical contract, Sprint authorization,
 tests, implementation and code review before the first reservation command.
 
@@ -82,5 +84,5 @@ plus all persisted episode backing/valuation sources together. It rejects
 contradictory request/captured product or source lineage and carries a
 deterministic observation fingerprint. This is *not* source qualification,
 capacity reservation, a legal approval, a cryptographic source attestation,
-a hold or a concurrency lock. Missing executable allocation, expiry, freshness,
-risk-gate and transaction definitions above continue to block BL-020.
+a hold or a concurrency lock. Missing executable allocation, restriction/exposure sources, risk-gate qualification,
+evidence acceptance and transaction definitions above continue to block BL-020.
