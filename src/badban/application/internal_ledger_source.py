@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.idempotency import canonical_request_hash
@@ -57,10 +57,15 @@ class InternalPostedJournalSource(ReconciliationSourcePort):
         if scope != expected_scope:
             raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
 
-        snapshot_at = datetime.now(UTC)
+        snapshot_cutoff = select(func.statement_timestamp()).scalar_subquery()
         rows = (
             await self._session.execute(
-                select(JournalEntry, JournalPosting, JournalAccountTaxonomy)
+                select(
+                    JournalEntry,
+                    JournalPosting,
+                    JournalAccountTaxonomy,
+                    snapshot_cutoff.label("snapshot_at"),
+                )
                 .join(JournalPosting, JournalPosting.journal_entry_id == JournalEntry.id)
                 .outerjoin(
                     JournalAccountTaxonomy,
@@ -69,7 +74,7 @@ class InternalPostedJournalSource(ReconciliationSourcePort):
                 .where(
                     JournalEntry.state == "POSTED",
                     JournalEntry.posted_at.is_not(None),
-                    JournalEntry.posted_at <= snapshot_at,
+                    JournalEntry.posted_at <= snapshot_cutoff,
                     JournalPosting.program_id == self._program_id,
                 )
                 .order_by(
@@ -82,8 +87,9 @@ class InternalPostedJournalSource(ReconciliationSourcePort):
                 )
             )
         ).all()
+        snapshot_at = rows[0][3] if rows else datetime.now(UTC)
         return build_posted_journal_snapshot(
-            rows,
+            [row[:3] for row in rows],
             program_id=self._program_id,
             snapshot_at=snapshot_at,
             received_at=datetime.now(UTC),
