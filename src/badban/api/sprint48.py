@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import (
@@ -23,10 +23,16 @@ from badban.infrastructure.persistence.models import (
     ExternalLoanMirror,
     GuaranteeCase,
     Identity,
+    JournalEntry,
+    JournalPosting,
+    MonthlyPensionEntitlement,
     Participant,
     ParticipationEpisode,
+    PostExitSupportCase,
+    PostExitSupportEntitlement,
     Program,
     RoleGrant,
+    ServiceCatalogueVersion,
     ValuationObservation,
 )
 from badban.security.audit import append_audit
@@ -171,13 +177,49 @@ class SupportedGuaranteeView(BaseModel):
     reconciliation_status: str | None
 
 
+class SupportedMonthlyPensionView(BaseModel):
+    id: UUID
+    period_reference: str
+    amount: Decimal
+    currency: str
+    lifecycle_status: str
+    approved_at: datetime | None
+
+
+class SupportedPostExitEntitlementView(BaseModel):
+    id: UUID
+    period_sequence: int
+    period_reference: str
+    period_at: datetime
+    amount: Decimal
+    currency: str
+    lifecycle_status: str
+    approved_at: datetime | None
+
+
+class SupportedPostExitCaseView(BaseModel):
+    id: UUID
+    exit_at: datetime
+    support_start_at: datetime
+    duration_months: int
+    lifecycle_status: str
+    entitlements: list[SupportedPostExitEntitlementView]
+
+
+class SupportedProgramReturnView(BaseModel):
+    currency: str
+    amount: Decimal
+
+
 class SupportedFinancialCaseView(BaseModel):
     program_id: UUID
     participant_id: UUID
     episode_id: UUID
     assets: list[SupportedAssetPositionView]
     guarantees: list[SupportedGuaranteeView]
-    profit_share_status: Literal["NOT_AVAILABLE_FOR_PROGRAM_SCOPE"]
+    monthly_pension_entitlements: list[SupportedMonthlyPensionView]
+    post_exit_support_cases: list[SupportedPostExitCaseView]
+    program_return_allocations: list[SupportedProgramReturnView]
 
 
 async def _authorize_global_governance(
@@ -732,6 +774,94 @@ async def read_program_beneficiary_financial_case(
         )
     ).all()
 
+    monthly_rows = (
+        await session.scalars(
+            select(MonthlyPensionEntitlement)
+            .join(
+                ServiceCatalogueVersion,
+                ServiceCatalogueVersion.id
+                == MonthlyPensionEntitlement.service_catalogue_version_id,
+            )
+            .where(
+                MonthlyPensionEntitlement.participant_id == participant_id,
+                MonthlyPensionEntitlement.program_id == program_id,
+                MonthlyPensionEntitlement.participation_episode_id == episode_id,
+                ServiceCatalogueVersion.service_code == "MONTHLY_PENSION",
+            )
+            .order_by(
+                MonthlyPensionEntitlement.period_reference,
+                MonthlyPensionEntitlement.id,
+            )
+            .limit(limit)
+        )
+    ).all()
+
+    post_exit_cases = (
+        await session.scalars(
+            select(PostExitSupportCase)
+            .join(
+                ServiceCatalogueVersion,
+                ServiceCatalogueVersion.id == PostExitSupportCase.service_catalogue_version_id,
+            )
+            .where(
+                PostExitSupportCase.participant_id == participant_id,
+                PostExitSupportCase.program_id == program_id,
+                PostExitSupportCase.participation_episode_id == episode_id,
+                ServiceCatalogueVersion.service_code == "POST_EXIT_SUPPORT",
+            )
+            .order_by(PostExitSupportCase.created_at.desc(), PostExitSupportCase.id)
+            .limit(limit)
+        )
+    ).all()
+    case_ids = [support_case.id for support_case in post_exit_cases]
+    post_exit_entitlements = []
+    if case_ids:
+        post_exit_entitlements = (
+            await session.scalars(
+                select(PostExitSupportEntitlement)
+                .where(PostExitSupportEntitlement.support_case_id.in_(case_ids))
+                .order_by(
+                    PostExitSupportEntitlement.period_sequence,
+                    PostExitSupportEntitlement.id,
+                )
+            )
+        ).all()
+    entitlements_by_case: dict[UUID, list[SupportedPostExitEntitlementView]] = {}
+    for entitlement in post_exit_entitlements:
+        entitlements_by_case.setdefault(entitlement.support_case_id, []).append(
+            SupportedPostExitEntitlementView(
+                id=entitlement.id,
+                period_sequence=entitlement.period_sequence,
+                period_reference=entitlement.period_reference,
+                period_at=entitlement.period_at,
+                amount=entitlement.amount,
+                currency=entitlement.currency,
+                lifecycle_status=entitlement.lifecycle_status,
+                approved_at=entitlement.approved_at,
+            )
+        )
+
+    return_rows = (
+        await session.execute(
+            select(
+                JournalPosting.currency,
+                func.sum(JournalPosting.credit_amount - JournalPosting.debit_amount),
+            )
+            .join(JournalEntry, JournalPosting.journal_entry_id == JournalEntry.id)
+            .where(
+                JournalPosting.participant_id == participant_id,
+                JournalPosting.program_id == program_id,
+                JournalPosting.account_code.in_(
+                    {"2010.LIVELIHOOD_PAYABLE", "2020.FUTURE_FINANCIAL_ENTITLEMENT"}
+                ),
+                JournalEntry.state == "POSTED",
+                JournalEntry.posting_template_reference == "RETURN_ALLOCATION@1",
+            )
+            .group_by(JournalPosting.currency)
+            .order_by(JournalPosting.currency)
+        )
+    ).all()
+
     append_audit(
         session,
         aggregate_type="SupportingInstitutionBeneficiaryFinancialCase",
@@ -748,6 +878,9 @@ async def read_program_beneficiary_financial_case(
             "episode_id": str(episode_id),
             "asset_count": len(asset_rows),
             "guarantee_count": len(guarantee_rows),
+            "monthly_pension_count": len(monthly_rows),
+            "post_exit_case_count": len(post_exit_cases),
+            "program_return_currency_count": len(return_rows),
         },
     )
     await session.commit()
@@ -788,5 +921,30 @@ async def read_program_beneficiary_financial_case(
             )
             for case, product, loan in guarantee_rows
         ],
-        profit_share_status="NOT_AVAILABLE_FOR_PROGRAM_SCOPE",
+        monthly_pension_entitlements=[
+            SupportedMonthlyPensionView(
+                id=entitlement.id,
+                period_reference=entitlement.period_reference,
+                amount=entitlement.amount,
+                currency=entitlement.currency,
+                lifecycle_status=entitlement.lifecycle_status,
+                approved_at=entitlement.approved_at,
+            )
+            for entitlement in monthly_rows
+        ],
+        post_exit_support_cases=[
+            SupportedPostExitCaseView(
+                id=support_case.id,
+                exit_at=support_case.exit_at,
+                support_start_at=support_case.support_start_at,
+                duration_months=support_case.duration_months,
+                lifecycle_status=support_case.lifecycle_status,
+                entitlements=entitlements_by_case.get(support_case.id, []),
+            )
+            for support_case in post_exit_cases
+        ],
+        program_return_allocations=[
+            SupportedProgramReturnView(currency=currency, amount=amount)
+            for currency, amount in return_rows
+        ],
     )
