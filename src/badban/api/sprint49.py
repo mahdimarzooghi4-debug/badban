@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
@@ -305,6 +305,13 @@ async def approve_lender_role_grant(
         raise ApiError(
             403, "MAKER_CHECKER_REQUIRED", "The requester cannot approve the lender grant"
         )
+    target_identity = await session.get(Identity, grant.identity_id)
+    if (
+        target_identity is None
+        or target_identity.status != "ACTIVE"
+        or target_identity.identity_type not in HUMAN_IDENTITY_TYPES
+    ):
+        raise ApiError(409, "HUMAN_IDENTITY_UNAVAILABLE", "The lender identity is no longer active")
     provider = await session.get(CreditProvider, grant.scope_id)
     if provider is None or provider.lifecycle_status != "ACTIVE":
         raise ApiError(409, "ACTIVE_LENDER_UNAVAILABLE", "The lender provider is no longer active")
