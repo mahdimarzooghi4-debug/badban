@@ -492,9 +492,15 @@ async def list_lender_guarantees(
             )
             .outerjoin(
                 ExternalLoanMirror,
-                ExternalLoanMirror.guarantee_case_id == GuaranteeCase.id,
+                and_(
+                    ExternalLoanMirror.guarantee_case_id == GuaranteeCase.id,
+                    ExternalLoanMirror.provider_id == provider_id,
+                ),
             )
-            .where(GuaranteeCase.provider_id == provider_id)
+            .where(
+                GuaranteeCase.provider_id == provider_id,
+                CreditProductVersion.provider_id == provider_id,
+            )
             .order_by(GuaranteeCase.created_at.desc(), GuaranteeCase.id)
             .offset(offset)
             .limit(limit)
