@@ -1836,7 +1836,6 @@ class MonthlyPensionEntitlement(VersionedMixin, Base):
         PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
     )
     period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
-    period_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
     currency: Mapped[str] = mapped_column(String(16), nullable=False)
     policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -1978,6 +1977,7 @@ class PostExitSupportEntitlement(VersionedMixin, Base):
     )
     period_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
+    period_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
     currency: Mapped[str] = mapped_column(String(16), nullable=False)
     policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
