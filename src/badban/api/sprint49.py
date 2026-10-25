@@ -298,9 +298,13 @@ async def approve_lender_role_grant(
     ):
         raise ApiError(404, "LENDER_ROLE_GRANT_NOT_FOUND", "Lender role grant was not found")
     if grant.status != "REQUESTED":
-        raise ApiError(409, "LENDER_ROLE_GRANT_NOT_REQUESTED", "Only a requested grant can be approved")
+        raise ApiError(
+            409, "LENDER_ROLE_GRANT_NOT_REQUESTED", "Only a requested grant can be approved"
+        )
     if grant.granted_by == principal.identity_id:
-        raise ApiError(403, "MAKER_CHECKER_REQUIRED", "The requester cannot approve the lender grant")
+        raise ApiError(
+            403, "MAKER_CHECKER_REQUIRED", "The requester cannot approve the lender grant"
+        )
     provider = await session.get(CreditProvider, grant.scope_id)
     if provider is None or provider.lifecycle_status != "ACTIVE":
         raise ApiError(409, "ACTIVE_LENDER_UNAVAILABLE", "The lender provider is no longer active")
@@ -348,7 +352,9 @@ async def revoke_lender_role_grant(
     ):
         raise ApiError(404, "LENDER_ROLE_GRANT_NOT_FOUND", "Lender role grant was not found")
     if grant.status not in {"REQUESTED", "ACTIVE"}:
-        raise ApiError(409, "LENDER_ROLE_GRANT_NOT_REVOCABLE", "Grant is no longer pending or active")
+        raise ApiError(
+            409, "LENDER_ROLE_GRANT_NOT_REVOCABLE", "Grant is no longer pending or active"
+        )
     grant.status = "REVOKED"
     grant.version += 1
     append_audit(
@@ -517,7 +523,9 @@ async def list_lender_guarantees(
                 external_loan_id=loan.external_loan_id if loan else None,
                 loan_state=loan.state if loan else None,
                 original_principal=_optional_amount(loan.original_principal) if loan else None,
-                outstanding_principal=_optional_amount(loan.outstanding_principal) if loan else None,
+                outstanding_principal=_optional_amount(loan.outstanding_principal)
+                if loan
+                else None,
                 loan_currency=loan.currency if loan else None,
                 disbursed_at=loan.disbursed_at if loan else None,
                 settled_at=loan.settled_at if loan else None,
