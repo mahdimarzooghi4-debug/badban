@@ -151,3 +151,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 46 — Role-Scoped Admin Service Operations](./46-sprint-46-role-scoped-admin-operations.md) — **Code in progress; Decision 0064 authorizes bounded scope**
 - Adds separate read-only service queues and maker-checker managed service role grants.
 - Existing staff roles remain service-scoped; a global role alone does not grant these queues.
+
+## Sprint 47
+
+- [Sprint 47 — Universal Individual Profile](./47-sprint-47-universal-individual-profile.md) — **Code in progress; Decision 0065 authorizes bounded scope**
+- Creates a self-scoped profile for an authenticated individual from the verified national-ID claim, reusing institution-introduced participant records.
+- Profile creation does not enroll the person in a program or grant financial services. Supporting institution workspaces remain program-scoped follow-up work.
