@@ -167,7 +167,9 @@ async def register_source(
         await session.flush()
     except IntegrityError as exc:
         await session.rollback()
-        raise ApiError(409, "SOURCE_ALREADY_REGISTERED", "Source key is already registered") from exc
+        raise ApiError(
+            409, "SOURCE_ALREADY_REGISTERED", "Source key is already registered"
+        ) from exc
     view = _view(source)
     append_audit(
         session,
