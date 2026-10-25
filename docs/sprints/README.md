@@ -133,3 +133,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Code in progress; Decision 0058 authorizes bounded scope**
 - BL-053 defines a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
 - No live sources are selected or connected. Conflicting/stale/unavailable evidence fails closed; valuation selection and reservation behavior remain out of scope.
+
+## Sprint 44
+
+- [Sprint 44 — Automatic Applicant Identity Link](./44-sprint-44-automatic-applicant-identity-link.md) — **Code in progress; Decision 0062 authorizes bounded scope**
+- Resolves a verified OIDC `participant_reference` claim to one participant record without asking the applicant to select or enter a record.
+- The external identity provider must issue that claim after its own participant authentication checks; applicant financial summaries remain the next BL-057 slice.
