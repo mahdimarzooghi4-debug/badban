@@ -1,6 +1,6 @@
-# Sprint 40 — Configurable Multi-Source Evidence Registry (Proposed)
+# Sprint 40 — Configurable Multi-Source Evidence Registry
 
-- **Status:** Proposed; Code not authorized
+- **Status:** Accepted; Code authorized by Decision 0058
 - **Date:** 2026-10-25
 - **Backlog:** BL-053 — Configurable External Evidence Source Registry
 - **Base:** current `main` plus merged PR #47
