@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -1804,6 +1805,76 @@ class ServiceCatalogueVersion(VersionedMixin, Base):
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+
+class LegacyBenefitLineageReview(Base):
+    __tablename__ = "legacy_benefit_lineage_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "benefit_type IN ('MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_legacy_benefit_lineage_type",
+        ),
+        CheckConstraint(
+            "status IN ('REQUESTED','APPROVED','REJECTED')",
+            name="ck_legacy_benefit_lineage_status",
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
+            "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
+            "AND reviewed_at IS NOT NULL)",
+            name="ck_legacy_benefit_lineage_review_state",
+        ),
+        CheckConstraint(
+            "reviewed_by IS NULL OR reviewed_by <> requested_by",
+            name="ck_legacy_benefit_lineage_maker_checker",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_legacy_benefit_lineage_episode_program",
+        ),
+        Index(
+            "uq_legacy_benefit_lineage_pending_subject",
+            "benefit_type",
+            "benefit_record_id",
+            unique=True,
+            postgresql_where=text("status = 'REQUESTED'"),
+        ),
+        Index(
+            "ix_legacy_benefit_lineage_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    benefit_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    benefit_record_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    program_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    participation_episode_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    reason_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="REQUESTED")
+    requested_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    reviewed_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reason_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
