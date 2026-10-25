@@ -10,7 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
+from badban.api.dependencies import (
+    get_correlation_id,
+    get_current_principal,
+    get_session,
+)
 from badban.api.errors import ApiError
 from badban.infrastructure.persistence.models import (
     AssetPosition,
@@ -126,7 +130,6 @@ class SupportedPeopleView(BaseModel):
     offset: int
 
 
-
 class SupportedAssetValuationView(BaseModel):
     id: UUID
     source_name: str
@@ -177,7 +180,6 @@ class SupportedFinancialCaseView(BaseModel):
     profit_share_status: Literal["NOT_AVAILABLE_FOR_PROGRAM_SCOPE"]
 
 
-
 async def _authorize_global_governance(
     session: AsyncSession,
     principal: Principal,
@@ -199,7 +201,9 @@ async def _authorize_global_governance(
             correlation_id=correlation_id,
         )
     except AuthorizationDenied as exc:
-        raise ApiError(403, exc.code, "Global governance approval permission required") from exc
+        raise ApiError(
+            403, exc.code, "Global governance approval permission required"
+        ) from exc
 
 
 @admin_router.get("/grants", response_model=SupportingRoleGrantListView)
@@ -283,7 +287,9 @@ async def request_supporting_institution_access(
         or identity.status != "ACTIVE"
         or identity.identity_type not in HUMAN_IDENTITY_TYPES
     ):
-        raise ApiError(404, "HUMAN_IDENTITY_NOT_FOUND", "Active human identity was not found")
+        raise ApiError(
+            404, "HUMAN_IDENTITY_NOT_FOUND", "Active human identity was not found"
+        )
     program = await session.get(Program, body.program_id)
     if program is None or program.status != "ACTIVE" or program.legal_entity_id is None:
         raise ApiError(
@@ -330,7 +336,10 @@ async def request_supporting_institution_access(
         correlation_id=correlation_id,
         outcome="SUCCESS",
         evidence_reference=body.reason_reference,
-        scope={"program_id": str(body.program_id), "identity_id": str(body.identity_id)},
+        scope={
+            "program_id": str(body.program_id),
+            "identity_id": str(body.identity_id),
+        },
     )
     await session.commit()
     return ProgramRoleGrantView.model_validate(grant)
@@ -360,7 +369,9 @@ async def approve_supporting_institution_access(
         or grant.scope_id is None
     ):
         raise ApiError(
-            404, "SUPPORT_INSTITUTION_GRANT_NOT_FOUND", "Supporting institution grant was not found"
+            404,
+            "SUPPORT_INSTITUTION_GRANT_NOT_FOUND",
+            "Supporting institution grant was not found",
         )
     if grant.status != "REQUESTED":
         raise ApiError(
@@ -424,7 +435,9 @@ async def revoke_supporting_institution_access(
         or grant.role_code != ROLE_SUPPORT_INSTITUTION_OPERATOR
     ):
         raise ApiError(
-            404, "SUPPORT_INSTITUTION_GRANT_NOT_FOUND", "Supporting institution grant was not found"
+            404,
+            "SUPPORT_INSTITUTION_GRANT_NOT_FOUND",
+            "Supporting institution grant was not found",
         )
     if grant.status not in {"REQUESTED", "ACTIVE"}:
         raise ApiError(
@@ -474,7 +487,9 @@ async def read_authorized_programs(
             scope={"scope_type": SCOPE_PROGRAM},
         )
         await session.commit()
-        raise ApiError(403, "AUTHORIZATION_DENIED", "Human institution operator identity required")
+        raise ApiError(
+            403, "AUTHORIZATION_DENIED", "Human institution operator identity required"
+        )
     now = datetime.now(UTC)
     programs = (
         await session.scalars(
@@ -598,7 +613,6 @@ async def read_program_beneficiaries(
         limit=limit,
         offset=offset,
     )
-
 
 
 @institution_router.get(
