@@ -6,7 +6,7 @@
 - **Scope:** Decision 0016 bounded external-lender pilot
 - **Entry Gate:** Decision 0018
 - **Sprint Planning:** Authorized by Decision 0019
-- **Current Sprint / Code Authorization:** No new Sprint authorized by this backlog; completed delivery is recorded in `docs/sprints/README.md`
+- **Current Sprint / Code Authorization:** Sprint 40 Code authorized by Decision 0058; see `docs/sprints/README.md`
 
 ## 1. Ordering Principle
 
@@ -1092,7 +1092,7 @@ Let authorized operators configure multiple external evidence sources by purpose
 - no reservation or financial state change is part of this capability;
 - arbitrary provider URLs are not accepted; outbound destinations are constrained.
 
-**Delivery Status:** Proposed in Sprint 40; no Code Authorization.
+**Delivery Status:** Sprint 40 Code in progress under Decision 0058. Initial increment adds draft-only source registration/listing and a provider-neutral multi-source adapter contract. Live source activation, external providers, durable response history, and valuation selection remain pending.
 
 ---
 
