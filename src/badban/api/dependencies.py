@@ -41,7 +41,9 @@ async def get_current_principal(
 
     national_id_claim = claims.get(request.app.state.settings.oidc_national_id_claim)
     national_id = national_id_claim if isinstance(national_id_claim, str) else None
-    identity = await session.scalar(select(Identity).where(Identity.external_subject == claims["sub"]))
+    identity = await session.scalar(
+        select(Identity).where(Identity.external_subject == claims["sub"])
+    )
     if identity is None and national_id and national_id.strip():
         identity = await session.scalar(
             insert(Identity)
