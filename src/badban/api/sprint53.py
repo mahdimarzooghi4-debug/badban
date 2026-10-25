@@ -273,9 +273,7 @@ async def approve_benefit_lineage_review(
         raise ApiError(
             403, "MAKER_CHECKER_REQUIRED", "The requester cannot approve the benefit lineage review"
         )
-    record = await _load_benefit(
-        session, review.benefit_type, review.benefit_record_id, lock=True
-    )
+    record = await _load_benefit(session, review.benefit_type, review.benefit_record_id, lock=True)
     if (
         record is None
         or record.participant_id != review.participant_id
