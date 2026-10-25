@@ -78,7 +78,7 @@ def test_internal_valuation_snapshot_preserves_recorded_status_and_evidence():
 
     assert snapshot.reconciliation_type == "INTERNAL_VALUATION_OBSERVATION"
     assert snapshot.records[0].freshness_status == "STALE"
-    assert snapshot.records[0].gross_market_value == "56.375"
+    assert Decimal(snapshot.records[0].gross_market_value) == Decimal("56.375")
     assert snapshot.evidence_references == (f"valuation-observation:{record.observation_id}",)
 
 
