@@ -35,8 +35,15 @@ def upgrade() -> None:
         sa.Column("activated_by", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.CheckConstraint("duration_months > 0 AND duration_months <= 36", name="ck_post_exit_duration_months"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.CheckConstraint(
+            "duration_months > 0 AND duration_months <= 36", name="ck_post_exit_duration_months"
+        ),
         sa.CheckConstraint(
             "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','COMPLETED','CANCELLED')",
             name="ck_post_exit_case_status",
@@ -45,7 +52,9 @@ def upgrade() -> None:
             "activated_by IS NULL OR activated_by <> created_by",
             name="ck_post_exit_case_maker_checker",
         ),
-        sa.ForeignKeyConstraint(["service_catalogue_version_id"], ["service_catalogue_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["service_catalogue_version_id"], ["service_catalogue_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["participant_id"], ["participants.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["activated_by"], ["identities.id"], ondelete="RESTRICT"),
@@ -76,7 +85,12 @@ def upgrade() -> None:
         sa.Column("approved_by", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.CheckConstraint(
             "period_sequence > 0 AND period_sequence <= 36", name="ck_post_exit_period_sequence"
         ),
@@ -89,7 +103,9 @@ def upgrade() -> None:
             "approved_by IS NULL OR approved_by <> created_by",
             name="ck_post_exit_entitlement_maker_checker",
         ),
-        sa.ForeignKeyConstraint(["support_case_id"], ["post_exit_support_cases.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["support_case_id"], ["post_exit_support_cases.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["approved_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
@@ -110,7 +126,12 @@ def upgrade() -> None:
         sa.Column("source_journal_posting_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("amount", sa.Numeric(38, 18), nullable=False),
         sa.Column("currency", sa.String(length=16), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.CheckConstraint("amount > 0", name="ck_post_exit_allocation_amount_positive"),
         sa.ForeignKeyConstraint(
             ["entitlement_id"], ["post_exit_support_entitlements.id"], ondelete="RESTRICT"
