@@ -17,7 +17,6 @@ router = APIRouter(prefix="/api/v1/applicant", tags=["applicant"])
 
 class ApplicantParticipantView(BaseModel):
     participant_id: UUID
-    participant_reference: str
     lifecycle_status: str
 
 
@@ -26,8 +25,8 @@ async def get_linked_participant(
     principal: Principal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session),
 ) -> ApplicantParticipantView:
-    """Resolve the signed OIDC participant reference to its unique Badban record."""
-    if principal.identity_type != "PARTICIPANT" or not principal.participant_reference:
+    """Resolve the verified OIDC national ID to its unique Badban participant record."""
+    if principal.identity_type != "PARTICIPANT" or not principal.national_id:
         raise ApiError(
             403,
             "PARTICIPANT_LINK_UNAVAILABLE",
@@ -36,7 +35,7 @@ async def get_linked_participant(
 
     participant = await session.scalar(
         select(Participant).where(
-            Participant.external_reference == principal.participant_reference
+            Participant.external_reference == principal.national_id
         )
     )
     if participant is None:
@@ -47,6 +46,5 @@ async def get_linked_participant(
         )
     return ApplicantParticipantView(
         participant_id=participant.id,
-        participant_reference=principal.participant_reference,
         lifecycle_status=participant.lifecycle_status,
     )
