@@ -1,6 +1,6 @@
 # Sprint 37 — Internal Posted-Journal Source
 
-- **Status:** Code authorized; stacked Draft PR pending implementation/review
+- **Status:** Implemented and merged to `main` via PR #44 on 2026-10-25; exact-head CI #495 and combined CI #510 passed
 - **Date:** 2026-10-25
 - **Decision:** [0055 — Internal Posted-Journal Source](../decisions/0055-sprint-37-internal-posted-journal-source.md)
 - **Base:** Sprint 36 PR #40 (`sprint-36-verified-source-acquisition`)
