@@ -106,7 +106,7 @@ Sprint 04 Code is not yet authorized.
 
 ## Sprint 37
 
-- [Sprint 37 — Internal Posted-Journal Source](./37-sprint-37-internal-posted-journal-source.md) — **Code authorized; stacked Draft PR pending implementation/review**
+- [Sprint 37 — Internal Posted-Journal Source](./37-sprint-37-internal-posted-journal-source.md) — **Merged to main via PR #44; CI #495 and combined CI #510 passed**
 - Decision 0055 authorizes only read-only source extraction from actual posted journal facts, with exact Program and Legal Entity lineage.
 - External sources without an identified authority remain unavailable; BL-020 remains blocked on explicit policy inputs.
 
