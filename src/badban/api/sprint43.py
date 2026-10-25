@@ -475,7 +475,6 @@ async def approve_period_entitlement(
     return SupportEntitlementView.model_validate(item)
 
 
-
 class SupportCasePage(BaseModel):
     items: list[SupportCaseView]
 
@@ -487,7 +486,8 @@ class SupportEntitlementPage(BaseModel):
 @router.get("/cases", response_model=SupportCasePage)
 async def list_support_cases(
     participant_id: UUID | None = None,
-    lifecycle_status: Literal["DRAFT", "ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"] | None = None,
+    lifecycle_status: Literal["DRAFT", "ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"]
+    | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     principal: Principal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session),
@@ -518,9 +518,7 @@ async def list_case_entitlements(
     session: AsyncSession = Depends(get_session),
     correlation_id: UUID = Depends(get_correlation_id),
 ) -> SupportEntitlementPage:
-    await _authorize(
-        session, principal, correlation_id, "POST_EXIT_ENTITLEMENT_READ", str(case_id)
-    )
+    await _authorize(session, principal, correlation_id, "POST_EXIT_ENTITLEMENT_READ", str(case_id))
     if await session.get(PostExitSupportCase, case_id) is None:
         raise ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Post-exit support case was not found")
     rows = (
