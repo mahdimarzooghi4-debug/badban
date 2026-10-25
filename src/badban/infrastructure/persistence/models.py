@@ -1691,3 +1691,49 @@ class DecisionSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class ExternalEvidenceSource(VersionedMixin, Base):
+    __tablename__ = "external_evidence_sources"
+    __table_args__ = (
+        CheckConstraint(
+            "evidence_purpose IN ('VALUATION','RESTRICTION','ENCUMBRANCE')",
+            name="ck_external_evidence_source_purpose",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED')",
+            name="ck_external_evidence_source_status",
+        ),
+        UniqueConstraint(
+            "asset_type_id",
+            "evidence_purpose",
+            "source_key",
+            "version",
+            name="uq_external_evidence_source_version",
+        ),
+        Index(
+            "ix_external_evidence_sources_lookup",
+            "asset_type_id",
+            "evidence_purpose",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    asset_type_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("asset_types.id", ondelete="RESTRICT"), nullable=False
+    )
+    evidence_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    adapter_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    contract_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    configuration_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
