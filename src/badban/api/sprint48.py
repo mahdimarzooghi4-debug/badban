@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -81,6 +82,13 @@ class ProgramRoleGrantView(BaseModel):
     version: int
 
 
+class SupportingRoleGrantListView(BaseModel):
+    items: list[ProgramRoleGrantView]
+    status: str
+    limit: int
+    offset: int
+
+
 class SupportingProgramView(BaseModel):
     program_id: UUID
     code: str
@@ -132,6 +140,58 @@ async def _authorize_global_governance(
         )
     except AuthorizationDenied as exc:
         raise ApiError(403, exc.code, "Global governance approval permission required") from exc
+
+
+@admin_router.get("/grants", response_model=SupportingRoleGrantListView)
+async def list_supporting_institution_grants(
+    grant_status: Literal["REQUESTED", "ACTIVE", "REVOKED"] = Query(
+        default="REQUESTED", alias="status"
+    ),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SupportingRoleGrantListView:
+    await _authorize_global_governance(
+        session,
+        principal,
+        correlation_id,
+        "SUPPORT_INSTITUTION_ROLE_GRANT_LIST",
+        grant_status,
+    )
+    grants = (
+        await session.scalars(
+            select(RoleGrant)
+            .where(
+                RoleGrant.role_code == ROLE_SUPPORT_INSTITUTION_OPERATOR,
+                RoleGrant.scope_type == SCOPE_PROGRAM,
+                RoleGrant.status == grant_status,
+            )
+            .order_by(RoleGrant.created_at.desc(), RoleGrant.id)
+            .offset(offset)
+            .limit(limit)
+        )
+    ).all()
+    append_audit(
+        session,
+        aggregate_type="SupportingInstitutionRoleGrantQueue",
+        aggregate_id=grant_status,
+        aggregate_version=None,
+        action="SUPPORT_INSTITUTION_ROLE_GRANT_LIST",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"status": grant_status, "returned_count": len(grants), "limit": limit, "offset": offset},
+    )
+    await session.commit()
+    return SupportingRoleGrantListView(
+        items=[ProgramRoleGrantView.model_validate(grant) for grant in grants],
+        status=grant_status,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @admin_router.post(
@@ -334,6 +394,22 @@ async def read_authorized_programs(
     session: AsyncSession = Depends(get_session),
     correlation_id: UUID = Depends(get_correlation_id),
 ) -> SupportingProgramsView:
+    if principal.identity_type not in HUMAN_IDENTITY_TYPES:
+        append_audit(
+            session,
+            aggregate_type="SupportingInstitutionWorkspace",
+            aggregate_id=str(principal.identity_id),
+            aggregate_version=None,
+            action="SUPPORT_INSTITUTION_PROGRAM_LIST_READ",
+            actor_type=principal.identity_type,
+            actor_id=principal.identity_id,
+            correlation_id=correlation_id,
+            outcome="DENIED",
+            reason_code="AUTHORIZATION_DENIED",
+            scope={"scope_type": SCOPE_PROGRAM},
+        )
+        await session.commit()
+        raise ApiError(403, "AUTHORIZATION_DENIED", "Human institution operator identity required")
     now = datetime.now(UTC)
     programs = (
         await session.scalars(
