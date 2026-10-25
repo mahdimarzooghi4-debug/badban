@@ -183,7 +183,12 @@ async def list_supporting_institution_grants(
         actor_id=principal.identity_id,
         correlation_id=correlation_id,
         outcome="SUCCESS",
-        scope={"status": grant_status, "returned_count": len(grants), "limit": limit, "offset": offset},
+        scope={
+            "status": grant_status,
+            "returned_count": len(grants),
+            "limit": limit,
+            "offset": offset,
+        },
     )
     await session.commit()
     return SupportingRoleGrantListView(
@@ -485,9 +490,11 @@ async def read_program_beneficiaries(
             correlation_id=correlation_id,
         )
     except AuthorizationDenied as exc:
-        raise ApiError(403, exc.code, "Program-scoped supporting institution access is required") from exc
+        raise ApiError(
+            403, exc.code, "Program-scoped supporting institution access is required"
+        ) from exc
 
-    rows: list[tuple[ParticipationEpisode, Participant]] = (
+    rows = (
         await session.execute(
             select(ParticipationEpisode, Participant)
             .join(Participant, Participant.id == ParticipationEpisode.participant_id)
