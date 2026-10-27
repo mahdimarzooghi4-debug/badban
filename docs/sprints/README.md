@@ -212,3 +212,11 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Adds maker-checker review to activate or suspend registered valuation, restriction, and encumbrance sources.
 - Each source starts as DRAFT; an independent global governance approver must approve activation, and lifecycle actions are audited.
 - No external provider is selected or connected by this Sprint; a configured source without a runtime adapter remains unavailable.
+
+
+## Sprint 56
+
+- [Sprint 56 — Durable External Evidence Acquisition](./56-sprint-56-durable-external-evidence-acquisition.md) — **Code in progress; Decision 0074 authorizes bounded scope**
+- Adds a program-scoped operations endpoint to query matching active evidence sources through installed adapters and persist each response separately.
+- Acquisition history preserves valid, unavailable, and invalid results with provenance; authorized operations and auditors can read it.
+- No provider is selected or connected; no valuation selection, freshness threshold, eligibility, or financial mutation is introduced.
