@@ -1775,12 +1775,8 @@ class ExternalEvidenceSourceLifecycleReview(Base):
             ondelete="RESTRICT",
             name="fk_external_evidence_source_lifecycle_source",
         ),
-        ForeignKeyConstraint(
-            ["requested_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
-        ForeignKeyConstraint(
-            ["reviewed_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
+        ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["reviewed_by"], ["identities.id"], ondelete="RESTRICT"),
         Index(
             "uq_external_evidence_source_review_pending",
             "source_id",
