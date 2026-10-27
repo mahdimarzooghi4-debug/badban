@@ -130,6 +130,109 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 
 ## Sprint 40
 
-- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Code in progress; Decision 0058 authorizes bounded scope**
-- BL-053 defines a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
-- No live sources are selected or connected. Conflicting/stale/unavailable evidence fails closed; valuation selection and reservation behavior remain out of scope.
+- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Registry foundation merged to main; lifecycle and durable acquisition are in Draft PRs #66–#67**
+- BL-053 provides a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
+- No live source or adapter is selected or connected. Valuation selection, freshness policy, and reservation remain blocked on later authority and policy inputs.
+
+## Sprint 44
+
+- [Sprint 44 — Automatic Applicant Identity Link](./44-sprint-44-automatic-applicant-identity-link.md) — **Code in progress; Decision 0062 authorizes bounded scope**
+- Resolves a verified OIDC `national_id` claim to one participant record without asking the applicant to select or enter a record, and does not return the national ID.
+- The external identity provider must issue the claim after its participant identity checks; this is the ownership foundation used by Sprint 45.
+
+## Sprint 45
+
+- [Sprint 45 — Applicant Financial Case Read Model](./45-sprint-45-applicant-financial-case-read-model.md) — **Code in progress; Decision 0063 authorizes bounded scope**
+- Adds a self-scoped, read-only view of the three service lifecycles and separates financial measures by currency.
+- Payment and external pricing remain explicitly not configured until their evidence integrations exist.
+
+## Sprint 46
+
+- [Sprint 46 — Role-Scoped Admin Service Operations](./46-sprint-46-role-scoped-admin-operations.md) — **Code in progress; Decision 0064 authorizes bounded scope**
+- Adds separate read-only service queues and maker-checker managed service role grants.
+- Existing staff roles remain service-scoped; a global role alone does not grant these queues.
+
+## Sprint 47
+
+- [Sprint 47 — Universal Individual Profile](./47-sprint-47-universal-individual-profile.md) — **Code in progress; Decision 0065 authorizes bounded scope**
+- Creates a self-scoped profile for an authenticated individual from the verified national-ID claim, reusing institution-introduced participant records.
+- Profile creation does not enroll the person in a program or grant financial services. Supporting institution workspaces remain program-scoped follow-up work.
+
+
+## Sprint 48
+
+- [Sprint 48 — Supporting Institution Workspace](./48-sprint-48-supporting-institution-workspace.md) — **Code in progress; Decision 0066 authorizes bounded scope**
+- Provides governance-reviewed, program-scoped operator grants and a read-only beneficiary list for the operator's authorized programs.
+- Beneficiary data excludes national IDs and financial case details; program enrollment and service decisions remain separate.
+
+
+## Sprint 49
+
+- [Sprint 49 — Lender Workspace](./49-sprint-49-lender-workspace.md) — **Code in progress; Decision 0067 authorizes bounded scope**
+- Provides exact-provider access to guarantee cases and already-recorded lender loan facts.
+- Keeps guarantee exposure separate from reported outstanding loan principal and excludes participant identity details.
+
+
+## Sprint 50
+
+- [Sprint 50 — Role-Derived Admin Workspace Index](./50-sprint-50-admin-workspace-index.md) — **Code in progress; Decision 0068 authorizes bounded scope**
+- Returns only admin workspaces matching the caller's active service-scoped roles or global governance grant.
+- Underlying endpoints continue to enforce their own authorization.
+
+## Sprint 51
+
+- [Sprint 51 — Supporting Institution Financial Case](./51-sprint-51-supporting-institution-financial-case.md) — **Code in progress; Decision 0069 authorizes bounded scope**
+- Adds a read-only financial case limited to the exact participant episode and authorized program, showing attributed assets, recorded valuation observations, guarantee exposure, and lender-reported loan facts.
+- Profit-share, monthly pension, and post-exit figures remain unavailable until explicit program lineage exists; recorded valuations are shown as observations, not as selected quotes.
+
+## Sprint 52
+
+- [Sprint 52 — Service Program Lineage](./52-sprint-52-service-program-lineage.md) — **Code in progress; Decision 0070 authorizes bounded scope**
+- Adds verified program and participation-episode lineage to monthly pension and post-exit records, and exposes only matching records in the support institution financial case.
+- Does not infer lineage for legacy rows; program return allocations are labeled at participant/program scope.
+
+## Sprint 53
+
+- [Sprint 53 — Legacy Benefit Lineage Review](./53-sprint-53-legacy-benefit-lineage-review.md) — **Code in progress; Decision 0071 authorizes bounded scope**
+- Adds a governance-only queue to propose and review evidence-backed program/episode links for legacy monthly pension and post-exit records.
+- A different global governance approver must approve or reject; approval updates the benefit record and both actions are audited.
+- No automatic mapping or backfill.
+
+
+## Sprint 54
+
+- [Sprint 54 — Admin Legacy Benefit Lineage Review Workspace](./54-sprint-54-admin-lineage-review-workspace.md) — **Code in progress; Decision 0072 authorizes bounded scope**
+- Adds a dedicated workspace entry for the legacy benefit lineage queue to the admin workspace index.
+- Discovery is limited to active global governance approvers; each queue endpoint continues to enforce its own authorization.
+
+
+## Sprint 55
+
+- [Sprint 55 — Governed External Evidence Source Lifecycle](./55-sprint-55-governed-evidence-source-lifecycle.md) — **Code in progress; Decision 0073 authorizes bounded scope**
+- Adds maker-checker review to activate or suspend registered valuation, restriction, and encumbrance sources.
+- Each source starts as DRAFT; an independent global governance approver must approve activation, and lifecycle actions are audited.
+- No external provider is selected or connected by this Sprint; a configured source without a runtime adapter remains unavailable.
+
+
+## Sprint 56
+
+- [Sprint 56 — Durable External Evidence Acquisition](./56-sprint-56-durable-external-evidence-acquisition.md) — **Code in progress; Decision 0074 authorizes bounded scope**
+- Adds a program-scoped operations endpoint to query matching active evidence sources through installed adapters and persist each response separately.
+- Acquisition history preserves valid, unavailable, and invalid results with provenance; authorized operations and auditors can read it.
+- No provider is selected or connected; no valuation selection, freshness threshold, eligibility, or financial mutation is introduced.
+
+
+## Sprint 57
+
+- [Sprint 57 — Applicant Service Request Intake](./57-sprint-57-applicant-service-request-intake.md) — **Code in progress; Decision 0075 authorizes bounded scope**
+- Authenticated individuals can submit and track a request for any of the three services after profile resolution.
+- Service staff can read requests only through their role-scoped service queue.
+- Requests remain RECEIVED; they do not imply eligibility, program enrollment, entitlement, guarantee, or payment.
+
+
+## Sprint 58
+
+- [Sprint 58 — Automatic Individual Profile Provisioning](./58-sprint-58-auto-individual-profile-on-authentication.md) — **Code in progress; Decision 0076 completes the behavior authorized in Decision 0065**
+- An active participant identity with a verified national-ID claim now resolves or creates the exact matching individual profile during authenticated request handling.
+- Existing institution-introduced profiles are reused; creation is race-safe and audited.
+- Authentication does not enroll the individual or create any service or financial state.
