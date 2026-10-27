@@ -1934,6 +1934,48 @@ class ExternalEvidenceObservation(Base):
     )
 
 
+class ApplicantServiceRequest(Base):
+    __tablename__ = "applicant_service_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "service_code IN ('LOAN_GUARANTEE','MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_applicant_service_request_service",
+        ),
+        CheckConstraint(
+            "status IN ('RECEIVED')",
+            name="ck_applicant_service_request_status",
+        ),
+        ForeignKeyConstraint(
+            ["participant_id"],
+            ["participants.id"],
+            ondelete="RESTRICT",
+            name="fk_applicant_service_request_participant",
+        ),
+        ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "ix_applicant_service_requests_participant_time",
+            "participant_id",
+            "submitted_at",
+        ),
+        Index(
+            "ix_applicant_service_requests_service_time",
+            "service_code",
+            "submitted_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    participant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    service_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="RECEIVED")
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class ServiceCatalogueVersion(VersionedMixin, Base):
     """Versioned catalogue entry for a Badban participant service."""
 
