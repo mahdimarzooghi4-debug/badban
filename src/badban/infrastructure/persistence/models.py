@@ -1829,9 +1829,7 @@ class ExternalEvidenceAcquisition(Base):
             ondelete="RESTRICT",
             name="fk_external_evidence_acquisition_position",
         ),
-        ForeignKeyConstraint(
-            ["requested_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
+        ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
         Index(
             "ix_external_evidence_acquisitions_position_time",
             "asset_position_id",
