@@ -102,12 +102,27 @@ The exact eligibility formula, payable amount formula, period cutoff, rounding, 
 - portal behavior preserves the lender-of-record and disbursement boundary;
 - pension and post-exit entitlement data are not exposed to lender users.
 
+## BL-060 — Universal Individual and Supporting Institution Access
+
+**Priority:** P1  
+**Type:** Identity / Participant and Partner Operations Capability  
+**Depends on:** BL-006, BL-007, BL-009, BL-044, BL-054
+
+**Acceptance Criteria**
+
+- every authenticated individual can resolve a self-scoped Badban profile from a verified national ID, whether or not a supporting institution introduced them;
+- profile creation does not imply program enrollment, capital assignment, service eligibility, or payment entitlement;
+- supporting institutions can access only beneficiaries and financial records within their explicitly authorized program scope;
+- ordinary individual capital and institution-assigned social capital remain distinguishable by ownership and funding source;
+- identity data and financial details are not exposed across individual or institution boundaries.
+
 ## Delivery sequence
 
 1. BL-054 policy/catalogue contract and a configurable service-type foundation.
 2. BL-055 monthly pension lifecycle and BL-056 post-exit lifecycle on shared return/entitlement/ledger foundations.
 3. BL-057 applicant case summary and BL-058 role-based admin operations.
 4. BL-059 lender operations, retaining the existing guarantee path.
-5. Cross-service reconciliation, reliability, security, and release readiness using existing platform controls.
+5. BL-060 universal individual access and supporting institution workspaces.
+6. Cross-service reconciliation, reliability, security, and release readiness using existing platform controls.
 
 No item permits production activation, real disbursement, or external source use without its accepted policy, contract, verified evidence, and operational approvals.
