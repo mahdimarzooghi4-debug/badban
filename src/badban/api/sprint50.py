@@ -72,7 +72,10 @@ async def read_admin_workspace_index(
                     scope_id=scope_id,
                     service_code=service_code,
                     role_codes=active_roles,
-                    capabilities=["READ_WORK_QUEUE"],
+                    capabilities=[
+                        "READ_WORK_QUEUE",
+                        "READ_APPLICANT_SERVICE_REQUESTS",
+                    ],
                 )
             )
 
@@ -94,6 +97,23 @@ async def read_admin_workspace_index(
                     "MANAGE_SERVICE_ROLE_GRANTS",
                     "MANAGE_SUPPORT_INSTITUTION_GRANTS",
                     "MANAGE_LENDER_GRANTS",
+                    "MANAGE_EXTERNAL_EVIDENCE_SOURCES",
+                ],
+            )
+        )
+
+        entries.append(
+            AdminWorkspaceEntry(
+                workspace_code="ADMIN_BENEFIT_LINEAGE_REVIEW",
+                scope_type=SCOPE_GLOBAL,
+                scope_id=None,
+                service_code=None,
+                role_codes=[ROLE_GOVERNANCE_APPROVER],
+                capabilities=[
+                    "READ_LEGACY_BENEFIT_LINEAGE_REVIEW_QUEUE",
+                    "REQUEST_LEGACY_BENEFIT_LINEAGE_REVIEW",
+                    "APPROVE_LEGACY_BENEFIT_LINEAGE_REVIEW",
+                    "REJECT_LEGACY_BENEFIT_LINEAGE_REVIEW",
                 ],
             )
         )
