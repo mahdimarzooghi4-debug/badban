@@ -13,7 +13,6 @@ from badban.api.dependencies import get_correlation_id, get_current_principal, g
 from badban.api.errors import ApiError
 from badban.application.external_evidence import (
     EvidenceAdapterRegistry,
-    EvidenceContract,
     EvidencePurpose,
     EvidenceRequest,
     EvidenceSourceDefinition,
