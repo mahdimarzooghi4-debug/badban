@@ -130,9 +130,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 
 ## Sprint 40
 
-- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Code in progress; Decision 0058 authorizes bounded scope**
-- BL-053 defines a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
-- No live sources are selected or connected. Conflicting/stale/unavailable evidence fails closed; valuation selection and reservation behavior remain out of scope.
+- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Registry foundation merged to main; lifecycle and durable acquisition are in Draft PRs #66–#67**
+- BL-053 provides a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
+- No live source or adapter is selected or connected. Valuation selection, freshness policy, and reservation remain blocked on later authority and policy inputs.
 
 ## Sprint 44
 
@@ -212,3 +212,27 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Adds maker-checker review to activate or suspend registered valuation, restriction, and encumbrance sources.
 - Each source starts as DRAFT; an independent global governance approver must approve activation, and lifecycle actions are audited.
 - No external provider is selected or connected by this Sprint; a configured source without a runtime adapter remains unavailable.
+
+
+## Sprint 56
+
+- [Sprint 56 — Durable External Evidence Acquisition](./56-sprint-56-durable-external-evidence-acquisition.md) — **Code in progress; Decision 0074 authorizes bounded scope**
+- Adds a program-scoped operations endpoint to query matching active evidence sources through installed adapters and persist each response separately.
+- Acquisition history preserves valid, unavailable, and invalid results with provenance; authorized operations and auditors can read it.
+- No provider is selected or connected; no valuation selection, freshness threshold, eligibility, or financial mutation is introduced.
+
+
+## Sprint 57
+
+- [Sprint 57 — Applicant Service Request Intake](./57-sprint-57-applicant-service-request-intake.md) — **Code in progress; Decision 0075 authorizes bounded scope**
+- Authenticated individuals can submit and track a request for any of the three services after profile resolution.
+- Service staff can read requests only through their role-scoped service queue.
+- Requests remain RECEIVED; they do not imply eligibility, program enrollment, entitlement, guarantee, or payment.
+
+
+## Sprint 58
+
+- [Sprint 58 — Automatic Individual Profile Provisioning](./58-sprint-58-auto-individual-profile-on-authentication.md) — **Code in progress; Decision 0076 completes the behavior authorized in Decision 0065**
+- An active participant identity with a verified national-ID claim now resolves or creates the exact matching individual profile during authenticated request handling.
+- Existing institution-introduced profiles are reused; creation is race-safe and audited.
+- Authentication does not enroll the individual or create any service or financial state.
