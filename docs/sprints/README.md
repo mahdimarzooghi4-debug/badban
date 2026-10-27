@@ -220,3 +220,11 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Adds a program-scoped operations endpoint to query matching active evidence sources through installed adapters and persist each response separately.
 - Acquisition history preserves valid, unavailable, and invalid results with provenance; authorized operations and auditors can read it.
 - No provider is selected or connected; no valuation selection, freshness threshold, eligibility, or financial mutation is introduced.
+
+
+## Sprint 57
+
+- [Sprint 57 — Applicant Service Request Intake](./57-sprint-57-applicant-service-request-intake.md) — **Code in progress; Decision 0075 authorizes bounded scope**
+- Authenticated individuals can submit and track a request for any of the three services after profile resolution.
+- Service staff can read requests only through their role-scoped service queue.
+- Requests remain RECEIVED; they do not imply eligibility, program enrollment, entitlement, guarantee, or payment.
