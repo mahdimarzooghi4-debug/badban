@@ -244,13 +244,12 @@ async def acquire_evidence(
         evidence_purpose=body.evidence_purpose,
     )
     registry: EvidenceAdapterRegistry = request.app.state.evidence_adapter_registry
+    started_at = datetime.now(UTC)
     results = await acquire_from_sources(
         registry,
         sources=source_definitions,
         request=evidence_request,
     )
-
-    started_at = datetime.now(UTC)
     completed_at = datetime.now(UTC)
     acquisition = ExternalEvidenceAcquisition(
         asset_position_id=position.id,
