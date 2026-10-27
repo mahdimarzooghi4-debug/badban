@@ -1092,7 +1092,7 @@ Let authorized operators configure multiple external evidence sources by purpose
 - no reservation or financial state change is part of this capability;
 - arbitrary provider URLs are not accepted; outbound destinations are constrained.
 
-**Delivery Status:** Sprint 40 Code in progress under Decision 0058. Initial increment adds draft-only source registration/listing and a provider-neutral multi-source adapter contract. Live source activation, external providers, durable response history, and valuation selection remain pending.
+**Delivery Status:** The Sprint 40 registration/listing and provider-neutral adapter foundation is present on `main`. Draft PRs #66 and #67 add maker-checker lifecycle control and durable per-source acquisition history; exact-head CI is green. No real provider/adapter is selected or connected, and valuation selection, freshness policy, and reservation remain blocked on later authority and policy inputs.
 
 ---
 
