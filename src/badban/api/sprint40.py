@@ -13,7 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
 from badban.api.errors import ApiError
 from badban.application.idempotency import acquire_idempotency, complete_idempotency
-from badban.infrastructure.persistence.models import AssetType, ExternalEvidenceSource
+from badban.infrastructure.persistence.models import (
+    AssetType,
+    ExternalEvidenceSource,
+    ExternalEvidenceSourceLifecycleReview,
+)
 from badban.security.audit import append_audit
 from badban.security.authorization import (
     ROLE_GOVERNANCE_APPROVER,
@@ -224,4 +228,363 @@ async def list_sources(
     return SourceRegistrationPage(
         observed_at=datetime.now(UTC),
         items=[_view(row) for row in rows],
+    )
+
+
+SourceLifecycleAction = Literal["ACTIVATE", "SUSPEND"]
+SourceLifecycleReviewStatus = Literal["REQUESTED", "APPROVED", "REJECTED"]
+
+
+class SourceLifecycleReviewCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: SourceLifecycleAction
+    reason_reference: str = Field(min_length=1, max_length=255)
+
+
+class SourceLifecycleReviewDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason_reference: str = Field(min_length=1, max_length=255)
+
+
+class SourceLifecycleReviewView(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    id: UUID
+    source_id: UUID
+    requested_action: SourceLifecycleAction
+    status: SourceLifecycleReviewStatus
+    reason_reference: str
+    requested_by: UUID
+    reviewed_by: UUID | None
+    reviewed_at: datetime | None
+    review_reason_reference: str | None
+    created_at: datetime
+
+
+class SourceLifecycleReviewPage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: UUID
+    items: list[SourceLifecycleReviewView]
+    limit: int
+    offset: int
+
+
+def _source_lifecycle_review_view(
+    review: ExternalEvidenceSourceLifecycleReview,
+) -> SourceLifecycleReviewView:
+    return SourceLifecycleReviewView.model_validate(review)
+
+
+@router.post(
+    "/{source_id}/lifecycle-reviews",
+    response_model=SourceLifecycleReviewView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_source_lifecycle_review(
+    source_id: UUID,
+    body: SourceLifecycleReviewCreate,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+) -> SourceLifecycleReviewView:
+    await _authorize_registry(
+        session,
+        principal=principal,
+        correlation_id=correlation_id,
+        action="EXTERNAL_EVIDENCE_SOURCE_LIFECYCLE_REQUEST",
+    )
+    source = await session.scalar(
+        select(ExternalEvidenceSource)
+        .where(ExternalEvidenceSource.id == source_id)
+        .with_for_update()
+    )
+    if source is None:
+        raise ApiError(404, "EXTERNAL_EVIDENCE_SOURCE_NOT_FOUND", "Evidence source was not found")
+
+    allowed_from = (
+        {"DRAFT", "SUSPENDED"} if body.action == "ACTIVATE" else {"ACTIVE"}
+    )
+    if source.lifecycle_status not in allowed_from:
+        raise ApiError(
+            409,
+            "EXTERNAL_EVIDENCE_SOURCE_INVALID_TRANSITION",
+            "The requested action is not valid for the current source state",
+        )
+
+    payload = {"source_id": str(source_id), **body.model_dump(mode="json")}
+    idempotency, replay = await acquire_idempotency(
+        session,
+        scope="external-evidence-source:lifecycle-request",
+        key=idempotency_key,
+        payload=payload,
+    )
+    if replay is not None:
+        return SourceLifecycleReviewView.model_validate(replay)
+
+    pending = await session.scalar(
+        select(ExternalEvidenceSourceLifecycleReview.id).where(
+            ExternalEvidenceSourceLifecycleReview.source_id == source_id,
+            ExternalEvidenceSourceLifecycleReview.status == "REQUESTED",
+        )
+    )
+    if pending is not None:
+        raise ApiError(
+            409,
+            "EXTERNAL_EVIDENCE_SOURCE_REVIEW_PENDING",
+            "A lifecycle review is already pending for this source",
+        )
+
+    review = ExternalEvidenceSourceLifecycleReview(
+        source_id=source.id,
+        requested_action=body.action,
+        status="REQUESTED",
+        reason_reference=body.reason_reference,
+        requested_by=principal.identity_id,
+    )
+    session.add(review)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ApiError(
+            409,
+            "EXTERNAL_EVIDENCE_SOURCE_REVIEW_PENDING",
+            "A lifecycle review is already pending for this source",
+        ) from exc
+
+    view = _source_lifecycle_review_view(review)
+    append_audit(
+        session,
+        aggregate_type="ExternalEvidenceSourceLifecycleReview",
+        aggregate_id=str(review.id),
+        aggregate_version=None,
+        action="EXTERNAL_EVIDENCE_SOURCE_LIFECYCLE_REQUEST",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        evidence_reference=body.reason_reference,
+        scope={
+            "source_id": str(source.id),
+            "source_key": source.source_key,
+            "requested_action": body.action,
+            "current_status": source.lifecycle_status,
+        },
+        new_state=view.model_dump(mode="json"),
+    )
+    complete_idempotency(
+        idempotency,
+        status_code=201,
+        response_payload=view.model_dump(mode="json"),
+    )
+    await session.commit()
+    return view
+
+
+@router.get(
+    "/{source_id}/lifecycle-reviews",
+    response_model=SourceLifecycleReviewPage,
+)
+async def list_source_lifecycle_reviews(
+    source_id: UUID,
+    review_status: SourceLifecycleReviewStatus | None = Query(default=None, alias="status"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SourceLifecycleReviewPage:
+    await _authorize_registry(
+        session,
+        principal=principal,
+        correlation_id=correlation_id,
+        action="EXTERNAL_EVIDENCE_SOURCE_LIFECYCLE_LIST",
+    )
+    source_exists = await session.scalar(
+        select(ExternalEvidenceSource.id).where(ExternalEvidenceSource.id == source_id)
+    )
+    if source_exists is None:
+        raise ApiError(404, "EXTERNAL_EVIDENCE_SOURCE_NOT_FOUND", "Evidence source was not found")
+
+    filters = [ExternalEvidenceSourceLifecycleReview.source_id == source_id]
+    if review_status is not None:
+        filters.append(ExternalEvidenceSourceLifecycleReview.status == review_status)
+    rows = (
+        await session.scalars(
+            select(ExternalEvidenceSourceLifecycleReview)
+            .where(*filters)
+            .order_by(
+                ExternalEvidenceSourceLifecycleReview.created_at.desc(),
+                ExternalEvidenceSourceLifecycleReview.id,
+            )
+            .offset(offset)
+            .limit(limit)
+        )
+    ).all()
+    append_audit(
+        session,
+        aggregate_type="ExternalEvidenceSourceLifecycleReviewQueue",
+        aggregate_id=str(source_id),
+        aggregate_version=None,
+        action="EXTERNAL_EVIDENCE_SOURCE_LIFECYCLE_LIST",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={"returned_count": len(rows), "limit": limit, "offset": offset},
+    )
+    await session.commit()
+    return SourceLifecycleReviewPage(
+        source_id=source_id,
+        items=[_source_lifecycle_review_view(row) for row in rows],
+        limit=limit,
+        offset=offset,
+    )
+
+
+async def _decide_source_lifecycle_review(
+    *,
+    source_id: UUID,
+    review_id: UUID,
+    body: SourceLifecycleReviewDecision,
+    principal: Principal,
+    session: AsyncSession,
+    correlation_id: UUID,
+    decision: Literal["APPROVED", "REJECTED"],
+) -> SourceLifecycleReviewView:
+    await _authorize_registry(
+        session,
+        principal=principal,
+        correlation_id=correlation_id,
+        action=f"EXTERNAL_EVIDENCE_SOURCE_LIFECYCLE_{decision}",
+    )
+    review = await session.scalar(
+        select(ExternalEvidenceSourceLifecycleReview)
+        .where(
+            ExternalEvidenceSourceLifecycleReview.id == review_id,
+            ExternalEvidenceSourceLifecycleReview.source_id == source_id,
+        )
+        .with_for_update()
+    )
+    if review is None:
+        raise ApiError(
+            404,
+            "EXTERNAL_EVIDENCE_SOURCE_REVIEW_NOT_FOUND",
+            "Evidence source lifecycle review was not found",
+        )
+    if review.status != "REQUESTED":
+        raise ApiError(
+            409,
+            "EXTERNAL_EVIDENCE_SOURCE_REVIEW_NOT_PENDING",
+            "Only a pending lifecycle review can be decided",
+        )
+    if review.requested_by == principal.identity_id:
+        raise ApiError(
+            403,
+            "MAKER_CHECKER_REQUIRED",
+            "The requester cannot decide the evidence source lifecycle review",
+        )
+
+    source = await session.scalar(
+        select(ExternalEvidenceSource)
+        .where(ExternalEvidenceSource.id == source_id)
+        .with_for_update()
+    )
+    if source is None:
+        raise ApiError(404, "EXTERNAL_EVIDENCE_SOURCE_NOT_FOUND", "Evidence source was not found")
+    if decision == "APPROVED":
+        allowed_from = (
+            {"DRAFT", "SUSPENDED"}
+            if review.requested_action == "ACTIVATE"
+            else {"ACTIVE"}
+        )
+        if source.lifecycle_status not in allowed_from:
+            raise ApiError(
+                409,
+                "EXTERNAL_EVIDENCE_SOURCE_INVALID_TRANSITION",
+                "The source state changed before this review could be approved",
+            )
+        source.lifecycle_status = (
+            "ACTIVE" if review.requested_action == "ACTIVATE" else "SUSPENDED"
+        )
+
+    review.status = decision
+    review.reviewed_by = principal.identity_id
+    review.reviewed_at = datetime.now(UTC)
+    review.review_reason_reference = body.reason_reference
+    view = _source_lifecycle_review_view(review)
+    append_audit(
+        session,
+        aggregate_type="ExternalEvidenceSourceLifecycleReview",
+        aggregate_id=str(review.id),
+        aggregate_version=None,
+        action=f"EXTERNAL_EVIDENCE_SOURCE_LIFECYCLE_{decision}",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        evidence_reference=body.reason_reference,
+        scope={
+            "source_id": str(source.id),
+            "source_key": source.source_key,
+            "requested_action": review.requested_action,
+            "source_status": source.lifecycle_status,
+        },
+        previous_state={"review_status": "REQUESTED"},
+        new_state={
+            **view.model_dump(mode="json"),
+            "source_lifecycle_status": source.lifecycle_status,
+        },
+    )
+    await session.commit()
+    return view
+
+
+@router.post(
+    "/{source_id}/lifecycle-reviews/{review_id}/approve",
+    response_model=SourceLifecycleReviewView,
+)
+async def approve_source_lifecycle_review(
+    source_id: UUID,
+    review_id: UUID,
+    body: SourceLifecycleReviewDecision,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SourceLifecycleReviewView:
+    return await _decide_source_lifecycle_review(
+        source_id=source_id,
+        review_id=review_id,
+        body=body,
+        principal=principal,
+        session=session,
+        correlation_id=correlation_id,
+        decision="APPROVED",
+    )
+
+
+@router.post(
+    "/{source_id}/lifecycle-reviews/{review_id}/reject",
+    response_model=SourceLifecycleReviewView,
+)
+async def reject_source_lifecycle_review(
+    source_id: UUID,
+    review_id: UUID,
+    body: SourceLifecycleReviewDecision,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SourceLifecycleReviewView:
+    return await _decide_source_lifecycle_review(
+        source_id=source_id,
+        review_id=review_id,
+        body=body,
+        principal=principal,
+        session=session,
+        correlation_id=correlation_id,
+        decision="REJECTED",
     )
