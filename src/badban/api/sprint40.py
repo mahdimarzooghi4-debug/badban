@@ -495,7 +495,9 @@ async def _decide_source_lifecycle_review(
     if source is None:
         raise ApiError(404, "EXTERNAL_EVIDENCE_SOURCE_NOT_FOUND", "Evidence source was not found")
     if decision == "APPROVED":
-        allowed_from = {"DRAFT", "SUSPENDED"} if review.requested_action == "ACTIVATE" else {"ACTIVE"}
+        allowed_from = (
+            {"DRAFT", "SUSPENDED"} if review.requested_action == "ACTIVATE" else {"ACTIVE"}
+        )
         if source.lifecycle_status not in allowed_from:
             raise ApiError(
                 409,
