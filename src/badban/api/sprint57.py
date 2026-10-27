@@ -128,7 +128,7 @@ async def submit_applicant_service_request(
     idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
 ) -> ApplicantServiceRequestView:
     # Ensure the self profile from the verified OIDC claim; never accept a caller-supplied participant ID.
-    await ensure_individual_profile(
+    profile = await ensure_individual_profile(
         principal=principal,
         session=session,
         correlation_id=correlation_id,
@@ -150,33 +150,7 @@ async def submit_applicant_service_request(
             )
         return _applicant_view(existing)
 
-    if principal.national_id is None or not principal.national_id.strip():
-        raise ApiError(
-            403,
-            "PARTICIPANT_LINK_UNAVAILABLE",
-            "The authenticated account has no trusted participant reference",
-        )
-    participant_id = await session.scalar(
-        select(ApplicantServiceRequest.participant_id)
-        .where(ApplicantServiceRequest.created_by == principal.identity_id)
-        .order_by(ApplicantServiceRequest.submitted_at.desc())
-        .limit(1)
-    )
-    if participant_id is None:
-        # The profile operation above is the authority for matching the verified claim.
-        from badban.infrastructure.persistence.models import Participant
-
-        participant_id = await session.scalar(
-            select(Participant.id).where(
-                Participant.external_reference == principal.national_id
-            )
-        )
-    if participant_id is None:
-        raise ApiError(
-            404,
-            "PARTICIPANT_RECORD_NOT_FOUND",
-            "No Badban participant profile matches the authenticated account",
-        )
+    participant_id = profile.participant_id
 
     submitted_at = datetime.now(UTC)
     service_request = ApplicantServiceRequest(
