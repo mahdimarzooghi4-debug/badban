@@ -57,9 +57,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
             name="fk_external_evidence_acquisition_position",
         ),
-        sa.ForeignKeyConstraint(
-            ["requested_by"], ["identities.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
