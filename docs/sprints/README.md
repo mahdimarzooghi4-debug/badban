@@ -130,9 +130,9 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 
 ## Sprint 40
 
-- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Code in progress; Decision 0058 authorizes bounded scope**
-- BL-053 defines a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
-- No live sources are selected or connected. Conflicting/stale/unavailable evidence fails closed; valuation selection and reservation behavior remain out of scope.
+- [Sprint 40 — Configurable Multi-Source Evidence Registry](./40-sprint-40-configurable-external-source-registry.md) — **Registry foundation merged to main; lifecycle and durable acquisition are in Draft PRs #66–#67**
+- BL-053 provides a provider-neutral, versioned source registry and read-only multi-source acquisition by evidence purpose and asset type.
+- No live source or adapter is selected or connected. Valuation selection, freshness policy, and reservation remain blocked on later authority and policy inputs.
 
 ## Sprint 44
 
