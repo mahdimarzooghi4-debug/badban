@@ -1804,6 +1804,138 @@ class ExternalEvidenceSourceLifecycleReview(Base):
     )
 
 
+class ExternalEvidenceAcquisition(Base):
+    __tablename__ = "external_evidence_acquisitions"
+    __table_args__ = (
+        CheckConstraint(
+            "evidence_purpose IN ('VALUATION','RESTRICTION','ENCUMBRANCE')",
+            name="ck_external_evidence_acquisition_purpose",
+        ),
+        CheckConstraint(
+            "status IN ('COMPLETED')",
+            name="ck_external_evidence_acquisition_status",
+        ),
+        CheckConstraint(
+            "source_count >= 0",
+            name="ck_external_evidence_acquisition_source_count",
+        ),
+        CheckConstraint(
+            "completed_at >= requested_at",
+            name="ck_external_evidence_acquisition_time_order",
+        ),
+        ForeignKeyConstraint(
+            ["asset_position_id"],
+            ["asset_positions.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_acquisition_position",
+        ),
+        ForeignKeyConstraint(
+            ["requested_by"], ["identities.id"], ondelete="RESTRICT"
+        ),
+        Index(
+            "ix_external_evidence_acquisitions_position_time",
+            "asset_position_id",
+            "requested_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    asset_position_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evidence_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ExternalEvidenceObservation(Base):
+    __tablename__ = "external_evidence_observations"
+    __table_args__ = (
+        UniqueConstraint(
+            "acquisition_id",
+            "source_id",
+            name="uq_external_evidence_observation_acquisition_source",
+        ),
+        CheckConstraint(
+            "status IN ('VALID','UNAVAILABLE','INVALID')",
+            name="ck_external_evidence_observation_status",
+        ),
+        CheckConstraint(
+            "error_code IS NULL OR error_code IN "
+            "('SOURCE_UNAVAILABLE','SOURCE_TIMEOUT','SOURCE_TRANSPORT_ERROR',"
+            "'SOURCE_CONTRACT_INVALID')",
+            name="ck_external_evidence_observation_error",
+        ),
+        CheckConstraint(
+            "(status = 'VALID' AND error_code IS NULL) OR "
+            "(status IN ('UNAVAILABLE','INVALID') AND error_code IS NOT NULL)",
+            name="ck_external_evidence_observation_status_error",
+        ),
+        CheckConstraint(
+            "source_value IS NULL OR source_value > 0",
+            name="ck_external_evidence_observation_positive_value",
+        ),
+        CheckConstraint(
+            "restriction_state IS NULL OR restriction_state IN ('CLEAR','BLOCKED','UNKNOWN')",
+            name="ck_external_evidence_observation_restriction",
+        ),
+        CheckConstraint(
+            "encumbrance_state IS NULL OR encumbrance_state IN ('CLEAR','BLOCKED','UNKNOWN')",
+            name="ck_external_evidence_observation_encumbrance",
+        ),
+        CheckConstraint(
+            "received_at >= observed_at",
+            name="ck_external_evidence_observation_time_order",
+        ),
+        CheckConstraint(
+            "status = 'VALID' OR "
+            "(evidence_reference IS NULL AND source_value IS NULL AND currency IS NULL "
+            "AND restriction_state IS NULL AND encumbrance_state IS NULL)",
+            name="ck_external_evidence_observation_failure_has_no_facts",
+        ),
+        ForeignKeyConstraint(
+            ["acquisition_id"],
+            ["external_evidence_acquisitions.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_observation_acquisition",
+        ),
+        ForeignKeyConstraint(
+            ["source_id"],
+            ["external_evidence_sources.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_observation_source",
+        ),
+        Index(
+            "ix_external_evidence_observations_source_time",
+            "source_id",
+            "received_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    acquisition_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    contract_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    source_value: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    restriction_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    encumbrance_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class ServiceCatalogueVersion(VersionedMixin, Base):
     """Versioned catalogue entry for a Badban participant service."""
 
