@@ -204,3 +204,11 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - [Sprint 54 — Admin Legacy Benefit Lineage Review Workspace](./54-sprint-54-admin-lineage-review-workspace.md) — **Code in progress; Decision 0072 authorizes bounded scope**
 - Adds a dedicated workspace entry for the legacy benefit lineage queue to the admin workspace index.
 - Discovery is limited to active global governance approvers; each queue endpoint continues to enforce its own authorization.
+
+
+## Sprint 55
+
+- [Sprint 55 — Governed External Evidence Source Lifecycle](./55-sprint-55-governed-evidence-source-lifecycle.md) — **Code in progress; Decision 0073 authorizes bounded scope**
+- Adds maker-checker review to activate or suspend registered valuation, restriction, and encumbrance sources.
+- Each source starts as DRAFT; an independent global governance approver must approve activation, and lifecycle actions are audited.
+- No external provider is selected or connected by this Sprint; a configured source without a runtime adapter remains unavailable.
