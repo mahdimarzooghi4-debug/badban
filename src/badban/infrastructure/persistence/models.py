@@ -1747,6 +1747,71 @@ class ExternalEvidenceSource(VersionedMixin, Base):
     )
 
 
+class ExternalEvidenceSourceLifecycleReview(Base):
+    __tablename__ = "external_evidence_source_lifecycle_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "requested_action IN ('ACTIVATE','SUSPEND')",
+            name="ck_external_evidence_source_review_action",
+        ),
+        CheckConstraint(
+            "status IN ('REQUESTED','APPROVED','REJECTED')",
+            name="ck_external_evidence_source_review_status",
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL "
+            "AND review_reason_reference IS NULL) OR "
+            "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
+            "AND reviewed_at IS NOT NULL AND review_reason_reference IS NOT NULL)",
+            name="ck_external_evidence_source_review_state",
+        ),
+        CheckConstraint(
+            "reviewed_by IS NULL OR reviewed_by <> requested_by",
+            name="ck_external_evidence_source_review_maker_checker",
+        ),
+        ForeignKeyConstraint(
+            ["source_id"],
+            ["external_evidence_sources.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_source_lifecycle_source",
+        ),
+        ForeignKeyConstraint(
+            ["requested_by"], ["identities.id"], ondelete="RESTRICT"
+        ),
+        ForeignKeyConstraint(
+            ["reviewed_by"], ["identities.id"], ondelete="RESTRICT"
+        ),
+        Index(
+            "uq_external_evidence_source_review_pending",
+            "source_id",
+            unique=True,
+            postgresql_where=text("status = 'REQUESTED'"),
+        ),
+        Index(
+            "ix_external_evidence_source_review_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    requested_action: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="REQUESTED")
+    reason_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    reviewed_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reason_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class ServiceCatalogueVersion(VersionedMixin, Base):
     """Versioned catalogue entry for a Badban participant service."""
 
