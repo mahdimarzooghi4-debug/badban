@@ -19,6 +19,7 @@ from badban.infrastructure.persistence.models import (
     JournalEntry,
     JournalPosting,
     Participant,
+    ParticipationEpisode,
     PostExitSupportCase,
     PostExitSupportEntitlement,
     PostExitSupportFundingAllocation,
@@ -49,6 +50,8 @@ class SupportCaseCreate(BaseModel):
 
     service_catalogue_version_id: UUID
     participant_id: UUID
+    program_id: UUID
+    participation_episode_id: UUID
     exit_event_reference: str = Field(min_length=1, max_length=255)
     exit_evidence_reference: str = Field(min_length=1, max_length=500)
     exit_at: datetime
@@ -75,6 +78,8 @@ class SupportCaseView(BaseModel):
     id: UUID
     service_catalogue_version_id: UUID
     participant_id: UUID
+    program_id: UUID | None
+    participation_episode_id: UUID | None
     exit_event_reference: str
     exit_evidence_reference: str
     exit_at: datetime
@@ -202,6 +207,20 @@ async def create_support_case(
         )
     if await session.get(Participant, body.participant_id) is None:
         raise ApiError(404, "PARTICIPANT_NOT_FOUND", "Participant was not found")
+
+    episode = await session.scalar(
+        select(ParticipationEpisode).where(
+            ParticipationEpisode.id == body.participation_episode_id,
+            ParticipationEpisode.participant_id == body.participant_id,
+            ParticipationEpisode.program_id == body.program_id,
+        )
+    )
+    if episode is None:
+        raise ApiError(
+            422,
+            "PARTICIPATION_EPISODE_SCOPE_MISMATCH",
+            "The participant episode must belong to the selected program",
+        )
     idem, replay = await acquire_idempotency(
         session,
         scope="post-exit-support:case-create",
@@ -213,6 +232,8 @@ async def create_support_case(
     case = PostExitSupportCase(
         service_catalogue_version_id=service.id,
         participant_id=body.participant_id,
+        program_id=body.program_id,
+        participation_episode_id=body.participation_episode_id,
         exit_event_reference=body.exit_event_reference,
         exit_evidence_reference=body.exit_evidence_reference,
         exit_at=body.exit_at,
@@ -245,7 +266,11 @@ async def create_support_case(
         correlation_id=correlation_id,
         outcome="SUCCESS",
         evidence_reference=case.exit_evidence_reference,
-        scope={"participant_id": str(case.participant_id)},
+        scope={
+            "participant_id": str(case.participant_id),
+            "program_id": str(case.program_id),
+            "participation_episode_id": str(case.participation_episode_id),
+        },
     )
     complete_idempotency(idem, status_code=201, response_payload=view.model_dump(mode="json"))
     await session.commit()
@@ -356,6 +381,7 @@ async def create_period_entitlement(
                 JournalPosting.id.in_(body.source_posting_ids),
                 JournalPosting.account_code == "2020.FUTURE_FINANCIAL_ENTITLEMENT",
                 JournalPosting.participant_id == case.participant_id,
+                JournalPosting.program_id == case.program_id,
                 JournalPosting.currency == body.currency,
                 JournalEntry.state == "POSTED",
                 JournalEntry.posting_template_reference == "RETURN_ALLOCATION@1",
