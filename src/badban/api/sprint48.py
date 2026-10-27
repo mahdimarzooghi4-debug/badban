@@ -1,22 +1,39 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
+from badban.api.dependencies import (
+    get_correlation_id,
+    get_current_principal,
+    get_session,
+)
 from badban.api.errors import ApiError
 from badban.infrastructure.persistence.models import (
+    AssetPosition,
+    AssetType,
+    CreditProductVersion,
+    ExternalLoanMirror,
+    GuaranteeCase,
     Identity,
+    JournalEntry,
+    JournalPosting,
+    MonthlyPensionEntitlement,
     Participant,
     ParticipationEpisode,
+    PostExitSupportCase,
+    PostExitSupportEntitlement,
     Program,
     RoleGrant,
+    ServiceCatalogueVersion,
+    ValuationObservation,
 )
 from badban.security.audit import append_audit
 from badban.security.authorization import (
@@ -117,6 +134,92 @@ class SupportedPeopleView(BaseModel):
     items: list[SupportedPersonView]
     limit: int
     offset: int
+
+
+class SupportedAssetValuationView(BaseModel):
+    id: UUID
+    source_name: str
+    source_reference: str
+    source_version_reference: str | None
+    observed_at: datetime
+    freshness_status: str
+    valuation_currency: str
+    unit_price: Decimal
+    gross_market_value: Decimal
+    valid_until: datetime | None
+
+
+class SupportedAssetPositionView(BaseModel):
+    id: UUID
+    asset_code: str
+    asset_name: str
+    ownership_funding_type: str
+    quantity: Decimal
+    unit_code: str
+    lifecycle_status: str
+    valuation_observations: list[SupportedAssetValuationView]
+
+
+class SupportedGuaranteeView(BaseModel):
+    id: UUID
+    provider_id: UUID
+    state: str
+    requested_principal: Decimal
+    reserved_guarantee_amount: Decimal | None
+    issued_guarantee_amount: Decimal | None
+    current_guarantee_exposure: Decimal
+    guarantee_mode: str
+    currency: str
+    loan_state: str | None
+    outstanding_principal: Decimal | None
+    loan_currency: str | None
+    last_synced_at: datetime | None
+    reconciliation_status: str | None
+
+
+class SupportedMonthlyPensionView(BaseModel):
+    id: UUID
+    period_reference: str
+    amount: Decimal
+    currency: str
+    lifecycle_status: str
+    approved_at: datetime | None
+
+
+class SupportedPostExitEntitlementView(BaseModel):
+    id: UUID
+    period_sequence: int
+    period_reference: str
+    period_at: datetime
+    amount: Decimal
+    currency: str
+    lifecycle_status: str
+    approved_at: datetime | None
+
+
+class SupportedPostExitCaseView(BaseModel):
+    id: UUID
+    exit_at: datetime
+    support_start_at: datetime
+    duration_months: int
+    lifecycle_status: str
+    entitlements: list[SupportedPostExitEntitlementView]
+
+
+class SupportedProgramReturnView(BaseModel):
+    currency: str
+    amount: Decimal
+
+
+class SupportedFinancialCaseView(BaseModel):
+    program_id: UUID
+    participant_id: UUID
+    episode_id: UUID
+    assets: list[SupportedAssetPositionView]
+    guarantees: list[SupportedGuaranteeView]
+    monthly_pension_entitlements: list[SupportedMonthlyPensionView]
+    post_exit_support_cases: list[SupportedPostExitCaseView]
+    program_return_allocations: list[SupportedProgramReturnView]
 
 
 async def _authorize_global_governance(
@@ -271,7 +374,10 @@ async def request_supporting_institution_access(
         correlation_id=correlation_id,
         outcome="SUCCESS",
         evidence_reference=body.reason_reference,
-        scope={"program_id": str(body.program_id), "identity_id": str(body.identity_id)},
+        scope={
+            "program_id": str(body.program_id),
+            "identity_id": str(body.identity_id),
+        },
     )
     await session.commit()
     return ProgramRoleGrantView.model_validate(grant)
@@ -301,7 +407,9 @@ async def approve_supporting_institution_access(
         or grant.scope_id is None
     ):
         raise ApiError(
-            404, "SUPPORT_INSTITUTION_GRANT_NOT_FOUND", "Supporting institution grant was not found"
+            404,
+            "SUPPORT_INSTITUTION_GRANT_NOT_FOUND",
+            "Supporting institution grant was not found",
         )
     if grant.status != "REQUESTED":
         raise ApiError(
@@ -365,7 +473,9 @@ async def revoke_supporting_institution_access(
         or grant.role_code != ROLE_SUPPORT_INSTITUTION_OPERATOR
     ):
         raise ApiError(
-            404, "SUPPORT_INSTITUTION_GRANT_NOT_FOUND", "Supporting institution grant was not found"
+            404,
+            "SUPPORT_INSTITUTION_GRANT_NOT_FOUND",
+            "Supporting institution grant was not found",
         )
     if grant.status not in {"REQUESTED", "ACTIVE"}:
         raise ApiError(
@@ -538,4 +648,303 @@ async def read_program_beneficiaries(
         ],
         limit=limit,
         offset=offset,
+    )
+
+
+@institution_router.get(
+    "/programs/{program_id}/beneficiaries/{participant_id}/episodes/{episode_id}/financial-case",
+    response_model=SupportedFinancialCaseView,
+)
+async def read_program_beneficiary_financial_case(
+    program_id: UUID,
+    participant_id: UUID,
+    episode_id: UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_session),
+    correlation_id: UUID = Depends(get_correlation_id),
+) -> SupportedFinancialCaseView:
+    try:
+        await authorize(
+            session,
+            principal=principal,
+            roles={ROLE_SUPPORT_INSTITUTION_OPERATOR},
+            scope_type=SCOPE_PROGRAM,
+            scope_id=program_id,
+            allow_global=False,
+            action="SUPPORT_INSTITUTION_BENEFICIARY_FINANCIAL_CASE_READ",
+            target_type="SupportingInstitutionProgram",
+            target_id=str(program_id),
+            correlation_id=correlation_id,
+        )
+    except AuthorizationDenied as exc:
+        raise ApiError(
+            403, exc.code, "Program-scoped supporting institution access is required"
+        ) from exc
+
+    episode = await session.scalar(
+        select(ParticipationEpisode).where(
+            ParticipationEpisode.id == episode_id,
+            ParticipationEpisode.program_id == program_id,
+            ParticipationEpisode.participant_id == participant_id,
+        )
+    )
+    program = await session.get(Program, program_id)
+    if (
+        episode is None
+        or program is None
+        or program.status != "ACTIVE"
+        or program.legal_entity_id is None
+    ):
+        raise ApiError(
+            404,
+            "SUPPORTING_BENEFICIARY_NOT_FOUND",
+            "Beneficiary episode was not found in this active program",
+        )
+
+    asset_rows = (
+        await session.execute(
+            select(AssetPosition, AssetType)
+            .join(AssetType, AssetType.id == AssetPosition.asset_type_id)
+            .where(
+                AssetPosition.program_id == program_id,
+                AssetPosition.participation_episode_id == episode_id,
+            )
+            .order_by(AssetPosition.created_at.desc(), AssetPosition.id)
+            .limit(limit)
+        )
+    ).all()
+    position_ids = [position.id for position, _asset_type in asset_rows]
+    valuation_rows = []
+    if position_ids:
+        valuation_rows = (
+            await session.scalars(
+                select(ValuationObservation)
+                .where(ValuationObservation.asset_position_id.in_(position_ids))
+                .order_by(
+                    ValuationObservation.observed_at.desc(),
+                    ValuationObservation.id,
+                )
+                .limit(500)
+            )
+        ).all()
+
+    valuations_by_position: dict[UUID, list[SupportedAssetValuationView]] = {}
+    for observation in valuation_rows:
+        valuations_by_position.setdefault(observation.asset_position_id, []).append(
+            SupportedAssetValuationView(
+                id=observation.id,
+                source_name=observation.source_name,
+                source_reference=observation.source_reference,
+                source_version_reference=observation.source_version_reference,
+                observed_at=observation.observed_at,
+                freshness_status=observation.freshness_status,
+                valuation_currency=observation.valuation_currency,
+                unit_price=observation.unit_price,
+                gross_market_value=observation.gross_market_value,
+                valid_until=observation.valid_until,
+            )
+        )
+
+    guarantee_rows = (
+        await session.execute(
+            select(GuaranteeCase, CreditProductVersion, ExternalLoanMirror)
+            .join(
+                ParticipationEpisode,
+                ParticipationEpisode.id == GuaranteeCase.participation_episode_id,
+            )
+            .join(
+                CreditProductVersion,
+                CreditProductVersion.id == GuaranteeCase.credit_product_version_id,
+            )
+            .outerjoin(
+                ExternalLoanMirror,
+                (ExternalLoanMirror.id == GuaranteeCase.external_loan_mirror_id)
+                & (ExternalLoanMirror.provider_id == GuaranteeCase.provider_id),
+            )
+            .where(
+                ParticipationEpisode.id == episode_id,
+                ParticipationEpisode.program_id == program_id,
+                ParticipationEpisode.participant_id == participant_id,
+                GuaranteeCase.participation_episode_id == episode_id,
+                CreditProductVersion.provider_id == GuaranteeCase.provider_id,
+            )
+            .order_by(GuaranteeCase.created_at.desc(), GuaranteeCase.id)
+            .limit(limit)
+        )
+    ).all()
+
+    monthly_rows = (
+        await session.scalars(
+            select(MonthlyPensionEntitlement)
+            .join(
+                ServiceCatalogueVersion,
+                ServiceCatalogueVersion.id
+                == MonthlyPensionEntitlement.service_catalogue_version_id,
+            )
+            .where(
+                MonthlyPensionEntitlement.participant_id == participant_id,
+                MonthlyPensionEntitlement.program_id == program_id,
+                MonthlyPensionEntitlement.participation_episode_id == episode_id,
+                ServiceCatalogueVersion.service_code == "MONTHLY_PENSION",
+            )
+            .order_by(
+                MonthlyPensionEntitlement.period_reference,
+                MonthlyPensionEntitlement.id,
+            )
+            .limit(limit)
+        )
+    ).all()
+
+    post_exit_cases = (
+        await session.scalars(
+            select(PostExitSupportCase)
+            .join(
+                ServiceCatalogueVersion,
+                ServiceCatalogueVersion.id == PostExitSupportCase.service_catalogue_version_id,
+            )
+            .where(
+                PostExitSupportCase.participant_id == participant_id,
+                PostExitSupportCase.program_id == program_id,
+                PostExitSupportCase.participation_episode_id == episode_id,
+                ServiceCatalogueVersion.service_code == "POST_EXIT_SUPPORT",
+            )
+            .order_by(PostExitSupportCase.created_at.desc(), PostExitSupportCase.id)
+            .limit(limit)
+        )
+    ).all()
+    case_ids = [support_case.id for support_case in post_exit_cases]
+    post_exit_entitlements = []
+    if case_ids:
+        post_exit_entitlements = (
+            await session.scalars(
+                select(PostExitSupportEntitlement)
+                .where(PostExitSupportEntitlement.support_case_id.in_(case_ids))
+                .order_by(
+                    PostExitSupportEntitlement.period_sequence,
+                    PostExitSupportEntitlement.id,
+                )
+            )
+        ).all()
+    entitlements_by_case: dict[UUID, list[SupportedPostExitEntitlementView]] = {}
+    for entitlement in post_exit_entitlements:
+        entitlements_by_case.setdefault(entitlement.support_case_id, []).append(
+            SupportedPostExitEntitlementView(
+                id=entitlement.id,
+                period_sequence=entitlement.period_sequence,
+                period_reference=entitlement.period_reference,
+                period_at=entitlement.period_at,
+                amount=entitlement.amount,
+                currency=entitlement.currency,
+                lifecycle_status=entitlement.lifecycle_status,
+                approved_at=entitlement.approved_at,
+            )
+        )
+
+    return_rows = (
+        await session.execute(
+            select(
+                JournalPosting.currency,
+                func.sum(JournalPosting.credit_amount - JournalPosting.debit_amount),
+            )
+            .join(JournalEntry, JournalPosting.journal_entry_id == JournalEntry.id)
+            .where(
+                JournalPosting.participant_id == participant_id,
+                JournalPosting.program_id == program_id,
+                JournalPosting.account_code.in_(
+                    {"2010.LIVELIHOOD_PAYABLE", "2020.FUTURE_FINANCIAL_ENTITLEMENT"}
+                ),
+                JournalEntry.state == "POSTED",
+                JournalEntry.posting_template_reference == "RETURN_ALLOCATION@1",
+            )
+            .group_by(JournalPosting.currency)
+            .order_by(JournalPosting.currency)
+        )
+    ).all()
+
+    append_audit(
+        session,
+        aggregate_type="SupportingInstitutionBeneficiaryFinancialCase",
+        aggregate_id=str(episode_id),
+        aggregate_version=None,
+        action="SUPPORT_INSTITUTION_BENEFICIARY_FINANCIAL_CASE_READ",
+        actor_type=principal.identity_type,
+        actor_id=principal.identity_id,
+        correlation_id=correlation_id,
+        outcome="SUCCESS",
+        scope={
+            "program_id": str(program_id),
+            "participant_id": str(participant_id),
+            "episode_id": str(episode_id),
+            "asset_count": len(asset_rows),
+            "guarantee_count": len(guarantee_rows),
+            "monthly_pension_count": len(monthly_rows),
+            "post_exit_case_count": len(post_exit_cases),
+            "program_return_currency_count": len(return_rows),
+        },
+    )
+    await session.commit()
+
+    return SupportedFinancialCaseView(
+        program_id=program_id,
+        participant_id=participant_id,
+        episode_id=episode_id,
+        assets=[
+            SupportedAssetPositionView(
+                id=position.id,
+                asset_code=asset_type.asset_code,
+                asset_name=asset_type.name,
+                ownership_funding_type=position.ownership_funding_type,
+                quantity=position.quantity,
+                unit_code=position.unit_code,
+                lifecycle_status=position.lifecycle_status,
+                valuation_observations=valuations_by_position.get(position.id, []),
+            )
+            for position, asset_type in asset_rows
+        ],
+        guarantees=[
+            SupportedGuaranteeView(
+                id=case.id,
+                provider_id=case.provider_id,
+                state=case.state,
+                requested_principal=case.requested_principal,
+                reserved_guarantee_amount=case.reserved_guarantee_amount,
+                issued_guarantee_amount=case.issued_guarantee_amount,
+                current_guarantee_exposure=case.current_guarantee_exposure,
+                guarantee_mode=case.guarantee_mode,
+                currency=product.currency,
+                loan_state=loan.state if loan is not None else None,
+                outstanding_principal=(loan.outstanding_principal if loan is not None else None),
+                loan_currency=loan.currency if loan is not None else None,
+                last_synced_at=loan.last_synced_at if loan is not None else None,
+                reconciliation_status=(loan.reconciliation_status if loan is not None else None),
+            )
+            for case, product, loan in guarantee_rows
+        ],
+        monthly_pension_entitlements=[
+            SupportedMonthlyPensionView(
+                id=entitlement.id,
+                period_reference=entitlement.period_reference,
+                amount=entitlement.amount,
+                currency=entitlement.currency,
+                lifecycle_status=entitlement.lifecycle_status,
+                approved_at=entitlement.approved_at,
+            )
+            for entitlement in monthly_rows
+        ],
+        post_exit_support_cases=[
+            SupportedPostExitCaseView(
+                id=support_case.id,
+                exit_at=support_case.exit_at,
+                support_start_at=support_case.support_start_at,
+                duration_months=support_case.duration_months,
+                lifecycle_status=support_case.lifecycle_status,
+                entitlements=entitlements_by_case.get(support_case.id, []),
+            )
+            for support_case in post_exit_cases
+        ],
+        program_return_allocations=[
+            SupportedProgramReturnView(currency=currency, amount=amount)
+            for currency, amount in return_rows
+        ],
     )
