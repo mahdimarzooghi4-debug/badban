@@ -94,6 +94,7 @@ async def read_admin_workspace_index(
                     "MANAGE_SERVICE_ROLE_GRANTS",
                     "MANAGE_SUPPORT_INSTITUTION_GRANTS",
                     "MANAGE_LENDER_GRANTS",
+                    "MANAGE_EXTERNAL_EVIDENCE_SOURCES",
                 ],
             )
         )
