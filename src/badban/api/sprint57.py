@@ -127,7 +127,7 @@ async def submit_applicant_service_request(
     correlation_id: UUID = Depends(get_correlation_id),
     idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
 ) -> ApplicantServiceRequestView:
-    # Ensure the self profile from the verified OIDC claim; never accept a caller-supplied participant ID.
+    # Resolve the profile from the verified OIDC claim; never accept a caller-supplied ID.
     profile = await ensure_individual_profile(
         principal=principal,
         session=session,
