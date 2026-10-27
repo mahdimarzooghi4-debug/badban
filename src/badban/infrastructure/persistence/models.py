@@ -10,12 +10,14 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -223,6 +225,12 @@ class ParticipationEpisode(VersionedMixin, Base):
             "participant_id",
             "program_id",
             "status",
+        ),
+        UniqueConstraint(
+            "id",
+            "participant_id",
+            "program_id",
+            name="uq_participation_episode_identity_program",
         ),
     )
 
@@ -1734,6 +1742,639 @@ class ExternalEvidenceSource(VersionedMixin, Base):
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ExternalEvidenceSourceLifecycleReview(Base):
+    __tablename__ = "external_evidence_source_lifecycle_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "requested_action IN ('ACTIVATE','SUSPEND')",
+            name="ck_external_evidence_source_review_action",
+        ),
+        CheckConstraint(
+            "status IN ('REQUESTED','APPROVED','REJECTED')",
+            name="ck_external_evidence_source_review_status",
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL "
+            "AND review_reason_reference IS NULL) OR "
+            "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
+            "AND reviewed_at IS NOT NULL AND review_reason_reference IS NOT NULL)",
+            name="ck_external_evidence_source_review_state",
+        ),
+        CheckConstraint(
+            "reviewed_by IS NULL OR reviewed_by <> requested_by",
+            name="ck_external_evidence_source_review_maker_checker",
+        ),
+        ForeignKeyConstraint(
+            ["source_id"],
+            ["external_evidence_sources.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_source_lifecycle_source",
+        ),
+        ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["reviewed_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "uq_external_evidence_source_review_pending",
+            "source_id",
+            unique=True,
+            postgresql_where=text("status = 'REQUESTED'"),
+        ),
+        Index(
+            "ix_external_evidence_source_review_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    requested_action: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="REQUESTED")
+    reason_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    reviewed_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reason_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ExternalEvidenceAcquisition(Base):
+    __tablename__ = "external_evidence_acquisitions"
+    __table_args__ = (
+        CheckConstraint(
+            "evidence_purpose IN ('VALUATION','RESTRICTION','ENCUMBRANCE')",
+            name="ck_external_evidence_acquisition_purpose",
+        ),
+        CheckConstraint(
+            "status IN ('COMPLETED')",
+            name="ck_external_evidence_acquisition_status",
+        ),
+        CheckConstraint(
+            "source_count >= 0",
+            name="ck_external_evidence_acquisition_source_count",
+        ),
+        CheckConstraint(
+            "completed_at >= requested_at",
+            name="ck_external_evidence_acquisition_time_order",
+        ),
+        ForeignKeyConstraint(
+            ["asset_position_id"],
+            ["asset_positions.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_acquisition_position",
+        ),
+        ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "ix_external_evidence_acquisitions_position_time",
+            "asset_position_id",
+            "requested_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    asset_position_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evidence_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ExternalEvidenceObservation(Base):
+    __tablename__ = "external_evidence_observations"
+    __table_args__ = (
+        UniqueConstraint(
+            "acquisition_id",
+            "source_id",
+            name="uq_external_evidence_observation_acquisition_source",
+        ),
+        CheckConstraint(
+            "status IN ('VALID','UNAVAILABLE','INVALID')",
+            name="ck_external_evidence_observation_status",
+        ),
+        CheckConstraint(
+            "error_code IS NULL OR error_code IN "
+            "('SOURCE_UNAVAILABLE','SOURCE_TIMEOUT','SOURCE_TRANSPORT_ERROR',"
+            "'SOURCE_CONTRACT_INVALID')",
+            name="ck_external_evidence_observation_error",
+        ),
+        CheckConstraint(
+            "(status = 'VALID' AND error_code IS NULL) OR "
+            "(status IN ('UNAVAILABLE','INVALID') AND error_code IS NOT NULL)",
+            name="ck_external_evidence_observation_status_error",
+        ),
+        CheckConstraint(
+            "source_value IS NULL OR source_value > 0",
+            name="ck_external_evidence_observation_positive_value",
+        ),
+        CheckConstraint(
+            "restriction_state IS NULL OR restriction_state IN ('CLEAR','BLOCKED','UNKNOWN')",
+            name="ck_external_evidence_observation_restriction",
+        ),
+        CheckConstraint(
+            "encumbrance_state IS NULL OR encumbrance_state IN ('CLEAR','BLOCKED','UNKNOWN')",
+            name="ck_external_evidence_observation_encumbrance",
+        ),
+        CheckConstraint(
+            "received_at >= observed_at",
+            name="ck_external_evidence_observation_time_order",
+        ),
+        CheckConstraint(
+            "status = 'VALID' OR "
+            "(evidence_reference IS NULL AND source_value IS NULL AND currency IS NULL "
+            "AND restriction_state IS NULL AND encumbrance_state IS NULL)",
+            name="ck_external_evidence_observation_failure_has_no_facts",
+        ),
+        ForeignKeyConstraint(
+            ["acquisition_id"],
+            ["external_evidence_acquisitions.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_observation_acquisition",
+        ),
+        ForeignKeyConstraint(
+            ["source_id"],
+            ["external_evidence_sources.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_observation_source",
+        ),
+        Index(
+            "ix_external_evidence_observations_source_time",
+            "source_id",
+            "received_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    acquisition_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    contract_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    source_value: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    restriction_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    encumbrance_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ApplicantServiceRequest(Base):
+    __tablename__ = "applicant_service_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "service_code IN ('LOAN_GUARANTEE','MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_applicant_service_request_service",
+        ),
+        CheckConstraint(
+            "status IN ('RECEIVED')",
+            name="ck_applicant_service_request_status",
+        ),
+        ForeignKeyConstraint(
+            ["participant_id"],
+            ["participants.id"],
+            ondelete="RESTRICT",
+            name="fk_applicant_service_request_participant",
+        ),
+        ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "ix_applicant_service_requests_participant_time",
+            "participant_id",
+            "submitted_at",
+        ),
+        Index(
+            "ix_applicant_service_requests_service_time",
+            "service_code",
+            "submitted_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    participant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    service_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="RECEIVED")
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ServiceCatalogueVersion(VersionedMixin, Base):
+    """Versioned catalogue entry for a Badban participant service."""
+
+    __tablename__ = "service_catalogue_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "service_code",
+            "version_number",
+            name="uq_service_catalogue_code_version",
+        ),
+        CheckConstraint(
+            "service_code IN ('LOAN_GUARANTEE','MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_service_catalogue_service_code",
+        ),
+        CheckConstraint(
+            "version_number > 0",
+            name="ck_service_catalogue_version_positive",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','RETIRED')",
+            name="ck_service_catalogue_status",
+        ),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="ck_service_catalogue_effective_window",
+        ),
+        CheckConstraint(
+            "max_duration_months IS NULL OR "
+            "(max_duration_months > 0 AND max_duration_months <= 36)",
+            name="ck_service_catalogue_duration_bound",
+        ),
+        CheckConstraint(
+            "(service_code = 'POST_EXIT_SUPPORT' AND max_duration_months IS NOT NULL) OR "
+            "(service_code <> 'POST_EXIT_SUPPORT' AND max_duration_months IS NULL)",
+            name="ck_service_catalogue_duration_service",
+        ),
+        Index(
+            "ix_service_catalogue_visibility",
+            "lifecycle_status",
+            "effective_from",
+            "effective_to",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    service_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(2000), nullable=False, default="")
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    policy_definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    max_duration_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class LegacyBenefitLineageReview(Base):
+    __tablename__ = "legacy_benefit_lineage_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "benefit_type IN ('MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_legacy_benefit_lineage_type",
+        ),
+        CheckConstraint(
+            "status IN ('REQUESTED','APPROVED','REJECTED')",
+            name="ck_legacy_benefit_lineage_status",
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
+            "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
+            "AND reviewed_at IS NOT NULL AND review_reason_reference IS NOT NULL)",
+            name="ck_legacy_benefit_lineage_review_state",
+        ),
+        CheckConstraint(
+            "reviewed_by IS NULL OR reviewed_by <> requested_by",
+            name="ck_legacy_benefit_lineage_maker_checker",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_legacy_benefit_lineage_episode_program",
+        ),
+        Index(
+            "uq_legacy_benefit_lineage_pending_subject",
+            "benefit_type",
+            "benefit_record_id",
+            unique=True,
+            postgresql_where=text("status = 'REQUESTED'"),
+        ),
+        Index(
+            "ix_legacy_benefit_lineage_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    benefit_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    benefit_record_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    program_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    participation_episode_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    reason_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="REQUESTED")
+    requested_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    reviewed_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reason_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class MonthlyPensionEntitlement(VersionedMixin, Base):
+    __tablename__ = "monthly_pension_entitlements"
+    __table_args__ = (
+        UniqueConstraint(
+            "participation_episode_id",
+            "period_reference",
+            name="uq_monthly_pension_episode_period",
+        ),
+        CheckConstraint(
+            "(participation_episode_id IS NULL AND program_id IS NULL) OR "
+            "(participation_episode_id IS NOT NULL AND program_id IS NOT NULL)",
+            name="ck_monthly_pension_program_episode_pair",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_monthly_pension_episode_program",
+        ),
+        CheckConstraint("amount > 0", name="ck_monthly_pension_amount_positive"),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','CANCELLED')",
+            name="ck_monthly_pension_status",
+        ),
+        CheckConstraint(
+            "approved_by IS NULL OR approved_by <> created_by",
+            name="ck_monthly_pension_maker_checker",
+        ),
+        Index(
+            "ix_monthly_pension_participant_status",
+            "participant_id",
+            "lifecycle_status",
+        ),
+        Index(
+            "ix_monthly_pension_program_episode_status",
+            "program_id",
+            "participation_episode_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    service_catalogue_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("service_catalogue_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    participation_episode_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    program_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    calculation_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    eligibility_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class MonthlyPensionFundingAllocation(Base):
+    __tablename__ = "monthly_pension_funding_allocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "entitlement_id",
+            "source_journal_posting_id",
+            name="uq_monthly_pension_entitlement_source",
+        ),
+        CheckConstraint("amount > 0", name="ck_monthly_pension_allocation_amount_positive"),
+        Index(
+            "ix_monthly_pension_funding_source",
+            "source_journal_posting_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    entitlement_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("monthly_pension_entitlements.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_journal_posting_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("journal_postings.id", ondelete="RESTRICT"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class PostExitSupportCase(VersionedMixin, Base):
+    __tablename__ = "post_exit_support_cases"
+    __table_args__ = (
+        UniqueConstraint(
+            "participation_episode_id",
+            "exit_event_reference",
+            name="uq_post_exit_episode_exit_event",
+        ),
+        CheckConstraint(
+            "(participation_episode_id IS NULL AND program_id IS NULL) OR "
+            "(participation_episode_id IS NOT NULL AND program_id IS NOT NULL)",
+            name="ck_post_exit_program_episode_pair",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_post_exit_episode_program",
+        ),
+        CheckConstraint(
+            "duration_months > 0 AND duration_months <= 36",
+            name="ck_post_exit_duration_months",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','ACTIVE','SUSPENDED','COMPLETED','CANCELLED')",
+            name="ck_post_exit_case_status",
+        ),
+        CheckConstraint(
+            "activated_by IS NULL OR activated_by <> created_by",
+            name="ck_post_exit_case_maker_checker",
+        ),
+        Index(
+            "ix_post_exit_case_participant_status",
+            "participant_id",
+            "lifecycle_status",
+        ),
+        Index(
+            "ix_post_exit_case_program_episode_status",
+            "program_id",
+            "participation_episode_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    service_catalogue_version_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("service_catalogue_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    participation_episode_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    program_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    exit_event_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    exit_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    exit_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    support_start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    duration_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    eligibility_decision_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    activated_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class PostExitSupportEntitlement(VersionedMixin, Base):
+    __tablename__ = "post_exit_support_entitlements"
+    __table_args__ = (
+        UniqueConstraint(
+            "support_case_id",
+            "period_sequence",
+            name="uq_post_exit_case_period_sequence",
+        ),
+        CheckConstraint(
+            "period_sequence > 0 AND period_sequence <= 36",
+            name="ck_post_exit_period_sequence",
+        ),
+        CheckConstraint("amount > 0", name="ck_post_exit_entitlement_amount_positive"),
+        CheckConstraint(
+            "lifecycle_status IN ('DRAFT','APPROVED','CANCELLED')",
+            name="ck_post_exit_entitlement_status",
+        ),
+        CheckConstraint(
+            "approved_by IS NULL OR approved_by <> created_by",
+            name="ck_post_exit_entitlement_maker_checker",
+        ),
+        Index(
+            "ix_post_exit_entitlement_case_status",
+            "support_case_id",
+            "lifecycle_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    support_case_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("post_exit_support_cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    period_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_reference: Mapped[str] = mapped_column(String(120), nullable=False)
+    period_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    policy_version_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    calculation_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    eligibility_evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class PostExitSupportFundingAllocation(Base):
+    __tablename__ = "post_exit_support_funding_allocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "entitlement_id",
+            "source_journal_posting_id",
+            name="uq_post_exit_entitlement_source",
+        ),
+        CheckConstraint("amount > 0", name="ck_post_exit_allocation_amount_positive"),
+        Index("ix_post_exit_funding_source", "source_journal_posting_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    entitlement_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("post_exit_support_entitlements.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_journal_posting_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("journal_postings.id", ondelete="RESTRICT"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
