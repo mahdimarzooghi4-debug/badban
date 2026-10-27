@@ -228,3 +228,11 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Authenticated individuals can submit and track a request for any of the three services after profile resolution.
 - Service staff can read requests only through their role-scoped service queue.
 - Requests remain RECEIVED; they do not imply eligibility, program enrollment, entitlement, guarantee, or payment.
+
+
+## Sprint 58
+
+- [Sprint 58 — Automatic Individual Profile Provisioning](./58-sprint-58-auto-individual-profile-on-authentication.md) — **Code in progress; Decision 0076 completes the behavior authorized in Decision 0065**
+- An active participant identity with a verified national-ID claim now resolves or creates the exact matching individual profile during authenticated request handling.
+- Existing institution-introduced profiles are reused; creation is race-safe and audited.
+- Authentication does not enroll the individual or create any service or financial state.
