@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.api.errors import ApiError
-from badban.infrastructure.persistence.models import Identity
+from badban.infrastructure.persistence.models import Identity, Participant
 from badban.security.audit import append_audit
 from badban.security.authorization import Principal
 from badban.security.oidc import AuthenticationError
@@ -75,6 +75,41 @@ async def get_current_principal(
             await session.commit()
     if identity is None or identity.status != "ACTIVE":
         raise ApiError(403, "AUTHORIZATION_DENIED", "Identity is not active in Badban")
+
+    if identity.identity_type == "PARTICIPANT" and national_id and national_id.strip():
+        participant = await session.scalar(
+            select(Participant).where(Participant.external_reference == national_id)
+        )
+        if participant is None:
+            participant = await session.scalar(
+                insert(Participant)
+                .values(external_reference=national_id, lifecycle_status="ACTIVE")
+                .on_conflict_do_nothing(index_elements=[Participant.external_reference])
+                .returning(Participant)
+            )
+            if participant is None:
+                participant = await session.scalar(
+                    select(Participant).where(Participant.external_reference == national_id)
+                )
+            if participant is None:
+                raise ApiError(
+                    503,
+                    "PARTICIPANT_PROFILE_UNAVAILABLE",
+                    "Individual profile could not be resolved",
+                )
+            append_audit(
+                session,
+                aggregate_type="Participant",
+                aggregate_id=str(participant.id),
+                aggregate_version=None,
+                action="INDIVIDUAL_PROFILE_CREATE",
+                actor_type=identity.identity_type,
+                actor_id=identity.id,
+                correlation_id=UUID(request.state.correlation_id),
+                outcome="SUCCESS",
+                scope={"creation_source": "VERIFIED_OIDC_NATIONAL_ID"},
+            )
+            await session.commit()
 
     return Principal(
         identity_id=identity.id,
