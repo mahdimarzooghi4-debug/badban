@@ -107,6 +107,7 @@ class EvidenceSourceDefinition:
     contract_version: str
     schema_version: str
     lifecycle_status: Literal["DRAFT", "ACTIVE", "SUSPENDED"]
+    configuration_reference: str | None = None
 
     @classmethod
     def from_record(cls, source: ExternalEvidenceSource) -> EvidenceSourceDefinition:
@@ -119,6 +120,7 @@ class EvidenceSourceDefinition:
             contract_version=source.contract_version,
             schema_version=source.schema_version,
             lifecycle_status=source.lifecycle_status,  # type: ignore[arg-type]
+            configuration_reference=source.configuration_reference,
         )
 
 

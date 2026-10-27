@@ -72,7 +72,10 @@ async def read_admin_workspace_index(
                     scope_id=scope_id,
                     service_code=service_code,
                     role_codes=active_roles,
-                    capabilities=["READ_WORK_QUEUE"],
+                    capabilities=[
+                        "READ_WORK_QUEUE",
+                        "READ_APPLICANT_SERVICE_REQUESTS",
+                    ],
                 )
             )
 
@@ -94,6 +97,7 @@ async def read_admin_workspace_index(
                     "MANAGE_SERVICE_ROLE_GRANTS",
                     "MANAGE_SUPPORT_INSTITUTION_GRANTS",
                     "MANAGE_LENDER_GRANTS",
+                    "MANAGE_EXTERNAL_EVIDENCE_SOURCES",
                 ],
             )
         )
