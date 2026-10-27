@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -1746,6 +1747,235 @@ class ExternalEvidenceSource(VersionedMixin, Base):
     )
 
 
+class ExternalEvidenceSourceLifecycleReview(Base):
+    __tablename__ = "external_evidence_source_lifecycle_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "requested_action IN ('ACTIVATE','SUSPEND')",
+            name="ck_external_evidence_source_review_action",
+        ),
+        CheckConstraint(
+            "status IN ('REQUESTED','APPROVED','REJECTED')",
+            name="ck_external_evidence_source_review_status",
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL "
+            "AND review_reason_reference IS NULL) OR "
+            "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
+            "AND reviewed_at IS NOT NULL AND review_reason_reference IS NOT NULL)",
+            name="ck_external_evidence_source_review_state",
+        ),
+        CheckConstraint(
+            "reviewed_by IS NULL OR reviewed_by <> requested_by",
+            name="ck_external_evidence_source_review_maker_checker",
+        ),
+        ForeignKeyConstraint(
+            ["source_id"],
+            ["external_evidence_sources.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_source_lifecycle_source",
+        ),
+        ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["reviewed_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "uq_external_evidence_source_review_pending",
+            "source_id",
+            unique=True,
+            postgresql_where=text("status = 'REQUESTED'"),
+        ),
+        Index(
+            "ix_external_evidence_source_review_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    requested_action: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="REQUESTED")
+    reason_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    reviewed_by: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reason_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ExternalEvidenceAcquisition(Base):
+    __tablename__ = "external_evidence_acquisitions"
+    __table_args__ = (
+        CheckConstraint(
+            "evidence_purpose IN ('VALUATION','RESTRICTION','ENCUMBRANCE')",
+            name="ck_external_evidence_acquisition_purpose",
+        ),
+        CheckConstraint(
+            "status IN ('COMPLETED')",
+            name="ck_external_evidence_acquisition_status",
+        ),
+        CheckConstraint(
+            "source_count >= 0",
+            name="ck_external_evidence_acquisition_source_count",
+        ),
+        CheckConstraint(
+            "completed_at >= requested_at",
+            name="ck_external_evidence_acquisition_time_order",
+        ),
+        ForeignKeyConstraint(
+            ["asset_position_id"],
+            ["asset_positions.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_acquisition_position",
+        ),
+        ForeignKeyConstraint(["requested_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "ix_external_evidence_acquisitions_position_time",
+            "asset_position_id",
+            "requested_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    asset_position_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evidence_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ExternalEvidenceObservation(Base):
+    __tablename__ = "external_evidence_observations"
+    __table_args__ = (
+        UniqueConstraint(
+            "acquisition_id",
+            "source_id",
+            name="uq_external_evidence_observation_acquisition_source",
+        ),
+        CheckConstraint(
+            "status IN ('VALID','UNAVAILABLE','INVALID')",
+            name="ck_external_evidence_observation_status",
+        ),
+        CheckConstraint(
+            "error_code IS NULL OR error_code IN "
+            "('SOURCE_UNAVAILABLE','SOURCE_TIMEOUT','SOURCE_TRANSPORT_ERROR',"
+            "'SOURCE_CONTRACT_INVALID')",
+            name="ck_external_evidence_observation_error",
+        ),
+        CheckConstraint(
+            "(status = 'VALID' AND error_code IS NULL) OR "
+            "(status IN ('UNAVAILABLE','INVALID') AND error_code IS NOT NULL)",
+            name="ck_external_evidence_observation_status_error",
+        ),
+        CheckConstraint(
+            "source_value IS NULL OR source_value > 0",
+            name="ck_external_evidence_observation_positive_value",
+        ),
+        CheckConstraint(
+            "restriction_state IS NULL OR restriction_state IN ('CLEAR','BLOCKED','UNKNOWN')",
+            name="ck_external_evidence_observation_restriction",
+        ),
+        CheckConstraint(
+            "encumbrance_state IS NULL OR encumbrance_state IN ('CLEAR','BLOCKED','UNKNOWN')",
+            name="ck_external_evidence_observation_encumbrance",
+        ),
+        CheckConstraint(
+            "received_at >= observed_at",
+            name="ck_external_evidence_observation_time_order",
+        ),
+        CheckConstraint(
+            "status = 'VALID' OR "
+            "(evidence_reference IS NULL AND source_value IS NULL AND currency IS NULL "
+            "AND restriction_state IS NULL AND encumbrance_state IS NULL)",
+            name="ck_external_evidence_observation_failure_has_no_facts",
+        ),
+        ForeignKeyConstraint(
+            ["acquisition_id"],
+            ["external_evidence_acquisitions.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_observation_acquisition",
+        ),
+        ForeignKeyConstraint(
+            ["source_id"],
+            ["external_evidence_sources.id"],
+            ondelete="RESTRICT",
+            name="fk_external_evidence_observation_source",
+        ),
+        Index(
+            "ix_external_evidence_observations_source_time",
+            "source_id",
+            "received_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    acquisition_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    contract_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    source_value: Mapped[Decimal | None] = mapped_column(Numeric(38, 18), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    restriction_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    encumbrance_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ApplicantServiceRequest(Base):
+    __tablename__ = "applicant_service_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "service_code IN ('LOAN_GUARANTEE','MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_applicant_service_request_service",
+        ),
+        CheckConstraint(
+            "status IN ('RECEIVED')",
+            name="ck_applicant_service_request_status",
+        ),
+        ForeignKeyConstraint(
+            ["participant_id"],
+            ["participants.id"],
+            ondelete="RESTRICT",
+            name="fk_applicant_service_request_participant",
+        ),
+        ForeignKeyConstraint(["created_by"], ["identities.id"], ondelete="RESTRICT"),
+        Index(
+            "ix_applicant_service_requests_participant_time",
+            "participant_id",
+            "submitted_at",
+        ),
+        Index(
+            "ix_applicant_service_requests_service_time",
+            "service_code",
+            "submitted_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    participant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    service_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="RECEIVED")
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class ServiceCatalogueVersion(VersionedMixin, Base):
     """Versioned catalogue entry for a Badban participant service."""
 
@@ -1804,6 +2034,75 @@ class ServiceCatalogueVersion(VersionedMixin, Base):
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class LegacyBenefitLineageReview(Base):
+    __tablename__ = "legacy_benefit_lineage_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "benefit_type IN ('MONTHLY_PENSION','POST_EXIT_SUPPORT')",
+            name="ck_legacy_benefit_lineage_type",
+        ),
+        CheckConstraint(
+            "status IN ('REQUESTED','APPROVED','REJECTED')",
+            name="ck_legacy_benefit_lineage_status",
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND reviewed_by IS NULL AND reviewed_at IS NULL) OR "
+            "(status IN ('APPROVED','REJECTED') AND reviewed_by IS NOT NULL "
+            "AND reviewed_at IS NOT NULL AND review_reason_reference IS NOT NULL)",
+            name="ck_legacy_benefit_lineage_review_state",
+        ),
+        CheckConstraint(
+            "reviewed_by IS NULL OR reviewed_by <> requested_by",
+            name="ck_legacy_benefit_lineage_maker_checker",
+        ),
+        ForeignKeyConstraint(
+            ["participation_episode_id", "participant_id", "program_id"],
+            [
+                "participation_episodes.id",
+                "participation_episodes.participant_id",
+                "participation_episodes.program_id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_legacy_benefit_lineage_episode_program",
+        ),
+        Index(
+            "uq_legacy_benefit_lineage_pending_subject",
+            "benefit_type",
+            "benefit_record_id",
+            unique=True,
+            postgresql_where=text("status = 'REQUESTED'"),
+        ),
+        Index(
+            "ix_legacy_benefit_lineage_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    benefit_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    benefit_record_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    participant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("participants.id", ondelete="RESTRICT"), nullable=False
+    )
+    program_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    participation_episode_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    evidence_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    reason_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="REQUESTED")
+    requested_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=False
+    )
+    reviewed_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("identities.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reason_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
