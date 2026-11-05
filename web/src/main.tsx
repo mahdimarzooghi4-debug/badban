@@ -164,40 +164,90 @@ function Individual({ token }: { token: string }) {
     } finally { setBusy(false); }
   }
 
-  return <div className="workspace-body">
-    <div className="welcome"><h2>پرونده مالی شما، شفاف و یکپارچه</h2>
-      <p>مبالغ و وضعیت‌ها فقط از سرویس بادبان دریافت می‌شوند.</p></div>
-    <Panel title="خدمات بادبان">
+  const [tab, setTab] = useState<"home" | "financial" | "services" | "requests" | "account">("home");
+  const tabs = [
+    { id: "home", name: "خانه", icon: "⌂" },
+    { id: "financial", name: "مالی", icon: "▣" },
+    { id: "services", name: "خدمات", icon: "▦" },
+    { id: "requests", name: "درخواست‌ها", icon: "▤" },
+    { id: "account", name: "حساب", icon: "♙" },
+  ] as const;
+
+  const requestRows = (data: { items: ServiceRequest[] }) => {
+    const rows = items ?? data.items;
+    return rows.length ? <div className="rows">{rows.map(r =>
+      <div className="data-row" key={r.id}>
+        <strong>{services.find(s => s.code === r.service_code)?.title ?? r.service_code}</strong>
+        <span>دریافت‌شده</span>
+        <small>{new Date(r.submitted_at).toLocaleDateString("fa-IR")}</small>
+      </div>)}</div> : <Empty>هنوز درخواستی ثبت نشده است.</Empty>;
+  };
+
+  return <div className="workspace-body individual-screen">
+    {tab === "home" && <>
+      <div className="welcome"><h2>پرونده مالی شما، شفاف و یکپارچه</h2>
+        <p>خدمات، سوابق درخواست و پرونده مالی در یک نگاه</p>
+        <button className="welcome-link" onClick={() => setTab("financial")} type="button">مشاهده پرونده مالی</button>
+      </div>
+      <Panel title="خدمات بادبان"><div className="service-grid">
+        {services.map(s => <button type="button" className="service-card" key={s.code}
+          onClick={() => setTab("services")}><span className="service-icon">{s.symbol}</span>
+          <h3>{s.title}</h3><p>{s.detail}</p><span className="service-more">مشاهده خدمات ‹</span></button>)}
+      </div></Panel>
+      <Panel title="پرونده مالی من"><button className="finance-shortcut" type="button" onClick={() => setTab("financial")}>
+        <span className="shortcut-icon">▣</span><span><strong>مشاهده سوابق و وضعیت مالی</strong>
+          <small>اطلاعات دریافت‌شده از بک‌اند بادبان</small></span><span aria-hidden="true">‹</span>
+      </button></Panel>
+      <Panel title="آخرین درخواست‌ها"><Remote state={requestState} render={requestRows} /></Panel>
+    </>}
+
+    {tab === "services" && <Panel title="خدمات بادبان">
       <div className="service-grid">{services.map(service => <article className="service-card" key={service.code}>
         <span className="service-icon">{service.symbol}</span><h3>{service.title}</h3><p>{service.detail}</p>
         <Button onClick={() => void submit(service.code)} disabled={busy}>ثبت درخواست</Button>
       </article>)}</div>
       {status && <p className="notice" role="status">{status}</p>}
-    </Panel>
-    <Panel title="درخواست‌های من">
-      <Remote state={requestState} render={data => {
-        const rows = items ?? data.items;
-        return rows.length ? <div className="rows">{rows.map(r =>
-          <div className="data-row" key={r.id}><strong>{services.find(s => s.code === r.service_code)?.title ?? r.service_code}</strong>
-            <span>دریافت‌شده</span><small>{new Date(r.submitted_at).toLocaleDateString("fa-IR")}</small></div>)}</div>
-          : <Empty>هنوز درخواستی ثبت نشده است.</Empty>;
-      }} />
-    </Panel>
-    <Panel title="پرونده مالی"><Remote state={financial} render={data => <>
-      <div className="metric-grid">
-        <div className="metric"><span>ضمانت‌های ثبت‌شده</span><strong>{data.guarantee_cases.length.toLocaleString("fa-IR")}</strong></div>
-        <div className="metric"><span>مستمری‌های ثبت‌شده</span><strong>{data.monthly_entitlements.length.toLocaleString("fa-IR")}</strong></div>
-        <div className="metric"><span>پرونده‌های پس از خروج</span><strong>{data.post_exit_cases.length.toLocaleString("fa-IR")}</strong></div>
-      </div>
-      <div className="rows">{data.balances.map(b => <div className="data-row" key={b.currency}>
-        <strong>مانده اصل تسهیلات ({b.currency})</strong>
-        <span>{amount(b.outstanding_principal, b.currency)}</span>
-        <small>پرداخت: {b.payment_status === "NOT_CONFIGURED" ? "متصل نیست" : "نامشخص"}</small>
-      </div>)}</div>
-      {!data.balances.length && <Empty>هنوز اطلاعات مالی قابل نمایش وجود ندارد.</Empty>}
-      <div className="notice">واریز و برداشت وجه در API فعلی فعال نشده‌اند. داده سرمایه شخصی و سرمایه سازمانی در این نما با یکدیگر جمع نمی‌شوند.</div>
-      <div className="disabled-actions"><Button disabled>واریز وجه — غیرفعال</Button><Button disabled outline>درخواست برداشت — غیرفعال</Button></div>
-    </>} /></Panel>
+      <p className="notice">درخواست فقط با وضعیت «دریافت‌شده» ثبت می‌شود؛ هیچ تأیید، ضمانت یا پرداختی ایجاد نمی‌کند.</p>
+    </Panel>}
+
+    {tab === "requests" && <Panel title="درخواست‌های من">
+      <Remote state={requestState} render={requestRows} />
+    </Panel>}
+
+    {tab === "financial" && <Panel title="پرونده مالی">
+      <Remote state={financial} render={data => <>
+        <div className="metric-grid">
+          <div className="metric"><span>ضمانت‌های ثبت‌شده</span><strong>{data.guarantee_cases.length.toLocaleString("fa-IR")}</strong></div>
+          <div className="metric"><span>مستمری‌های ثبت‌شده</span><strong>{data.monthly_entitlements.length.toLocaleString("fa-IR")}</strong></div>
+          <div className="metric"><span>پرونده‌های پس از خروج</span><strong>{data.post_exit_cases.length.toLocaleString("fa-IR")}</strong></div>
+        </div>
+        <div className="rows">{data.balances.map(b => <div className="data-row" key={b.currency}>
+          <strong>مانده اصل تسهیلات ({b.currency})</strong>
+          <span>{amount(b.outstanding_principal, b.currency)}</span>
+          <small>پرداخت: {b.payment_status === "NOT_CONFIGURED" ? "متصل نیست" : "نامشخص"}</small>
+        </div>)}</div>
+        {!data.balances.length && <Empty>هنوز اطلاعات مالی قابل نمایش وجود ندارد.</Empty>}
+        <div className="notice">واریز و برداشت وجه در API فعلی فعال نشده‌اند.
+          سرمایه شخصی و سرمایه متعلق به سازمان به‌جای جمع‌شدن، باید با حقوق مستقل نمایش داده شوند.</div>
+        <div className="disabled-actions"><Button disabled>واریز وجه — غیرفعال</Button>
+          <Button disabled outline>درخواست برداشت — غیرفعال</Button></div>
+      </>} />
+    </Panel>}
+
+    {tab === "account" && <Panel title="حساب من">
+      <div className="notice">شما از طریق سرویس احراز هویت معتبر وارد شده‌اید.
+        اطلاعات هویتی حساس و شناسه ملی از این نما نمایش داده نمی‌شود.</div>
+      <p className="muted">برای خروج از نشست محلی از گزینه «خروج از حساب» در ناوبری استفاده کنید.</p>
+    </Panel>}
+
+    <nav className="individual-tabs" aria-label="تب‌های اپلیکیشن افراد">
+      {tabs.map(t => <button type="button" key={t.id}
+        aria-current={tab === t.id ? "page" : undefined}
+        className={"individual-tab" + (tab === t.id ? " individual-tab--selected" : "")}
+        onClick={() => { setTab(t.id); setStatus(""); }}>
+        <span aria-hidden="true">{t.icon}</span><strong>{t.name}</strong>
+      </button>)}
+    </nav>
   </div>;
 }
 

@@ -229,3 +229,41 @@ h1 { line-height: 1.45; }
 .site-header .brand-logo { width:165px; height:60px; }
 .footer .brand { width: fit-content; }
 @media(max-width:640px) { .site-header .brand-logo { width:125px; height:47px; } }
+
+/* Figma mobile applicant navigation: right-to-left home, finance, center services,
+   requests, account. It remains usable as a tab bar on larger screens. */
+.individual-screen { padding-bottom: 30px; }
+.individual-tabs { display:flex;justify-content:space-between;gap:7px;padding:7px;
+  border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 5px 24px #0719340b; }
+.individual-tab {display:flex;flex:1;align-items:center;justify-content:center;gap:7px;
+  border:0;border-radius:11px;background:transparent;color:#69788d;padding:12px 5px;min-width:0;font-size:12px;}
+.individual-tab span {font-size:21px;line-height:1.1;}
+.individual-tab strong {font-weight:650;white-space:nowrap;}
+.individual-tab--selected {background:var(--blue);color:white;}
+.welcome-link {margin-top:15px;background:white;color:var(--brand);border:0;padding:11px 21px;
+  border-radius:11px;font-weight:750;}
+.finance-shortcut {width:100%;display:flex;align-items:center;gap:16px;text-align:right;border:1px solid var(--line);
+  background:#f7f9fe;border-radius:15px;padding:20px;color:var(--brand);}
+.finance-shortcut small {display:block;color:var(--muted);margin-top:5px;}
+.finance-shortcut>span:last-child {margin-right:auto;font-size:27px;}
+.shortcut-icon {background:var(--blue);color:white;border-radius:12px;display:grid;place-items:center;
+  width:46px;height:46px;font-size:25px;}
+.service-card .service-more {margin-top:8px;font-size:12px;color:var(--muted);}
+@media(max-width:640px){
+  .workspace--individual .sidebar nav {display:none;}
+  .workspace--individual .sidebar {padding:10px 17px;min-height:0;}
+  .workspace--individual .sidebar>p {display:none;}
+  .workspace--individual .sidebar-back,.workspace--individual .sidebar-logout {display:none;}
+  .workspace--individual .workspace-main {padding-bottom:108px;}
+  .individual-screen {padding-bottom:0;}
+  .individual-tabs {position:fixed;left:0;right:0;bottom:0;z-index:10;border-radius:0;
+    min-height:75px;gap:1px;box-shadow:0 -4px 16px #07193417;padding:6px;}
+  .individual-tab {display:flex;flex-direction:column;gap:3px;font-size:10px;padding:7px 0;}
+  .individual-tab span {font-size:23px;}
+  .individual-tab strong {font-size:10px;}
+  .individual-screen .service-grid {grid-template-columns:repeat(3,1fr);gap:9px;}
+  .individual-screen .service-card {min-height:142px;padding:13px 3px;}
+  .individual-screen .service-card h3 {font-size:12px;}
+  .individual-screen .service-card p {font-size:10px;}
+  .individual-screen .service-card button {padding:6px 4px;}
+}
