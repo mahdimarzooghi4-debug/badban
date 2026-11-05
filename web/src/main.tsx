@@ -22,9 +22,9 @@ const services: Array<{ code: ServiceCode; title: string; detail: string; symbol
 ];
 
 function Brand({ light = false }: { light?: boolean }) {
-  return <span className={"brand" + (light ? " brand--light" : "")} aria-label="بادبان">
-    <span className="brand-sail" aria-hidden="true">◢</span>
-    <span><strong>بادبان</strong><small>سرمایه، اعتبار، توانمندسازی</small></span>
+  return <span className={"brand" + (light ? " brand--light" : "")}>
+    <img className="brand-logo" src="/assets/badban-logo.png"
+      alt="بادبان — سرمایه، اعتبار، توانمندسازی" width="180" height="70" />
   </span>;
 }
 

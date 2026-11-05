@@ -31,10 +31,10 @@ Backend role checks remain the authority. No front-end role tab may confer a per
 ## Figma assets
 
 The styling, section hierarchy, RTL, brand colors, content and navigation are implemented
-from high-fidelity Figma design context. Photo/logo source files must be installed as
-versioned, verified local assets before claiming pixel-perfect Figma equivalence; temporary
-Figma MCP asset links must never be embedded in committed source. Until then the landing
-uses a CSS-safe layout without pretending it includes the exact photo.
+from high-fidelity Figma design context. The Figma-original image-fill JPEGs and original mark are now committed as versioned local
+assets. Note: the source Figma photo fills are low-resolution thumbnails, so higher-resolution
+replacement and visual verification remain required before declaring pixel-perfect fidelity.
+No temporary Figma asset URL is referenced by application code.
 
 ## Product and release status
 

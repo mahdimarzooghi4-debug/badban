@@ -221,3 +221,11 @@ h1 { line-height: 1.45; }
   .service-grid,.metric-grid {grid-template-columns:1fr;}
   .disabled-actions {flex-wrap:wrap;}
 }
+
+/* The original Badban mark is used as a versioned Figma asset. */
+.brand { background: #fff; border-radius: 13px; padding: 5px 12px; box-shadow: 0 2px 12px #07193419; }
+.brand-logo { display:block; width:172px; max-width:100%; height:63px; object-fit:contain; }
+.sidebar .brand-logo { width:177px; height:70px; }
+.site-header .brand-logo { width:165px; height:60px; }
+.footer .brand { width: fit-content; }
+@media(max-width:640px) { .site-header .brand-logo { width:125px; height:47px; } }
