@@ -137,12 +137,12 @@ async def list_human_identity_directory(
     statement = select(Identity).where(Identity.identity_type.in_(HUMAN_IDENTITY_TYPES))
     if identity_type is not None:
         statement = statement.where(Identity.identity_type == identity_type)
+    statement = statement.order_by(
+        Identity.created_at.desc(),
+        Identity.id,
+    )
     identities = (
-        await session.scalars(
-            statement.order_by(Identity.created_at.desc(), Identity.id)
-            .offset(offset)
-            .limit(limit)
-        )
+        await session.scalars(statement.offset(offset).limit(limit))
     ).all()
     append_audit(
         session,
