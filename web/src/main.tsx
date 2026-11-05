@@ -6,6 +6,7 @@ import "./styles.css";
 import "./operational-details.css";
 import { AdminServiceQueue } from "./operational-details";
 import { AdminGovernance } from "./operational-governance";
+import { AdminDirectory } from "./admin-directory";
 import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
@@ -273,7 +274,7 @@ function Admin({ token }: { token: string }) {
         <div className="selector" key={w.workspace_code + i}>
           <strong>{w.workspace_code}</strong><small>{w.capabilities.join(" · ") || "بدون عملیات مجاز"}</small>
         </div>)}</div> : <Empty>هیچ حوزه مدیریتی فعالی برای این حساب ثبت نشده است.</Empty>} />
-  </Panel><AdminServiceQueue token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><AdminGovernance token={token} workspaces={data.kind === "ready" ? data.data.items : []} currentIdentityId={me.kind === "ready" ? me.data.identity_id : null} /><div className="notice">دستورهای دسترسی فقط با مجوز راهبری بک‌اند اجرا می‌شوند. تأیید درخواست باید توسط هویتی غیر از درخواست‌کننده انجام شود. هیچ عملیات مالی در این صفحه وجود ندارد.</div></div>;
+  </Panel><AdminServiceQueue token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><AdminGovernance token={token} workspaces={data.kind === "ready" ? data.data.items : []} currentIdentityId={me.kind === "ready" ? me.data.identity_id : null} /><AdminDirectory token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><div className="notice">دستورهای دسترسی فقط با مجوز راهبری بک‌اند اجرا می‌شوند. تأیید درخواست باید توسط هویتی غیر از درخواست‌کننده انجام شود. هیچ عملیات مالی در این صفحه وجود ندارد.</div></div>;
 }
 
 const navigation: Record<Surface, string[]> = {
