@@ -26,3 +26,14 @@ No deposit, withdrawal, allocation, enrolment, guarantee issuance, payment, sett
 - Strict schema validation of nested asset/valuation, guarantee, loan, pension, post-exit, and program-return facts.
 - Vitest covers path confinement, exact scope, malformed financial facts, permission-derived admin navigation, and intake pagination/state.
 - Full Vite build and GitHub CI are the acceptance gate for this code candidate.
+
+
+## Acceptance and review record — 2026-11-05
+
+- Implementation commit: \`02f6f108a6465dcf9befb6463b58d0f8d95b2b0e\`.
+- JSX correction: \`25532c0c8ae8f5307231227217d19d98de965052\`.
+- Web Candidate CI #42048126739: SUCCESS — unit tests, strict TypeScript and Vite production build.
+- Full CI #42048126676: SUCCESS — secret scan, format, lint, type check, migrations, migration drift, backend tests, dependency audit and container build.
+- Technical review: COMMENTED on PR #70 (review id \`5786834205\`); no approval to merge or release.
+- PR #70 remains Draft/Open. Main remains unchanged. No Stage, QA admission, release approval, merge or Production deployment occurred.
+- Outstanding: configured OIDC browser tests, real browser screenshot comparison against approved Figma viewports, and separate approved contracts for any real deposit/withdrawal or funding operations.
