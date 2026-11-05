@@ -34,3 +34,13 @@
 - Unit tests cover exact routes/payloads, UUID confinement, aware timestamps, time-window ordering and mandatory revocation reason.
 - Full web candidate and repository CI must pass on the exact head.
 - Real OIDC browser tests and screenshot comparison remain separate follow-up work.
+
+
+## Acceptance and review record — 2026-11-05
+
+- Implementation commit: \`c7fc08b04f089b9f161b40ebf48e936dd965fcff\`.
+- Initial TypeScript prop compatibility failure on \`e253e67b1055e6c071a08e12ca460f4dcc3aef9c\` was corrected by aligning the UI prop type with the API's string-valued workspace scope field.
+- Web Candidate CI #42056368480: SUCCESS — 31 Vitest tests (including five governance action contract tests), strict TypeScript and Vite production build.
+- Full CI #42056368420: SUCCESS — secret scan, format, lint, type check, migrations/drift, backend tests, dependency audit and container build.
+- Technical review: COMMENTED on PR #70, review id \`5787614573\`; not approval to merge or release.
+- PR #70 remains Draft/Open/unmerged; main unchanged. No Stage, QA gate, release approval or Production deployment.
