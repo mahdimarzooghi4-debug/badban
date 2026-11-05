@@ -9,11 +9,16 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
+from badban.api.dependencies import (
+    get_correlation_id,
+    get_current_principal,
+    get_session,
+)
 from badban.api.sprint46 import SERVICE_ROLE_MATRIX, _service_scope_id
 from badban.infrastructure.persistence.models import RoleGrant
 from badban.security.audit import append_audit
 from badban.security.authorization import (
+    HUMAN_IDENTITY_TYPES,
     ROLE_AUDITOR,
     ROLE_GOVERNANCE_APPROVER,
     ROLE_LEGAL_COMPLIANCE,
@@ -89,11 +94,15 @@ async def read_admin_workspace_index(
         for grant in grants
     )
 
-    global_roles = {
-        grant.role_code
-        for grant in grants
-        if grant.scope_type == SCOPE_GLOBAL and grant.scope_id is None
-    }
+    global_roles = (
+        {
+            grant.role_code
+            for grant in grants
+            if grant.scope_type == SCOPE_GLOBAL and grant.scope_id is None
+        }
+        if principal.identity_type in HUMAN_IDENTITY_TYPES
+        else set()
+    )
     identity_directory_roles = sorted(global_roles & {ROLE_GOVERNANCE_APPROVER})
     legal_entity_directory_roles = sorted(
         global_roles & {ROLE_GOVERNANCE_APPROVER, ROLE_LEGAL_COMPLIANCE, ROLE_AUDITOR}

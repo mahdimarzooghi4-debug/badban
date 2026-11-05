@@ -9,7 +9,11 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from badban.api.dependencies import get_correlation_id, get_current_principal, get_session
+from badban.api.dependencies import (
+    get_correlation_id,
+    get_current_principal,
+    get_session,
+)
 from badban.api.errors import ApiError
 from badban.infrastructure.persistence.models import Identity, LegalEntity, Program
 from badban.security.audit import append_audit
@@ -25,7 +29,10 @@ from badban.security.authorization import (
     authorize,
 )
 
-router = APIRouter(prefix="/api/v1/admin/directory", tags=["admin-reference-directories"])
+router = APIRouter(
+    prefix="/api/v1/admin/directory",
+    tags=["admin-reference-directories"],
+)
 
 
 class HumanIdentityDirectoryItem(BaseModel):
@@ -108,7 +115,9 @@ async def _authorize_directory(
 
 @router.get("/identities", response_model=HumanIdentityDirectoryPage)
 async def list_human_identity_directory(
-    identity_type: Literal["STAFF", "GOVERNANCE", "AUDITOR"] | None = Query(default=None),
+    identity_type: Literal["STAFF", "GOVERNANCE", "AUDITOR"] | None = Query(
+        default=None
+    ),
     limit: int = Query(default=25, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     principal: Principal = Depends(get_current_principal),

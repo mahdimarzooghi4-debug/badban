@@ -57,7 +57,11 @@ async def _identity(
                         role_code=role_code,
                         scope_type=scope_type,
                         scope_id=scope_id,
-                        valid_from=valid_from or datetime.now(UTC) - timedelta(minutes=1),
+                        valid_from=(
+                            valid_from
+                            if valid_from is not None
+                            else datetime.now(UTC) - timedelta(minutes=1)
+                        ),
                         valid_until=None,
                         status="ACTIVE",
                         granted_by=None,
@@ -107,8 +111,16 @@ async def test_human_identity_directory_is_minimal_paged_and_audited(
         identity_type="AUDITOR",
         status="INACTIVE",
     )
-    await _identity(database, subject="sprint64-participant", identity_type="PARTICIPANT")
-    await _identity(database, subject="sprint64-service", identity_type="SERVICE")
+    await _identity(
+        database,
+        subject="sprint64-participant",
+        identity_type="PARTICIPANT",
+    )
+    await _identity(
+        database,
+        subject="sprint64-service",
+        identity_type="SERVICE",
+    )
 
     async with await _client(settings) as client:
         first = await client.get(

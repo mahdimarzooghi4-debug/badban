@@ -99,7 +99,8 @@ async def clean_sprint64_directory_tables(database: Database):
     async with database.engine.begin() as connection:
         await connection.execute(
             text(
-                "TRUNCATE audit_events, role_grants, legal_entities, programs, identities "
+                "TRUNCATE "
+                "audit_events, role_grants, legal_entities, programs, identities "
                 "RESTART IDENTITY CASCADE"
             )
         )
