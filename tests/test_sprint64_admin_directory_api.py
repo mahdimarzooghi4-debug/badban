@@ -146,7 +146,13 @@ async def test_human_identity_directory_is_minimal_paged_and_audited(
     assert len(first.json()["items"]) == 2
     assert len(second.json()["items"]) == 1
     assert all(
-        set(item) == {"identity_id", "identity_type", "status", "created_at"}
+        set(item)
+        == {
+            "identity_id",
+            "identity_type",
+            "status",
+            "created_at",
+        }
         for item in all_items
     )
     assert all("external_subject" not in item for item in all_items)
