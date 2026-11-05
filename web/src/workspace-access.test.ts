@@ -20,9 +20,9 @@ describe("role-derived workspace entry",()=>{
   expect(deriveAvailableSurfaces(identity,[grant("LENDER_OPERATOR","PROVIDER")],emptyWorkspaces)).toEqual(["lender"]);
   expect(deriveAvailableSurfaces(identity,[grant("LENDER_OPERATOR","PROGRAM")],emptyWorkspaces)).toEqual([]);
  });
- it("ignores inactive, malformed and unrelated grants",()=>{
+ it("ignores inactive and unrelated grants but fails closed on malformed records",()=>{
   expect(deriveAvailableSurfaces(identity,[grant("SUPPORT_INSTITUTION_OPERATOR","PROGRAM",scope,"REVOKED"),grant("OPERATIONS","SERVICE")],emptyWorkspaces)).toEqual([]);
-  expect(deriveAvailableSurfaces(identity,[grant("LENDER_OPERATOR","PROVIDER","not-a-uuid")],emptyWorkspaces)).toEqual([]);
+  expect(()=>deriveAvailableSurfaces(identity,[grant("LENDER_OPERATOR","PROVIDER","not-a-uuid")],emptyWorkspaces)).toThrow();
  });
  it("shows admin only for a recognized active role-derived workspace",()=>{
   expect(deriveAvailableSurfaces(identity,[],adminWorkspaces)).toEqual(["admin"]);
