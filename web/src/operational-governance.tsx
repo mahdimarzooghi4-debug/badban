@@ -11,7 +11,7 @@ import {
 import "./operational-governance.css";
 
 type Workspace = {
-  workspace_code: string; scope_type: "GLOBAL" | "SERVICE"; scope_id: string | null;
+  workspace_code: string; scope_type: string; scope_id: string | null;
   role_codes: string[]; capabilities: string[];
 };
 type State<T> = { scope: string; owner: string; status: "loading" } |
