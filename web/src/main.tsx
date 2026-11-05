@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
-import { amount, client, type AdminWorkspace, type Beneficiary,
-  type Guarantee, type Provider, type ServiceCode, type ServiceRequest } from "./api";
+import { amount, client, type AdminWorkspace, type ServiceCode, type ServiceRequest } from "./api";
 import "./styles.css";
 import "./operational-details.css";
-import { AdminServiceQueue, InstitutionFinancialDetail, LenderGuaranteeDetail } from "./operational-details";
+import { AdminServiceQueue } from "./operational-details";
 import { AdminGovernance } from "./operational-governance";
-import { verifiedBeneficiariesPage, verifiedLenderGuaranteesPage } from "./operational-data";
+import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
@@ -258,55 +257,11 @@ function Individual({ token }: { token: string }) {
 }
 
 function Institution({ token }: { token: string }) {
-  const programs = useRemote(token, client.programs, "institution-programs");
-  const [selected, setSelected] = useState("");
-  const [selectedPerson, setSelectedPerson] = useState<{programId: string; participantId: string; episodeId: string} | null>(null);
-  const people = useRemote(token, t => selected ? client.beneficiaries(t, selected).then(data => verifiedBeneficiariesPage<Beneficiary>(data, selected)) : Promise.resolve({ items: [], limit: 50, offset: 0 } as { items: Beneficiary[]; limit: number; offset: number }), selected);
-  return <div className="workspace-body">
-    <Panel title="برنامه‌های مجاز سازمان"><Remote state={programs} render={data =>
-      data.items.length ? <div className="selector-cards">{data.items.map(p =>
-        <button className={selected === p.program_id ? "selector selected" : "selector"} key={p.program_id}
-          onClick={() => { setSelected(p.program_id); setSelectedPerson(null); }} type="button"><strong>{p.name}</strong><small>{p.code} · {p.status}</small></button>)}</div>
-        : <Empty>برنامه مجازی به این حساب اختصاص داده نشده است.</Empty>} />
-    </Panel>
-    <Panel title="افراد منتسب به برنامه">{!selected ? <Empty>برای مشاهده افراد، یکی از برنامه‌های مجاز را انتخاب کنید.</Empty>
-      : <Remote state={people} render={data => data.items.length ? <div className="rows">{data.items.map(r =>
-        <div className="data-row" key={r.episode_id}><strong>پرونده {r.participant_id.slice(0, 8)}…</strong>
-          <span>{r.participation_status}</span><small>وضعیت رضایت: {r.consent_state}</small>
-          <button className="inline-detail" type="button" onClick={() => setSelectedPerson({programId: selected, participantId: r.participant_id, episodeId: r.episode_id})}>مشاهده پرونده مالی</button></div>)}</div>
-        : <Empty>در این برنامه فردی برای نمایش ثبت نشده است.</Empty>} />}
-    </Panel>
-    {selectedPerson && selectedPerson.programId === selected && people.kind === "ready" && people.data.items.some(row => row.participant_id === selectedPerson.participantId && row.episode_id === selectedPerson.episodeId) && <InstitutionFinancialDetail key={selectedPerson.episodeId} token={token} programId={selectedPerson.programId} participantId={selectedPerson.participantId} episodeId={selectedPerson.episodeId} onClose={() => setSelectedPerson(null)} />}
-    <div className="notice">ورود گروهی افراد و تأمین مالی سازمانی هنوز API عملیاتی مصوب ندارند؛ هیچ پرداخت یا انتساب جدیدی از این صفحه انجام نمی‌شود.</div>
-  </div>;
+  return <InstitutionWorkspace token={token} />;
 }
 
 function Lender({ token }: { token: string }) {
-  const providers = useRemote(token, client.providers, "lender-providers");
-  const [selected, setSelected] = useState("");
-  const [selectedGuarantee, setSelectedGuarantee] = useState<Guarantee | null>(null);
-  const guarantees = useRemote(token, t => selected ? client.guarantees(t, selected).then(data => verifiedLenderGuaranteesPage<Guarantee>(data, selected)) : Promise.resolve({ items: [], limit: 50, offset: 0 } as { items: Guarantee[]; limit: number; offset: number }), selected);
-  return <div className="workspace-body">
-    <Panel title="تأمین‌کنندگان مجاز"><Remote state={providers} render={data =>
-      data.items.length ? <div className="selector-cards">{data.items.map((p: Provider) =>
-        <button type="button" onClick={() => { setSelected(p.provider_id); setSelectedGuarantee(null); }}
-          className={selected === p.provider_id ? "selector selected" : "selector"} key={p.provider_id}>
-          <strong>{p.display_name}</strong><small>{p.provider_code}</small></button>)}</div>
-        : <Empty>دسترسی به هیچ تأمین‌کننده‌ای ثبت نشده است.</Empty>} /></Panel>
-    <Panel title="ضمانت‌ها و وضعیت تسهیلات">
-      {!selected ? <Empty>یک تأمین‌کننده مجاز را انتخاب کنید.</Empty> :
-        <Remote state={guarantees} render={data =>
-          data.items.length ? <div className="rows">{data.items.map((g: Guarantee) =>
-            <div className="data-row data-row--lender" key={g.guarantee_case_id}>
-              <strong>ضمانت {g.guarantee_case_id.slice(0, 8)}…</strong><span>وضعیت: {g.case_state}</span>
-              <span>مبلغ ضمانت: {amount(g.current_guarantee_exposure, g.currency)}</span>
-              <span>مانده وام: {amount(g.outstanding_principal, g.loan_currency)}</span>
-              <button type="button" className="inline-detail" onClick={() => setSelectedGuarantee(g)}>جزئیات ضمانت</button>
-            </div>)}</div> : <Empty>هیچ ضمانتی برای این تأمین‌کننده گزارش نشده است.</Empty>} />}
-    </Panel>
-    {selectedGuarantee && selected && guarantees.kind === "ready" && guarantees.data.items.some(row => row.guarantee_case_id === selectedGuarantee.guarantee_case_id) && <LenderGuaranteeDetail key={selectedGuarantee.guarantee_case_id} guarantee={selectedGuarantee} onClose={() => setSelectedGuarantee(null)} />}
-    <div className="notice">مبلغ ضمانت و مانده وام مستقل‌اند. این صفحه امکان صدور ضمانت یا پرداخت تسهیلات ندارد.</div>
-  </div>;
+  return <LenderWorkspace token={token} />;
 }
 
 function Admin({ token }: { token: string }) {
