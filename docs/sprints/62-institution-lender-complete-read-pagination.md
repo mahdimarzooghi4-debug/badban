@@ -26,3 +26,17 @@
 - Vitest covers precise paths, malicious IDs, malformed pages, duplicate IDs, scope binding, decimal integrity, and pagination boundaries.
 - Strict TypeScript/Vite Web Candidate CI and full GitHub CI are required before the technical review can be marked COMMENTED.
 - Browser-level identity flow and screenshot regression against approved Figma frames remain outstanding.
+
+
+## Validation record — 2026-11-05
+
+- Code commit: \`c10e2dc3d089c576d478afa454d9b7e1a52d196e\`.
+- Web Candidate CI #42051367164: SUCCESS (26 Vitest tests, including 7 pagination tests; strict TypeScript and Vite build).
+- Full CI #42051367188: SUCCESS (secret scan, format, lint, type-check, Alembic migrations/drift, backend tests, dependency audit, container build).
+- Technical Code Review: COMMENTED on PR #70, review id \`5787162797\`. This is not human approval or a release authorization.
+- Main is unchanged; PR remains Draft/Open/unmerged. No Stage, QA Gate, Release Approval or Production deployment.
+
+## Deferred
+- OIDC real-browser end-to-end and screenshot comparison with approved Figma viewports.
+- On a failed page load, previous navigation currently requires refreshing the page first.
+- Bulk import, capital funding, withdrawal, payment/settlement and guarantee mutation remain out of scope pending approved backend contracts.
