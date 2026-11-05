@@ -134,9 +134,7 @@ async def list_human_identity_directory(
         correlation_id=correlation_id,
     )
     observed_at = datetime.now(UTC)
-    statement = select(Identity).where(
-        Identity.identity_type.in_(HUMAN_IDENTITY_TYPES)
-    )
+    statement = select(Identity).where(Identity.identity_type.in_(HUMAN_IDENTITY_TYPES))
     if identity_type is not None:
         statement = statement.where(Identity.identity_type == identity_type)
     identities = (
