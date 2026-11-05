@@ -92,7 +92,7 @@ export function InstitutionFinancialDetail({ token, programId, participantId, ep
       <article className="detail-card"><h3>بازده تخصیص‌یافته در برنامه</h3>
         <p className="detail-empty">این ارقام در سطح برنامه و فرد گزارش شده‌اند، نه صرفاً این دوره مشارکت.</p>
         {data.program_return_allocations.length ? data.program_return_allocations.map((r,i) =>
-          <MiniRow key={r.currency + i} title={"بازده ثبت‌شده (" + r.currency + ")"} value={money(r.amount,r.currency}/>) :
+          <MiniRow key={r.currency + i} title={"بازده ثبت‌شده (" + r.currency + ")"} value={money(r.amount,r.currency)}/>) :
           <p className="detail-empty">بازده تخصیص‌یافته‌ای گزارش نشده است.</p>}
       </article>
       <p className="detail-note">ارزش‌گذاری‌ها مشاهده‌های منبع‌دارند، نه قیمت منتخب یا تضمین‌شده. نبود داده نیز به معنی صفر یا تسویه نیست.</p>
