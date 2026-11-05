@@ -1,0 +1,20 @@
+.detail-surface{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;box-shadow:0 7px 25px #07193410}
+.detail-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.detail-heading h2{font-size:20px;margin-top:3px;color:#09234b}.detail-heading small{color:#6f7c92;font-size:11px}
+.detail-close{border:1px solid #d7a440;background:#fff1cc;color:#09234b;border-radius:11px;padding:10px 20px;font-size:13px;font-weight:600}
+.detail-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin-top:16px}
+.detail-card{padding:18px;border:1px solid #e2e8f0;border-radius:14px;min-width:0;margin-top:14px}
+.detail-card h3{font-size:15px;margin:0 0 14px;color:#09234b}
+.detail-entry{padding:10px 12px;background:#f5f7fc;border-radius:10px;margin-bottom:12px}
+.detail-mini-row{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap;font-size:12px;padding:11px 0;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere}
+.detail-mini-row:last-child{border-bottom:0}.detail-mini-row span{color:#66758c}.detail-mini-row strong{font-size:12px;color:#09234b}
+.detail-note{padding:15px 18px;background:#fff1cc;border-radius:11px;font-size:12px;line-height:1.9;margin:15px 0 0;color:#09234b}
+.detail-empty{font-size:13px;color:#6f7c92;padding:15px 0}.detail-feedback{font-size:13px;background:#f5f7fc;border-radius:9px;padding:15px 19px}
+.detail-feedback--error{background:#fff0ef;color:#9d2424}.detail-rows{display:grid;gap:3px}
+.detail-rows>.detail-mini-row{padding:17px 11px;background:#f5f7fc;border-radius:9px}
+.detail-select-label{display:flex;align-items:center;gap:10px;font-size:12px;color:#6f7c92}
+.detail-select-label select{border:1px solid #d7a440;background:white;padding:9px;border-radius:9px;color:#09234b}
+.detail-pagination{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:17px;padding:13px;border-top:1px solid #e2e8f0}
+.detail-pagination>button{border:1px solid #d7a440;background:#fff1cc;color:#09234b;border-radius:9px;padding:9px 16px;font:inherit}
+.detail-pagination>button:disabled{opacity:.44;cursor:not-allowed}.inline-detail{border:1px solid #d7a440;border-radius:9px;background:#fff1cc;color:#09234b;padding:8px 12px;font-size:12px;font-weight:600}
+@media(max-width:680px){.detail-columns{grid-template-columns:1fr}.detail-surface{padding:15px}}
