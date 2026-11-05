@@ -945,6 +945,31 @@ Internal risk secrets and unrelated records are not exposed.
 
 ---
 
+### BL-054 — Role-Scoped Administrative Reference Directories
+
+**Priority:** P2  
+**Type:** Read Model / UI Capability  
+**Depends on:** BL-006, BL-009, BL-044; Decisions 0065, 0066, 0068
+
+**Goal**
+
+Provide audited, paginated reference directories for authorized administrative users without turning them into global beneficiary or personal-data directories.
+
+**Acceptance Criteria**
+
+- Global governance approvers can read only human Identity records needed for grant administration; external_subject, national ID, contact data, participant identities, and service identities are excluded.
+- Global governance, legal-compliance, and auditor roles can read safe LegalEntity metadata; registration identifiers and legal-authorization evidence are excluded.
+- Global governance, auditor, and operations roles can read safe Program metadata; beneficiary lists, participant counts, eligibility, balances, and financial records are excluded.
+- Each directory is paginated, deterministically ordered, read-only, and audited.
+- The role-derived AdminWorkspaceIndex advertises each directory only for the exact active global roles; each API independently authorizes.
+- Beneficiary/person records remain available only through the already-approved exact-program and exact-service scopes; no global participant directory is introduced.
+
+**Boundaries**
+
+- No Identity, LegalEntity, Program, Participant, or enrollment creation/update/deletion.
+- No external_subject, registration identifier, national ID, contact detail, or beneficiary profile data in directory responses.
+- No inferred organization status, legal authorization, eligibility, or program outcomes.
+
 ## 15. P3 — Security, Reliability, and Operational Hardening
 
 ### BL-048 — Security Hardening and Secret Rotation Verification
@@ -1128,7 +1153,7 @@ BL-001 → BL-002 → BL-003 → BL-004 → BL-005
 → BL-042 → BL-053 → BL-043
 → BL-045 → BL-046 → BL-047
 → BL-048 → BL-049 → BL-050 → BL-051
-→ BL-052
+→ BL-052 → BL-054
 ```
 
 This ordering is dependency-oriented, not an instruction that every item must occupy a separate Sprint.

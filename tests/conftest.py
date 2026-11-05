@@ -95,6 +95,18 @@ async def clean_sprint06_registry_tables(database: Database):
 
 
 @pytest.fixture
+async def clean_sprint64_directory_tables(database: Database):
+    async with database.engine.begin() as connection:
+        await connection.execute(
+            text(
+                "TRUNCATE audit_events, role_grants, legal_entities, programs, identities "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
+    yield
+
+
+@pytest.fixture
 async def clean_sprint07_guarantee_tables(database: Database):
     async with database.engine.begin() as connection:
         await connection.execute(

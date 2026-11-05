@@ -14,7 +14,10 @@ from badban.api.sprint46 import SERVICE_ROLE_MATRIX, _service_scope_id
 from badban.infrastructure.persistence.models import RoleGrant
 from badban.security.audit import append_audit
 from badban.security.authorization import (
+    ROLE_AUDITOR,
     ROLE_GOVERNANCE_APPROVER,
+    ROLE_LEGAL_COMPLIANCE,
+    ROLE_OPERATIONS,
     SCOPE_GLOBAL,
     SCOPE_SERVICE,
     Principal,
@@ -85,6 +88,53 @@ async def read_admin_workspace_index(
         and grant.scope_id is None
         for grant in grants
     )
+
+    global_roles = {
+        grant.role_code
+        for grant in grants
+        if grant.scope_type == SCOPE_GLOBAL and grant.scope_id is None
+    }
+    identity_directory_roles = sorted(global_roles & {ROLE_GOVERNANCE_APPROVER})
+    legal_entity_directory_roles = sorted(
+        global_roles & {ROLE_GOVERNANCE_APPROVER, ROLE_LEGAL_COMPLIANCE, ROLE_AUDITOR}
+    )
+    program_directory_roles = sorted(
+        global_roles & {ROLE_OPERATIONS, ROLE_AUDITOR, ROLE_GOVERNANCE_APPROVER}
+    )
+
+    if identity_directory_roles:
+        entries.append(
+            AdminWorkspaceEntry(
+                workspace_code="ADMIN_HUMAN_IDENTITY_DIRECTORY",
+                scope_type=SCOPE_GLOBAL,
+                scope_id=None,
+                service_code=None,
+                role_codes=identity_directory_roles,
+                capabilities=["READ_HUMAN_IDENTITY_DIRECTORY"],
+            )
+        )
+    if legal_entity_directory_roles:
+        entries.append(
+            AdminWorkspaceEntry(
+                workspace_code="ADMIN_LEGAL_ENTITY_DIRECTORY",
+                scope_type=SCOPE_GLOBAL,
+                scope_id=None,
+                service_code=None,
+                role_codes=legal_entity_directory_roles,
+                capabilities=["READ_LEGAL_ENTITY_DIRECTORY"],
+            )
+        )
+    if program_directory_roles:
+        entries.append(
+            AdminWorkspaceEntry(
+                workspace_code="ADMIN_PROGRAM_DIRECTORY",
+                scope_type=SCOPE_GLOBAL,
+                scope_id=None,
+                service_code=None,
+                role_codes=program_directory_roles,
+                capabilities=["READ_PROGRAM_DIRECTORY"],
+            )
+        )
     if has_global_governance:
         entries.append(
             AdminWorkspaceEntry(
