@@ -115,9 +115,11 @@ async def _authorize_directory(
 
 @router.get("/identities", response_model=HumanIdentityDirectoryPage)
 async def list_human_identity_directory(
-    identity_type: Literal["STAFF", "GOVERNANCE", "AUDITOR"] | None = Query(
-        default=None
-    ),
+    identity_type: Literal[
+        "STAFF",
+        "GOVERNANCE",
+        "AUDITOR",
+    ] | None = Query(default=None),
     limit: int = Query(default=25, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     principal: Principal = Depends(get_current_principal),
