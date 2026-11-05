@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
-import { amount, client, type AdminWorkspace, type Beneficiary, type FinancialCase,
-  type Guarantee, type Program, type Provider, type ServiceCode, type ServiceRequest } from "./api";
+import { amount, client, type AdminWorkspace, type Beneficiary,
+  type Guarantee, type Provider, type ServiceCode, type ServiceRequest } from "./api";
 import "./styles.css";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
