@@ -141,9 +141,7 @@ async def list_human_identity_directory(
         Identity.created_at.desc(),
         Identity.id,
     )
-    identities = (
-        await session.scalars(statement.offset(offset).limit(limit))
-    ).all()
+    identities = (await session.scalars(statement.offset(offset).limit(limit))).all()
     append_audit(
         session,
         aggregate_type="HumanIdentityDirectory",
@@ -261,9 +259,7 @@ async def list_program_directory(
     statement = select(Program).order_by(Program.code, Program.id)
     if status is not None:
         statement = statement.where(Program.status == status)
-    programs = (
-        await session.scalars(statement.offset(offset).limit(limit))
-    ).all()
+    programs = (await session.scalars(statement.offset(offset).limit(limit))).all()
     append_audit(
         session,
         aggregate_type="ProgramDirectory",
