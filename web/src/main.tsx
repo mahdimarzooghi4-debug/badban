@@ -6,6 +6,7 @@ import { amount, client, type AdminWorkspace, type Beneficiary,
 import "./styles.css";
 import "./operational-details.css";
 import { AdminServiceQueue, InstitutionFinancialDetail, LenderGuaranteeDetail } from "./operational-details";
+import { AdminGovernance } from "./operational-governance";
 import { verifiedBeneficiariesPage, verifiedLenderGuaranteesPage } from "./operational-data";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
@@ -316,7 +317,7 @@ function Admin({ token }: { token: string }) {
         <div className="selector" key={w.workspace_code + i}>
           <strong>{w.workspace_code}</strong><small>{w.capabilities.join(" · ") || "بدون عملیات مجاز"}</small>
         </div>)}</div> : <Empty>هیچ حوزه مدیریتی فعالی برای این حساب ثبت نشده است.</Empty>} />
-  </Panel><AdminServiceQueue token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><div className="notice">نمایه دسترسی فقط برای راهبری است. هر دستور مالی یا مدیریتی به مجوز مستقل بک‌اند نیاز دارد؛ این نسخه هیچ دستور حساس صادر نمی‌کند.</div></div>;
+  </Panel><AdminServiceQueue token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><AdminGovernance token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><div className="notice">نمایه دسترسی فقط برای راهبری است. هر دستور مالی یا مدیریتی به مجوز مستقل بک‌اند نیاز دارد؛ این نسخه هیچ دستور حساس صادر نمی‌کند.</div></div>;
 }
 
 const navigation: Record<Surface, string[]> = {
