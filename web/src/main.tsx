@@ -7,8 +7,7 @@ import "./operational-details.css";
 import { AdminServiceQueue } from "./operational-details";
 import { AdminGovernance } from "./operational-governance";
 import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
-
-type Surface = "individual" | "institution" | "lender" | "admin";
+import { deriveAvailableSurfaces, type Surface } from "./workspace-access";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
 
 const sections: Array<{ id: Surface; name: string; description: string; symbol: string }> = [
@@ -313,6 +312,8 @@ function App() {
   const [surface, setSurface] = useState<Surface | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(window.location.pathname === "/auth/callback");
+  const [accessRefresh, setAccessRefresh] = useState(0);
+  const [access, setAccess] = useState<{ owner: string; status: "loading" | "ready" | "error"; surfaces: Surface[]; message?: string } | null>(null);
 
   useEffect(() => {
     if (window.location.pathname !== "/auth/callback") return;
@@ -322,8 +323,26 @@ function App() {
     return () => { live = false; };
   }, []);
 
+  useEffect(() => {
+    if (!token) { setAccess(null); return; }
+    let live = true;
+    setAccess({ owner: token, status: "loading", surfaces: [] });
+    Promise.all([client.me(token), client.grants(token), client.workspaces(token)])
+      .then(([identity, grants, workspaces]) => {
+        if (live) setAccess({ owner: token, status: "ready", surfaces: deriveAvailableSurfaces(identity, grants, workspaces) });
+      })
+      .catch((e: unknown) => {
+        if (live) setAccess({ owner: token, status: "error", surfaces: [], message: e instanceof Error ? e.message : "دریافت مجوز محیط‌ها ممکن نشد." });
+      });
+    return () => { live = false; };
+  }, [token, accessRefresh]);
+
   function openWorkspace(next: Surface) {
     if (!token) { setError("برای ورود به محیط عملیاتی ابتدا احراز هویت کنید."); return; }
+    if (access?.owner !== token || access.status !== "ready" || !access.surfaces.includes(next)) {
+      setError("این محیط در مجوزهای فعال حساب شما وجود ندارد.");
+      return;
+    }
     setError("");
     setSurface(next);
     window.history.replaceState(null, "", "/app");
@@ -335,20 +354,35 @@ function App() {
   }
   async function logout() {
     await localSignOut();
-    setToken(null); setSurface(null); setError("");
+    setToken(null); setSurface(null); setAccess(null); setError("");
     window.history.replaceState(null, "", "/");
   }
 
   if (loading) return <div className="auth-state" role="status">در حال تکمیل ورود امن…</div>;
   if (token && surface) return <Workspace key={surface} token={token} surface={surface}
     choose={s => { setSurface(s); if (!s) window.history.replaceState(null, "", "/"); }} logout={() => void logout()} />;
-  if (token) return <div className="choose-surface">
-    <header><Brand /><Button outline onClick={() => void logout()}>خروج محلی</Button></header>
-    <h1>انتخاب محیط بادبان</h1><p>فقط اطلاعاتی نمایش داده می‌شود که بک‌اند به حساب شما اجازه داده باشد.</p>
-    <div className="audience-grid">{sections.map(s => <button className="audience-card" key={s.id}
-      type="button" onClick={() => openWorkspace(s.id)}><span className="audience-icon">{s.symbol}</span>
-      <strong>{s.name}</strong><small>{s.description}</small></button>)}</div>
-  </div>;
+  if (token) {
+    const currentAccess = access?.owner === token ? access : null;
+    if (!currentAccess || currentAccess.status === "loading") return <div className="choose-surface">
+      <header><Brand /><Button outline onClick={() => void logout()}>خروج محلی</Button></header>
+      <p className="notice" role="status">در حال بررسی مجوزهای فعال و محیط‌های قابل دسترس…</p>
+    </div>;
+    if (currentAccess.status === "error") return <div className="choose-surface">
+      <header><Brand /><Button outline onClick={() => void logout()}>خروج محلی</Button></header>
+      <p className="notice notice--error" role="alert">{currentAccess.message}</p>
+      <Button onClick={() => setAccessRefresh(v => v + 1)}>تلاش دوباره</Button>
+    </div>;
+    const available = sections.filter(section => currentAccess.surfaces.includes(section.id));
+    return <div className="choose-surface">
+      <header><Brand /><Button outline onClick={() => void logout()}>خروج محلی</Button></header>
+      <h1>انتخاب محیط بادبان</h1>
+      <p>محیط‌ها از هویت و مجوزهای فعال ثبت‌شده در بک‌اند استخراج شده‌اند؛ انتخاب محیط هیچ دسترسی تازه‌ای ایجاد نمی‌کند.</p>
+      {available.length ? <div className="audience-grid">{available.map(s => <button className="audience-card" key={s.id}
+        type="button" onClick={() => openWorkspace(s.id)}><span className="audience-icon">{s.symbol}</span>
+        <strong>{s.name}</strong><small>{s.description}</small></button>)}</div>
+        : <div className="notice">برای این حساب، محیط عملیاتی فعالی ثبت نشده است. برای بررسی دسترسی با راهبر سامانه تماس بگیرید.</div>}
+    </div>;
+  }
   return <><Landing signIn={signIn} openWorkspace={openWorkspace}/>{error &&
     <div className="floating-error" role="alert">{error}<button type="button" onClick={() => setError("")}>بستن</button></div>}</>;
 }
