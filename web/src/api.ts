@@ -34,6 +34,7 @@ export type AdminWorkspace = {
   workspace_code: string; scope_type: string; scope_id: string | null;
   service_code: string | null; role_codes: string[]; capabilities: string[];
 };
+export type CurrentIdentity = { identity_id: string; external_subject: string; identity_type: string };
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
@@ -98,5 +99,6 @@ export const client = {
   providers: (token: string) => api<Page<Provider>>("/api/v1/lender/providers", token),
   guarantees: (token: string, providerId: string) =>
     api<Page<Guarantee>>("/api/v1/lender/providers/" + encodeURIComponent(providerId) + "/guarantees", token),
+  me: (token: string) => api<CurrentIdentity>("/api/v1/me", token),
   workspaces: (token: string) => api<{ items: AdminWorkspace[] }>("/api/v1/admin/workspace", token),
 };

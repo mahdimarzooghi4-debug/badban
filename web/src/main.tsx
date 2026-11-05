@@ -266,13 +266,14 @@ function Lender({ token }: { token: string }) {
 
 function Admin({ token }: { token: string }) {
   const data = useRemote(token, client.workspaces, "admin-workspaces");
+  const me = useRemote(token, client.me, "admin-current-identity");
   return <div className="workspace-body"><Panel title="حوزه‌های مدیریتی مجاز">
     <Remote state={data} render={d => d.items.length ? <div className="selector-cards">
       {d.items.map((w: AdminWorkspace, i: number) =>
         <div className="selector" key={w.workspace_code + i}>
           <strong>{w.workspace_code}</strong><small>{w.capabilities.join(" · ") || "بدون عملیات مجاز"}</small>
         </div>)}</div> : <Empty>هیچ حوزه مدیریتی فعالی برای این حساب ثبت نشده است.</Empty>} />
-  </Panel><AdminServiceQueue token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><AdminGovernance token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><div className="notice">نمایه دسترسی فقط برای راهبری است. هر دستور مالی یا مدیریتی به مجوز مستقل بک‌اند نیاز دارد؛ این نسخه هیچ دستور حساس صادر نمی‌کند.</div></div>;
+  </Panel><AdminServiceQueue token={token} workspaces={data.kind === "ready" ? data.data.items : []} /><AdminGovernance token={token} workspaces={data.kind === "ready" ? data.data.items : []} currentIdentityId={me.kind === "ready" ? me.data.identity_id : null} /><div className="notice">دستورهای دسترسی فقط با مجوز راهبری بک‌اند اجرا می‌شوند. تأیید درخواست باید توسط هویتی غیر از درخواست‌کننده انجام شود. هیچ عملیات مالی در این صفحه وجود ندارد.</div></div>;
 }
 
 const navigation: Record<Surface, string[]> = {
