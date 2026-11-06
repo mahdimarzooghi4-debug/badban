@@ -392,12 +392,6 @@ function App() {
     setSurface(next);
     window.history.replaceState(null, "", "/app");
   }
-  function signIn() {
-    setError("");
-    if (token) { setSurface(null); setLoginOpen(false); window.history.replaceState(null, "", "/app"); return; }
-    setLoginOpen(true);
-    window.history.replaceState(null, "", "/app");
-  }
   async function logout() {
     await localSignOut();
     setToken(null); setSurface(null); setLoginOpen(false); setAccess(null); setError("");

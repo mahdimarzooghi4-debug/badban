@@ -228,3 +228,5 @@
   .preview-item-grid { grid-template-columns: 1fr; }
   .preview-panel { padding: 15px; }
 }
+
+.preview-section-note { margin: -24px 0 28px; color: var(--muted); font-size: 12px; text-align: center; }
