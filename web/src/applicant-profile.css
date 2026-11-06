@@ -17,3 +17,7 @@
 .applicant-account-back {background:#fff;border:1px solid var(--line);border-radius:9px;
   color:var(--brand);padding:9px 15px;align-self:flex-start;font-size:12px;}
 .applicant-account-action:focus-visible,.applicant-account-back:focus-visible {outline:3px solid var(--gold);outline-offset:3px;}
+
+.applicant-account-logout {align-self:center;border:0;background:transparent;color:#a32935;
+  padding:13px 25px;font-size:12px;text-decoration:underline;}
+.applicant-account-logout:focus-visible {outline:3px solid var(--gold);outline-offset:3px;}
