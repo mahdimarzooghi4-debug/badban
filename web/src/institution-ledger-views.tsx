@@ -265,6 +265,8 @@ function InstitutionLedgerWorkspace({ token, mode }: { token: string; mode: Mode
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [dataOffset, setDataOffset] = useState(0);
   const [dataRefresh, setDataRefresh] = useState(0);
+  const [historySnapshotAt, setHistorySnapshotAt] = useState<string | null>(null);
+  const [statementSnapshotAt, setStatementSnapshotAt] = useState<string | null>(null);
   const programsScope = "institution-ledger-programs:" + programOffset + ":" + programRefresh;
   const programs = useLive(token, programsScope, () =>
     api<unknown>(readPagePath("programs", READ_PAGE_SIZE, programOffset), token)
@@ -276,26 +278,72 @@ function InstitutionLedgerWorkspace({ token, mode }: { token: string; mode: Mode
   const historyScope = "institution-ledger-history:" + (programId ?? "none") + ":" + dataOffset + ":" + dataRefresh;
   const history = useLive<FinancialHistoryPage | null>(token, historyScope, () => {
     if (mode !== "history" || !programId) return Promise.resolve(null);
-    return api<unknown>(financialHistoryPath(programId, LEDGER_PAGE_SIZE, dataOffset), token)
-      .then(raw => verifiedFinancialHistoryPage(raw, programId, LEDGER_PAGE_SIZE, dataOffset));
+    return api<unknown>(
+      financialHistoryPath(programId, LEDGER_PAGE_SIZE, dataOffset, historySnapshotAt ?? undefined),
+      token,
+    ).then(raw =>
+      verifiedFinancialHistoryPage(
+        raw, programId, LEDGER_PAGE_SIZE, dataOffset, historySnapshotAt ?? undefined,
+      ),
+    );
   });
   const statementScope = "institution-ledger-statement:" + (programId ?? "none") + ":" + dataOffset + ":" + dataRefresh;
   const statement = useLive<ProgramStatement | null>(token, statementScope, () => {
     if (mode !== "reports" || !programId) return Promise.resolve(null);
-    return api<unknown>(financialStatementPath(programId, LEDGER_PAGE_SIZE, dataOffset), token)
-      .then(raw => verifiedProgramStatement(raw, programId, LEDGER_PAGE_SIZE, dataOffset));
+    return api<unknown>(
+      financialStatementPath(programId, LEDGER_PAGE_SIZE, dataOffset, statementSnapshotAt ?? undefined),
+      token,
+    ).then(raw =>
+      verifiedProgramStatement(
+        raw, programId, LEDGER_PAGE_SIZE, dataOffset, statementSnapshotAt ?? undefined,
+      ),
+    );
   });
+  useEffect(() => {
+    if (mode === "history" && history.status === "ready" && history.data && historySnapshotAt === null) {
+      setHistorySnapshotAt(history.data.snapshot_at);
+    }
+  }, [mode, history, historySnapshotAt]);
+  useEffect(() => {
+    if (mode === "reports" && statement.status === "ready" && statement.data && statementSnapshotAt === null) {
+      setStatementSnapshotAt(statement.data.snapshot_at);
+    }
+  }, [mode, statement, statementSnapshotAt]);
   const title = mode === "history" ? "سوابق مالی سازمان" : "گزارش‌های سازمان";
-  const refreshData = () => { setDataOffset(0); setDataRefresh(value => value + 1); };
+  const refreshData = () => {
+    setDataOffset(0);
+    setHistorySnapshotAt(null);
+    setStatementSnapshotAt(null);
+    setDataRefresh(value => value + 1);
+  };
   return <div className="workspace-body institution-empty-pages">
     <SourceNote />
     <ProgramSelector
       programs={programs}
       selectedProgram={programId}
-      onSelect={value => { setSelectedProgram(value || null); setDataOffset(0); setDataRefresh(value => value + 1); }}
-      onRefresh={() => { setSelectedProgram(null); setProgramOffset(0); setProgramRefresh(value => value + 1); }}
+      onSelect={value => {
+        setSelectedProgram(value || null);
+        setDataOffset(0);
+        setHistorySnapshotAt(null);
+        setStatementSnapshotAt(null);
+        setDataRefresh(refresh => refresh + 1);
+      }}
+      onRefresh={() => {
+        setSelectedProgram(null);
+        setProgramOffset(0);
+        setDataOffset(0);
+        setHistorySnapshotAt(null);
+        setStatementSnapshotAt(null);
+        setProgramRefresh(value => value + 1);
+      }}
       offset={programOffset}
-      onOffset={value => { setProgramOffset(value); setSelectedProgram(null); setDataOffset(0); }}
+      onOffset={value => {
+        setProgramOffset(value);
+        setSelectedProgram(null);
+        setDataOffset(0);
+        setHistorySnapshotAt(null);
+        setStatementSnapshotAt(null);
+      }}
     />
     <section className="institution-ledger-content">
       <div className="institution-ledger-content__heading">
@@ -311,14 +359,30 @@ function InstitutionLedgerWorkspace({ token, mode }: { token: string; mode: Mode
           : history.status === "error" ? <p className="institution-ledger-feedback institution-ledger-feedback--error" role="alert">{unavailableMessage(history)}</p>
             : history.data ? <>
               <HistoryContent data={history.data} />
-              <DataPager offset={dataOffset} total={history.data.total_entries} limit={LEDGER_PAGE_SIZE} onOffset={setDataOffset} />
+              <DataPager
+                offset={dataOffset}
+                total={history.data.total_entries}
+                limit={LEDGER_PAGE_SIZE}
+                onOffset={value => {
+                  setHistorySnapshotAt(history.data.snapshot_at);
+                  setDataOffset(value);
+                }}
+              />
             </> : null
       ) : (
         statement.status === "loading" ? <p className="institution-ledger-feedback" role="status">در حال ساخت صورت‌وضعیت از ثبت‌های دفترکل…</p>
           : statement.status === "error" ? <p className="institution-ledger-feedback institution-ledger-feedback--error" role="alert">{unavailableMessage(statement)}</p>
             : statement.data ? <>
               <StatementContent data={statement.data} />
-              <DataPager offset={dataOffset} total={statement.data.total_rows} limit={LEDGER_PAGE_SIZE} onOffset={setDataOffset} />
+              <DataPager
+                offset={dataOffset}
+                total={statement.data.total_rows}
+                limit={LEDGER_PAGE_SIZE}
+                onOffset={value => {
+                  setStatementSnapshotAt(statement.data.snapshot_at);
+                  setDataOffset(value);
+                }}
+              />
             </> : null
       )}
     </section>

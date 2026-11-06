@@ -86,14 +86,18 @@ function statementPayload() {
 
 describe("supporting institution ledger read contracts", () => {
   it("builds only exact-program read paths and rejects invalid pagination or IDs", () => {
-    expect(financialHistoryPath(program)).toContain("/" + program + "/financial-history?limit=25&offset=0");
-    expect(financialStatementPath(program, 50, 50)).toContain("/" + program + "/financial-statement?limit=50&offset=50");
+    expect(financialHistoryPath(program, 25, 0, now)).toContain(
+      "/" + program + "/financial-history?limit=25&offset=0&snapshot_at=" + encodeURIComponent(now),
+    );
+    expect(financialStatementPath(program, 50, 50, now)).toContain(
+      "/" + program + "/financial-statement?limit=50&offset=50&snapshot_at=" + encodeURIComponent(now),
+    );
     expect(() => financialHistoryPath("not-a-uuid")).toThrow();
     expect(() => financialStatementPath(program, 101, 0)).toThrow();
   });
 
   it("validates POSTED complete history and rejects private posting dimensions", () => {
-    const result = verifiedFinancialHistoryPage(historyPayload(), program, 25, 0);
+    const result = verifiedFinancialHistoryPage(historyPayload(), program, 25, 0, now);
     expect(result.items).toHaveLength(1);
     const invalid = historyPayload();
     (invalid.items[0].postings[0] as Record<string, unknown>).participant_id = journal;
@@ -110,7 +114,7 @@ describe("supporting institution ledger read contracts", () => {
   });
 
   it("validates program statement aggregation without participant identifiers", () => {
-    const result = verifiedProgramStatement(statementPayload(), program, 25, 0);
+    const result = verifiedProgramStatement(statementPayload(), program, 25, 0, now);
     expect(result.items[0].balance).toBe("25.000000000000000000");
     const invalid = statementPayload();
     (invalid.items[0] as unknown as Record<string, unknown>).participant_id = journal;
@@ -124,5 +128,6 @@ describe("supporting institution ledger read contracts", () => {
     const wrongEntity = statementPayload();
     wrongEntity.items[0].legal_entity_id = program;
     expect(() => verifiedProgramStatement(wrongEntity, program, 25, 0)).toThrow();
+    expect(() => verifiedProgramStatement(statementPayload(), program, 25, 0, "2026-11-06T11:00:00Z")).toThrow();
   });
 });

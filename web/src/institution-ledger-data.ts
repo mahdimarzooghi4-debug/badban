@@ -52,6 +52,7 @@ export interface FinancialHistoryPage {
   source_type: "INTERNAL_BADBAN_POSTED_JOURNAL";
   program_id: string;
   legal_entity_id: string;
+  snapshot_at: string;
   items: FinancialHistoryEntry[];
   limit: number;
   offset: number;
@@ -135,15 +136,27 @@ function exactPage(raw: unknown, limit: number, offset: number): RecordValue & {
   return page as RecordValue & { items: unknown[]; limit: number; offset: number };
 }
 
-export function financialHistoryPath(programId: string, limit = LEDGER_PAGE_SIZE, offset = 0): string {
+export function financialHistoryPath(
+  programId: string,
+  limit = LEDGER_PAGE_SIZE,
+  offset = 0,
+  snapshotAt?: string,
+): string {
   checkedReadPage(limit, offset);
-  return "/api/v1/support-institution/programs/" + requireUuid(programId) +
+  const path = "/api/v1/support-institution/programs/" + requireUuid(programId) +
     "/financial-history?limit=" + limit + "&offset=" + offset;
+  return snapshotAt ? path + "&snapshot_at=" + encodeURIComponent(snapshotAt) : path;
 }
-export function financialStatementPath(programId: string, limit = LEDGER_PAGE_SIZE, offset = 0): string {
+export function financialStatementPath(
+  programId: string,
+  limit = LEDGER_PAGE_SIZE,
+  offset = 0,
+  snapshotAt?: string,
+): string {
   checkedReadPage(limit, offset);
-  return "/api/v1/support-institution/programs/" + requireUuid(programId) +
+  const path = "/api/v1/support-institution/programs/" + requireUuid(programId) +
     "/financial-statement?limit=" + limit + "&offset=" + offset;
+  return snapshotAt ? path + "&snapshot_at=" + encodeURIComponent(snapshotAt) : path;
 }
 
 export function verifiedFinancialHistoryPage(
@@ -151,10 +164,12 @@ export function verifiedFinancialHistoryPage(
   programId: string,
   limit: number,
   offset: number,
+  expectedSnapshotAt?: string,
 ): FinancialHistoryPage {
   const page = exactPage(raw, limit, offset);
   if (page.source_type !== "INTERNAL_BADBAN_POSTED_JOURNAL" ||
-      !uuid(page.legal_entity_id) ||
+      !uuid(page.legal_entity_id) || !aware(page.snapshot_at) ||
+      (expectedSnapshotAt !== undefined && page.snapshot_at !== expectedSnapshotAt) ||
       typeof page.total_entries !== "number" || !Number.isSafeInteger(page.total_entries) ||
       page.total_entries < page.items.length ||
       typeof page.program_id !== "string" ||
@@ -197,13 +212,16 @@ export function verifiedProgramStatement(
   programId: string,
   limit: number,
   offset: number,
+  expectedSnapshotAt?: string,
 ): ProgramStatement {
   const page = exactPage(raw, limit, offset);
   if (page.source_type !== "INTERNAL_BADBAN_POSTED_JOURNAL" ||
       typeof page.program_id !== "string" ||
       page.program_id.toLowerCase() !== requireUuid(programId) ||
       !uuid(page.legal_entity_id) ||
-      !aware(page.snapshot_at) || !aware(page.received_at) ||
+      !aware(page.snapshot_at) ||
+      (expectedSnapshotAt !== undefined && page.snapshot_at !== expectedSnapshotAt) ||
+      !aware(page.received_at) ||
       !nonEmpty(page.source_reference) || !nonEmpty(page.schema_version) ||
       !nonEmpty(page.contract_version) || !nonEmpty(page.mapping_version) ||
       typeof page.content_hash !== "string" || !/^[a-f\d]{64}$/.test(page.content_hash) ||
