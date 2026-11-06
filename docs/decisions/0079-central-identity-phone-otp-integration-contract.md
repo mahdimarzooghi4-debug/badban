@@ -162,3 +162,42 @@ Passing this checklist does not authorize Stage, Release, Production, or real-mo
 - If the owner instead chooses Badban-owned OTP, this proposal must be revised and a separate security, privacy, identity-proofing, and operational contract must be accepted before implementation.
 
 **Proposed outcome:** keep authentication centralized, preserve the existing OIDC trust boundary, and make phone OTP a verified IdP-owned factor rather than a new parallel identity system inside Badban.
+
+## 11. Owner Direction: SMS and Shahkar Matching (2026-11-06)
+
+**Owner direction received:** Badban's intended onboarding/login journey includes connecting an SMS provider for OTP and using Shahkar as a mobile-to-national-ID verification dependency. This direction records the intended capabilities; it does **not** assert that either integration is already connected or that Decision 0079 as a whole has been accepted.
+
+### Important Shahkar contract correction
+
+The commonly available **Shahkar matching** service accepts a **national ID and mobile number as inputs**, and returns whether they match. It does **not** normally disclose the national ID when given only a mobile number. This is a fundamental request/response distinction and must be verified against the actual selected provider's authorized API schema.
+
+Representative public API descriptions (non-binding vendor examples; no provider selected):
+- https://www.ehrazino.com/api/identity/shahkar/
+- https://www.ehrazino.com/guides/what-is-shahkar/
+- https://github.com/api-ir/python-sdk
+
+Therefore, do not implement a phone-number-only `get_national_id_from_shahkar()`, a guessed response field, or an inferred national ID. If a specific licensed service contract later genuinely permits retrieving an official national identifier from a phone number, that is a **separate, explicitly reviewed and approved identity-data service contract**; it must not be silently assumed to be ordinary Shahkar matching.
+
+### Candidate sequence for a future approved IdP integration
+
+1. The identity provider collects the mobile number and verifies control through its authorized SMS/OTP integration.
+2. The user or an **explicitly approved and independently verified identity-data source** supplies the claimed national ID; the exact collection/source workflow remains undecided. No auto-discovery from the phone number is assumed.
+3. Through an approved backend-to-provider channel, the identity-proofing owner submits the mobile number and claimed national ID to the contracted Shahkar matching service. Browser direct access and exposure of provider credentials are forbidden.
+4. A verified match is one necessary phone-ownership evidence signal, **not** sufficient on its own to assert a complete, authoritative identity proof. Any further identity checks and binding rules must be approved.
+5. Only when the identity provider's authoritative proofing requirements are satisfied may it issue the trusted OIDC access token carrying the stable `sub` and the configured verified national-ID claim consumed by Badban.
+6. Badban's existing verified-token principal resolution and role/resource authorization run unchanged. No SMS/OTP success or Shahkar match alone provisions a participant, staff grant, guarantee, entitlement, or financial state.
+
+### Required negative and privacy tests
+
+- National ID unknown or not authoritatively established: no trusted national-ID claim and no participant auto-provisioning from the mobile number.
+- Shahkar mismatch, provider timeout, provider error, missing response, malformed response, or unverifiable provenance: fail closed; no automatic identity promotion.
+- IdP challenge failure, expired/replayed challenge, invalid OTP, or unsupported phone ownership path: no successful login.
+- A matched phone/national-ID pair without the IdP's required identity-proofing and stable account binding: no verified claim.
+- Provider response handling must avoid leaking national IDs, full phone numbers, OTPs, credentials, raw provider payloads, or sensitive lineage into browser URLs, browser storage, general logs, audit events, analytics, and unrelated domains.
+- Identity recovery, mobile-number changes, recycled SIMs, number reassignment, and staff/admin MFA require separately approved controls.
+
+### Remaining implementation input
+
+Before implementation, obtain the **actual authorized Shahkar provider specification** (request fields, normalized identifiers, positive/negative/unavailable semantics, provenance, retention and legal basis, credentials, access/consent constraints), the **SMS/OTP provider contract**, authoritative national-ID source/proofing rules, and the IdP's integration and OIDC-claim contract. Keep vendor selection, security numeric values, and hosting unresolved until explicit approval.
+
+**Status:** Shahkar matching and SMS OTP are intended future integrations; their exact interfaces, sourcing, providers, policy, credentials, and operational readiness remain undecided. No code, network integration, provider purchase, service provisioning, Stage, or Production authorization is implied.

@@ -61,3 +61,20 @@ See Decision 0079 §8. In summary: IdP selection and ownership; authoritative pa
 - PRs #85 and #84 and all parents remain Draft/Open and unmerged.
 - A COMMENTED technical review is not owner approval.
 - No Stage, QA, Release, Production, Render provisioning, payment, transfer, settlement, or real-money action is authorized.
+
+## Addendum — Owner SMS/Shahkar Direction (2026-11-06)
+
+The owner confirmed an intended **SMS OTP integration** plus **Shahkar identity/phone matching** for Badban. Documented in Decision 0079 §11 without activating either service.
+
+**Critical technical distinction:** ordinary Shahkar matching requires **both national ID and mobile number** and returns a match result; it does not normally return a national ID from a phone number alone. Do not guess a national-ID lookup endpoint or fake a response.
+
+The national ID must first come from the user or another **approved, authoritative identity source**. The selected IdP must enforce the approved proofing and phone-binding policy before issuing the configured verified national-ID claim. Phone OTP proves factor possession; matching evidence alone does not authorize identity, profile provisioning, permissions, services, or financial state.
+
+### Additional Definition-of-Ready evidence
+- Authorized Shahkar API specification, access contract, legal basis, request/response semantics, and failure codes.
+- Explicit source of the national ID; if a provider alleges phone-to-national-ID retrieval, obtain its separate licensed API specification and security/privacy approval.
+- SMS delivery provider and IdP ownership of OTP challenge, plus approved resend, abuse, expiry, lockout, and recovery policies.
+- Consent/privacy handling and safe treatment of phone and national-ID data; no full identifiers or raw vendor payloads in generic logs/audits.
+- Tests for mismatch, unavailable Shahkar, unverified national ID, invalid/expired/replayed OTP, and no identity provision or role escalation on any failure.
+
+This addendum is **planning-only**; Decision 0079 remains Proposed, and Sprint 74 has no Code Authorization.
