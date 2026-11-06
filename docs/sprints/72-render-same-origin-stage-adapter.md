@@ -7,7 +7,8 @@
 - Runtime OIDC metadata contains only the public issuer and client ID. Browser access tokens remain in memory, PKCE is unchanged, no client secret is written to JavaScript or browser storage.
 - Strict startup refusal if the configured static build is absent/incomplete or if a public OIDC client ID is missing. API-only deployments remain unchanged.
 - Security response headers including CSP, no-store, nosniff, no-referrer, and frame denial on the HTML entrypoints.
-- The combined Docker image defaults to `BADBAN_APP_ENV=stage` and `BADBAN_SECRET_PROVIDER=vault`; missing real Stage dependencies or approved secrets must prevent startup, not silently fall back to development.\n- Separate multi-stage `Dockerfile.render-stage` builds the React bundle into the FastAPI image. The old backend-only Dockerfile is unchanged. The Web CI builds this combined image, **but does not deploy it**.
+- The combined Docker image defaults to `BADBAN_APP_ENV=stage` and `BADBAN_SECRET_PROVIDER=vault`; missing real Stage dependencies or approved secrets must prevent startup, not silently fall back to development.
+- Separate multi-stage `Dockerfile.render-stage` builds the React bundle into the FastAPI image. The old backend-only Dockerfile is unchanged. The Web CI builds this combined image, **but does not deploy it**.
 - Negative tests verify that the adapter cannot shadow backend API routes, that Stage's Vault restriction is preserved, and that runtime configuration rejects unsafe issuers.
 
 ## Still blocking a real Render Stage
