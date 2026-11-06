@@ -23,7 +23,13 @@ export function InstitutionCaseOverview({ data, scope }: {
   data: InstitutionFinancialCase;
   scope: InstitutionCaseScope;
 }) {
-  // The exact API scope is checked by verifiedInstitutionCase BEFORE this component renders.
+  // Defense in depth: the rendered participant and returned case must be the same
+  // authorized program, participant and participation episode, not just matching a name.
+  if (data.program_id.toLowerCase() !== scope.programId.toLowerCase() ||
+      data.participant_id.toLowerCase() !== scope.participant.participant_id.toLowerCase() ||
+      data.episode_id.toLowerCase() !== scope.participant.episode_id.toLowerCase()) {
+    throw new Error("محدوده پرونده مالی با برنامه یا فرد انتخاب‌شده تطابق ندارد.");
+  }
   // An asset quantity is not cash, and there is no program-capital total or payment ledger
   // in this response. Never infer either from Figma sample amounts.
   const programAssets = data.assets.filter(
