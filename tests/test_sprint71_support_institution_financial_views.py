@@ -55,6 +55,7 @@ async def _seed(database) -> dict[str, object]:
             await session.flush()
 
             entity = LegalEntity(
+                id=uuid4(),  # Allocate the FK target before constructing program rows.
                 legal_name="Sprint 71 Supporting Entity",
                 registration_identifier=f"SPRINT71-ENTITY-{uuid4()}",
                 entity_type="TEST",
