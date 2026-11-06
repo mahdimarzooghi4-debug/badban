@@ -78,11 +78,11 @@ export function normalizeFinancialDecimal(value: unknown, field: string, nullabl
     decimal = digits.slice(point);
   }
   whole = whole.replace(/^0+(?=\d)/, "");
-  decimal = decimal.replace(/0+$/, "");
+  // Preserve the source scale exactly; formatting may trim display-only trailing zeros later.
   if (whole.length > 20 || decimal.length > 18) {
     throw new Error("دقت مبلغ " + field + " با قرارداد NUMERIC(38,18) سازگار نیست.");
   }
-  const zero = /^0+$/.test(whole) && decimal.length === 0;
+  const zero = /^0+$/.test(whole) && (decimal.length === 0 || /^0+$/.test(decimal));
   return (sign && !zero ? "-" : "") + whole + (decimal ? "." + decimal : "");
 }
 
