@@ -78,9 +78,7 @@ def test_applicant_finance_figma_icons_are_versioned_and_have_native_geometry() 
 def test_institution_person_figma_icons_use_exact_vector_dimensions() -> None:
     """Institution node 244:283 uses the native person and rights-lock vectors."""
     directory = ROOT / "web" / "public" / "assets" / "figma"
-    overview = (ROOT / "web" / "src" / "institution-case-overview.tsx").read_text(
-        encoding="utf-8"
-    )
+    overview = (ROOT / "web" / "src" / "institution-case-overview.tsx").read_text(encoding="utf-8")
     for name, dimension in {"institution-person.svg": 30, "institution-lock.svg": 26}.items():
         path = directory / name
         assert path.exists() and path.stat().st_size > 200, name
