@@ -2,6 +2,7 @@ import { useState } from "react";
 import { previewWorkspaces } from "./preview-data";
 import type { Surface } from "./workspace-access";
 import "./preview-workspaces.css";
+import { IndividualPreviewPage } from "./preview-individual-pages";
 
 type WorkspacePage = {
   title: string;
@@ -366,7 +367,9 @@ export function PreviewWorkspace({ surface, onBack }: {
   const page = (workspace.pages[pageId] ?? workspace.pages.dashboard) as WorkspacePage;
 
   if (surface === "individual") {
-    return <div className="preview-individual-stage" data-figma-frame="160:3">
+    return <div className="preview-individual-stage" data-figma-frame={
+      ({ dashboard: "160:3", services: "163:2", requests: "163:81", finance: "163:160", profile: "163:239" } as Record<string, string>)[pageId] ?? "160:3"
+    }>
       <div className="mobile-screen" dir="rtl">
         <header className="mobile-topbar">
           <span className="mobile-notification" aria-hidden="true">
@@ -375,7 +378,10 @@ export function PreviewWorkspace({ surface, onBack }: {
           <PreviewBrand onClick={onBack} mobile />
         </header>
         <main className="mobile-content">
-          {pageId === "dashboard" ? <IndividualDashboard onNavigate={setPageId} /> : <IndividualPage page={page} />}
+          {pageId === "dashboard" ? <IndividualDashboard onNavigate={setPageId} />
+            : ["services", "requests", "finance", "profile"].includes(pageId)
+              ? <IndividualPreviewPage pageId={pageId as "services" | "requests" | "finance" | "profile"} onNavigate={setPageId} />
+              : <IndividualPage page={page} />}
         </main>
         <MobileBottomNav pageId={pageId} onNavigate={setPageId} />
       </div>
