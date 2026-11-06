@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { beginSignIn, completeSignIn, localSignOut } from "./auth";
+import { beginSignIn, completeSignIn, isOidcConfigured, localSignOut } from "./auth";
 import { client, type AdminWorkspace, type Service, type ServiceCode } from "./api";
 import { ApplicantRequests } from "./applicant-requests";
 import { ApplicantAccount } from "./applicant-profile";
@@ -16,6 +16,7 @@ import { AdminDirectory } from "./admin-directory";
 import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
 import { InstitutionHistoryView, InstitutionReportsView } from "./institution-ledger-views";
 import { institutionViewForNavigationIndex, type InstitutionView } from "./institution-navigation";
+import { AuthLoginPage } from "./auth-login";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
@@ -340,30 +341,38 @@ function App() {
   const [token, setToken] = useState<string | null>(null);
   const [surface, setSurface] = useState<Surface | null>(null);
   const [error, setError] = useState("");
+  const [loginOpen, setLoginOpen] = useState(window.location.pathname === "/app");
   const [loading, setLoading] = useState(window.location.pathname === "/auth/callback");
+  const otpPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("auth-preview") === "otp";
 
   useEffect(() => {
     if (window.location.pathname !== "/auth/callback") return;
     let live = true;
-    completeSignIn().then(accessToken => { if (live) { setToken(accessToken); setLoading(false); } })
-      .catch((e: unknown) => { if (live) { setLoading(false); setError(e instanceof Error ? e.message : "ورود ناموفق بود."); } });
+    completeSignIn().then(accessToken => { if (live) { setToken(accessToken); setLoginOpen(false); setLoading(false); } })
+      .catch((e: unknown) => { if (live) { setLoading(false); setLoginOpen(true); setError(e instanceof Error ? e.message : "ورود ناموفق بود."); } });
     return () => { live = false; };
   }, []);
 
   function openWorkspace(next: Surface) {
-    if (!token) { setError("برای ورود به محیط عملیاتی ابتدا احراز هویت کنید."); return; }
+    if (!token) {
+      setError("");
+      setLoginOpen(true);
+      window.history.replaceState(null, "", "/app");
+      return;
+    }
     setError("");
     setSurface(next);
     window.history.replaceState(null, "", "/app");
   }
   function signIn() {
     setError("");
-    if (token) { setSurface(null); window.history.replaceState(null, "", "/app"); return; }
-    void beginSignIn().catch((e: unknown) => setError(e instanceof Error ? e.message : "ورود امکان‌پذیر نیست."));
+    if (token) { setSurface(null); setLoginOpen(false); window.history.replaceState(null, "", "/app"); return; }
+    setLoginOpen(true);
+    window.history.replaceState(null, "", "/app");
   }
   async function logout() {
     await localSignOut();
-    setToken(null); setSurface(null); setError("");
+    setToken(null); setSurface(null); setLoginOpen(false); setError("");
     window.history.replaceState(null, "", "/");
   }
 
@@ -377,6 +386,14 @@ function App() {
       type="button" onClick={() => openWorkspace(s.id)}><span className="audience-icon">{s.symbol}</span>
       <strong>{s.name}</strong><small>{s.description}</small></button>)}</div>
   </div>;
+  if (loginOpen) return <AuthLoginPage
+    onBack={() => { setLoginOpen(false); setError(""); window.history.replaceState(null, "", "/"); }}
+    onExistingSignIn={() => { setError(""); void beginSignIn().catch((e: unknown) => setError(e instanceof Error ? e.message : "ورود امکان‌پذیر نیست.")); }}
+    oidcConfigured={isOidcConfigured}
+    previewOtp={otpPreview}
+    error={error}
+    onDismissError={() => setError("")}
+  />;
   return <><Landing signIn={signIn} openWorkspace={openWorkspace}/>{error &&
     <div className="floating-error" role="alert">{error}<button type="button" onClick={() => setError("")}>بستن</button></div>}</>;
 }

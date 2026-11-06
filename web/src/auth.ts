@@ -27,6 +27,8 @@ export const oidc = publicOidc
     })
   : null;
 
+export const isOidcConfigured = oidc !== null;
+
 export async function beginSignIn(): Promise<void> {
   if (!oidc) throw new Error("اتصال احراز هویت هنوز پیکربندی نشده است.");
   await oidc.signinRedirect();
