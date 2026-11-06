@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from badban.application.idempotency import canonical_request_hash
@@ -29,9 +29,20 @@ from badban.infrastructure.persistence.models import (
 class InternalPostedJournalSource(ReconciliationSourcePort):
     """Read-only, program-scoped source over immutable POSTED journal truth."""
 
-    def __init__(self, session: AsyncSession, *, program_id: UUID) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        *,
+        program_id: UUID,
+        snapshot_at: datetime | None = None,
+    ) -> None:
+        if snapshot_at is not None and (
+            snapshot_at.tzinfo is None or snapshot_at.utcoffset() is None
+        ):
+            raise ValueError("snapshot_at must be timezone-aware")
         self._session = session
         self._program_id = program_id
+        self._snapshot_at = snapshot_at
 
     def capability(self) -> SourceCapability:
         return SourceCapability(
@@ -57,7 +68,11 @@ class InternalPostedJournalSource(ReconciliationSourcePort):
         if scope != expected_scope:
             raise ReconciliationSourceAcquisitionError("SOURCE_CONTRACT_INVALID")
 
-        snapshot_cutoff = select(func.statement_timestamp()).scalar_subquery()
+        snapshot_cutoff = (
+            select(func.statement_timestamp()).scalar_subquery()
+            if self._snapshot_at is None
+            else literal(self._snapshot_at)
+        )
         rows = (
             await self._session.execute(
                 select(
@@ -87,7 +102,7 @@ class InternalPostedJournalSource(ReconciliationSourcePort):
                 )
             )
         ).all()
-        snapshot_at = rows[0][3] if rows else datetime.now(UTC)
+        snapshot_at = rows[0][3] if rows else self._snapshot_at or datetime.now(UTC)
         return build_posted_journal_snapshot(
             [row[:3] for row in rows],
             program_id=self._program_id,

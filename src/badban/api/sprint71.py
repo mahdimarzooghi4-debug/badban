@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Literal, NoReturn, cast
 from uuid import UUID
@@ -84,6 +84,7 @@ class FinancialHistoryPageView(ReadModel):
     limit: int
     offset: int
     total_entries: int
+    snapshot_at: datetime
 
 
 class FinancialStatementRowView(ReadModel):
@@ -180,6 +181,26 @@ def _audit_read(
     )
 
 
+async def _resolve_snapshot_at(
+    session: AsyncSession,
+    requested_snapshot_at: datetime | None,
+) -> datetime:
+    database_now = await session.scalar(select(func.statement_timestamp()))
+    if requested_snapshot_at is None:
+        return database_now or datetime.now(UTC)
+    if (
+        requested_snapshot_at.tzinfo is None
+        or requested_snapshot_at.utcoffset() is None
+        or (database_now is not None and requested_snapshot_at > database_now)
+    ):
+        raise ApiError(
+            422,
+            "SNAPSHOT_TIME_INVALID",
+            "Snapshot time must be timezone-aware and cannot be in the future",
+        )
+    return requested_snapshot_at
+
+
 def _source_contract_error() -> ApiError:
     return ApiError(
         409,
@@ -214,6 +235,7 @@ async def _fail_source_contract(
 def _complete_program_entry_predicates(
     program_id: UUID,
     legal_entity_id: UUID,
+    snapshot_at: datetime,
 ) -> tuple[ColumnElement[bool], ...]:
     has_program_posting = exists(
         select(JournalPosting.id).where(
@@ -234,6 +256,7 @@ def _complete_program_entry_predicates(
     return (
         JournalEntry.state == "POSTED",
         JournalEntry.posted_at.is_not(None),
+        JournalEntry.posted_at <= snapshot_at,
         JournalEntry.legal_entity_id == legal_entity_id,
         has_program_posting,
         ~has_out_of_scope_posting,
@@ -245,6 +268,7 @@ async def read_program_financial_history(
     program_id: UUID,
     limit: int = Query(default=25, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    snapshot_at: datetime | None = Query(default=None),
     principal: Principal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session),
     correlation_id: UUID = Depends(get_correlation_id),
@@ -258,7 +282,24 @@ async def read_program_financial_history(
         action=action,
     )
     assert program.legal_entity_id is not None
-    predicates = _complete_program_entry_predicates(program_id, program.legal_entity_id)
+    try:
+        snapshot_cutoff = await _resolve_snapshot_at(session, snapshot_at)
+    except ApiError as exc:
+        _audit_read(
+            session,
+            principal=principal,
+            correlation_id=correlation_id,
+            program_id=program_id,
+            action=action,
+            outcome="FAILED",
+            reason_code=exc.code,
+            scope={"limit": limit, "offset": offset},
+        )
+        await session.commit()
+        raise
+    predicates = _complete_program_entry_predicates(
+        program_id, program.legal_entity_id, snapshot_cutoff
+    )
     total_entries = int(
         await session.scalar(select(func.count()).select_from(JournalEntry).where(*predicates)) or 0
     )
@@ -412,6 +453,7 @@ async def read_program_financial_history(
             "offset": offset,
             "total_entries": total_entries,
             "returned_count": len(result_entries),
+            "snapshot_at": snapshot_cutoff.isoformat(),
         },
     )
     await session.commit()
@@ -423,6 +465,7 @@ async def read_program_financial_history(
         limit=limit,
         offset=offset,
         total_entries=total_entries,
+        snapshot_at=snapshot_cutoff,
     )
 
 
@@ -459,6 +502,7 @@ async def _assert_snapshot_entries_are_complete(
         if (
             entry.state != "POSTED"
             or entry.posted_at is None
+            or entry.posted_at > snapshot.snapshot_at
             or entry.legal_entity_id != legal_entity_id
             or posting.program_id != program_id
             or posting.legal_entity_id != legal_entity_id
@@ -472,6 +516,7 @@ async def read_program_financial_statement(
     program_id: UUID,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    snapshot_at: datetime | None = Query(default=None),
     principal: Principal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session),
     correlation_id: UUID = Depends(get_correlation_id),
@@ -485,7 +530,24 @@ async def read_program_financial_statement(
         action=action,
     )
     assert program.legal_entity_id is not None
-    source = InternalPostedJournalSource(session, program_id=program_id)
+    try:
+        snapshot_cutoff = await _resolve_snapshot_at(session, snapshot_at)
+    except ApiError as exc:
+        _audit_read(
+            session,
+            principal=principal,
+            correlation_id=correlation_id,
+            program_id=program_id,
+            action=action,
+            outcome="FAILED",
+            reason_code=exc.code,
+            scope={"limit": limit, "offset": offset},
+        )
+        await session.commit()
+        raise
+    source = InternalPostedJournalSource(
+        session, program_id=program_id, snapshot_at=snapshot_cutoff
+    )
     try:
         snapshot = await source.fetch_reconciliation_snapshot(
             SourceTarget(reconciliation_type="LEDGER", program_id=program_id),
@@ -525,7 +587,10 @@ async def read_program_financial_statement(
         raise _source_contract_error() from exc
 
     try:
-        if any(record.legal_entity_id != program.legal_entity_id for record in snapshot.records):
+        if (
+            snapshot.snapshot_at != snapshot_cutoff
+            or any(record.legal_entity_id != program.legal_entity_id for record in snapshot.records)
+        ):
             raise _source_contract_error()
         await _assert_snapshot_entries_are_complete(
             session,
@@ -610,6 +675,7 @@ async def read_program_financial_statement(
             "total_rows": total_rows,
             "returned_count": len(items),
             "evidence_reference_count": len(snapshot.evidence_references),
+            "snapshot_at": snapshot.snapshot_at.isoformat(),
         },
     )
     await session.commit()
