@@ -5,6 +5,7 @@ import { amount, client, type AdminWorkspace, type Service, type ServiceCode } f
 import { ApplicantRequests } from "./applicant-requests";
 import { ApplicantAccount } from "./applicant-profile";
 import { validateApplicantRequest } from "./applicant-requests-data";
+import { loadApplicantFinancialCase } from "./applicant-financial-data";
 import { activeCatalogueServices } from "./applicant-services";
 import "./styles.css";
 import "./operational-details.css";
@@ -154,7 +155,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function Individual({ token, logout }: { token: string; logout: () => void }) {
   const catalogue = useRemote(token, client.catalogue, "individual-service-catalogue");
-  const financial = useRemote(token, client.financial, "individual-financial");
+  const financial = useRemote(token, loadApplicantFinancialCase, "individual-financial");
   const [requestRefreshKey, setRequestRefreshKey] = useState(0);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
