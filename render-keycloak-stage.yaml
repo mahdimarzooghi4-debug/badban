@@ -1,0 +1,38 @@
+# Proposal only. NOT the repository's default render.yaml.
+# Requires separate review/approval of the Blueprint plan and its estimated cost.
+services:
+  - type: web
+    name: badban-keycloak-stage
+    runtime: docker
+    region: frankfurt
+    plan: standard # 1 CPU / 2 GB RAM; requires explicit approval of paid usage.
+    repo: https://github.com/mahdimarzooghi4-debug/badban
+    branch: sprint-75-keycloak-stage-readiness
+    dockerContext: .
+    dockerfilePath: ./infra/keycloak/Dockerfile
+    autoDeployTrigger: off
+    healthCheckPath: /realms/master/.well-known/openid-configuration
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: badban-keycloak-stage-db
+          property: connectionString
+      - key: KC_DB_USERNAME
+        fromDatabase:
+          name: badban-keycloak-stage-db
+          property: user
+      - key: KC_DB_PASSWORD
+        fromDatabase:
+          name: badban-keycloak-stage-db
+          property: password
+      - key: KC_BOOTSTRAP_ADMIN_USERNAME
+        value: badban-stage-admin
+      - key: KC_BOOTSTRAP_ADMIN_PASSWORD
+        generateValue: true
+
+databases:
+  - name: badban-keycloak-stage-db
+    postgresMajorVersion: "18"
+    region: frankfurt
+    plan: free # Ephemeral sandbox only; expires after 30 days, no managed backups.
+    ipAllowList: [] # No public database ingress.
