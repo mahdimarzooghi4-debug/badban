@@ -1,0 +1,58 @@
+/* Figma frames Institution 244:113, Lender 259:103, Admin 271:122.
+   These lists are public read-only samples, not backend read models. */
+.figma-list-page{width:100%;color:var(--brand)}
+.figma-list-breadcrumb{color:var(--muted);font-size:11px;line-height:1.8}
+.figma-list-heading{margin:11px 0 20px;text-align:right}
+.figma-list-heading h1{font-size:28px;font-weight:850;line-height:1.5}
+.figma-list-heading p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.figma-list-scope{min-height:49px;display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:18px;padding:9px 15px;border:1px solid var(--line);border-radius:13px;background:#fff}
+.figma-list-scope strong{font-size:11px;color:var(--brand);font-weight:700}
+.figma-list-scope>span{min-width:117px;border-radius:50px;padding:7px 13px;color:var(--brand);background:var(--gold-light);font-size:10px;text-align:center}
+.figma-list-intro{min-height:98px;display:flex;align-items:center;gap:15px;margin-bottom:20px;padding:17px 20px;border:1px solid var(--line);border-radius:17px;background:#fff}
+.figma-list-intro>div:last-child{flex:1}
+.figma-list-intro h2{font-size:17px;font-weight:850}
+.figma-list-intro p{margin:6px 0 0;font-size:11px;color:var(--muted)}
+.figma-list-section-icon{width:36px;height:36px;display:grid;place-items:center}
+.figma-list-section-icon img{width:24px;height:24px;object-fit:contain}
+.figma-list-toolbar{min-height:43px;display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:19px}
+.figma-list-filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.figma-list-filter{min-width:98px;padding:7px 17px;border:1px solid transparent;border-radius:99px;background:var(--gold-light);font-size:10px;color:var(--brand);text-align:center}
+.figma-list-filter.is-active{border-color:var(--gold);font-weight:800}
+.figma-list-static-actions{display:flex;gap:9px;align-items:center;direction:ltr}
+.figma-list-static-actions span{min-width:135px;padding:11px 17px;border:1px solid var(--line);border-radius:10px;color:var(--brand);background:#fff;font-size:11px;font-weight:700;text-align:center}
+.figma-list-static-actions .figma-list-action-dark{background:var(--navy);border-color:var(--navy);color:#fff}
+.figma-list-records{min-height:218px;display:grid;align-content:start;gap:10px;padding:11px;border:1px solid var(--line);border-radius:17px;background:#fff}
+.figma-list-record{min-height:59px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(60px,.6fr) minmax(85px,.6fr) minmax(100px,1fr) minmax(115px,.9fr);align-items:center;gap:12px;padding:10px 15px;border:1px solid var(--line);border-radius:10px;background:var(--canvas);font-size:11px;white-space:nowrap}
+.figma-list-record>span:not(.figma-list-status){color:#6d7d95}
+.figma-list-record>strong{font-weight:750}
+.figma-list-name{display:flex;align-items:center;gap:9px;min-width:0}
+.figma-list-name img{width:22px;height:22px;object-fit:contain}
+.figma-list-status{min-width:115px;justify-self:start;padding:7px 11px;border-radius:99px;text-align:center;font-size:10px;font-weight:750}
+.figma-list-status--gold{background:var(--gold-light);color:var(--brand)}
+.figma-list-status--blue{background:var(--blue);color:#fff}
+.figma-list-status--pending{background:var(--navy);color:#fff}
+.figma-list-footnote{margin:25px 0 0;color:var(--muted);font-size:11px;text-align:right}
+.figma-list-page--lender .figma-list-record{min-height:68px}
+.figma-list-page--lender .figma-list-records{gap:12px}
+.figma-list-page--admin .figma-list-intro{min-height:110px}
+.figma-list-page--admin .figma-list-record{min-height:62px}
+.figma-list-warning{margin-top:24px;padding:20px;border-radius:15px;background:var(--gold-light);color:var(--brand);font-size:11px;line-height:1.8;text-align:center}
+@media (max-width:1150px){
+ .figma-list-toolbar{align-items:flex-start;flex-wrap:wrap}
+ .figma-list-record{gap:8px;padding:10px}
+ .figma-list-filters{gap:6px}
+}
+@media (max-width:850px){
+ .figma-list-records{overflow-x:auto}
+ .figma-list-record{min-width:720px}
+ .figma-list-scope{align-items:flex-start}
+ .figma-list-heading h1{font-size:24px}
+}
+@media (max-width:640px){
+ .figma-list-toolbar{gap:12px}
+ .figma-list-static-actions{width:100%;justify-content:flex-end}
+ .figma-list-scope{align-items:center}
+ .figma-list-scope strong{font-size:10px;line-height:1.8}
+ .figma-list-intro{padding:12px}
+ .figma-list-intro h2{font-size:15px}
+}

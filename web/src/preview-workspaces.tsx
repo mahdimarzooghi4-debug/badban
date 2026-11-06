@@ -3,6 +3,7 @@ import { previewWorkspaces } from "./preview-data";
 import type { Surface } from "./workspace-access";
 import "./preview-workspaces.css";
 import { IndividualPreviewPage } from "./preview-individual-pages";
+import { DesktopInnerPreview } from "./preview-desktop-pages";
 
 type WorkspacePage = {
   title: string;
@@ -388,13 +389,19 @@ export function PreviewWorkspace({ surface, onBack }: {
     </div>;
   }
 
-  const frame = surface === "institution" ? "244:3" : surface === "lender" ? "259:3" : "271:3";
+  const frame = surface === "institution" ? (pageId==="people" ? "244:113" : "244:3")
+    : surface === "lender" ? (pageId==="guarantees" ? "259:103" : "259:3")
+      : pageId==="people" ? "271:122" : "271:3";
   return <div className={"preview-desktop-shell preview-desktop-shell--" + surface}
     dir="ltr" data-figma-frame={frame}>
     <main className="preview-main" dir="rtl">
       {pageId === "dashboard"
         ? <DesktopDashboard surface={surface} onNavigate={setPageId} />
-        : <GenericDesktopPage page={page} surface={surface} />}
+        : (surface === "institution" && pageId === "people")
+          || (surface === "lender" && pageId === "guarantees")
+          || (surface === "admin" && pageId === "people")
+            ? <DesktopInnerPreview surface={surface} pageId={pageId} />
+            : <GenericDesktopPage page={page} surface={surface} />}
     </main>
     <PreviewSidebar surface={surface} workspace={workspace} pageId={pageId}
       onNavigate={setPageId} onBack={onBack} />
