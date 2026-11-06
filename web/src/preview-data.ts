@@ -34,7 +34,7 @@ export interface PreviewWorkspaceDefinition {
   pages: Readonly<Record<string, PreviewPage>>;
 }
 
-export const previewWorkspaces = {
+export const previewWorkspaces: Record<Surface, PreviewWorkspaceDefinition> = {
   individual: {
     title: "افراد و متقاضیان",
     shortTitle: "افراد",
@@ -432,7 +432,7 @@ export const previewWorkspaces = {
       },
     },
   },
-} as const satisfies Record<Surface, PreviewWorkspaceDefinition>;
+};
 
 export function previewPageIds(surface: Surface): string[] {
   return Object.keys(previewWorkspaces[surface].pages);
