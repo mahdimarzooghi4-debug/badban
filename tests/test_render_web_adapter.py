@@ -95,3 +95,13 @@ def test_stage_env_secret_fallback_stays_forbidden_with_web_enabled(tmp_path: Pa
             web_dist_dir=str(dist),
             web_oidc_client_id="badban-web",
         )
+
+
+def test_stage_candidate_image_defaults_to_stage_and_vault() -> None:
+    dockerfile = (Path(__file__).resolve().parents[1] / "Dockerfile.render-stage").read_text(
+        encoding="utf-8"
+    )
+    assert "BADBAN_APP_ENV=stage" in dockerfile
+    assert "BADBAN_SECRET_PROVIDER=vault" in dockerfile
+    assert "BADBAN_APP_ENV=development" not in dockerfile
+    assert "BADBAN_SECRET_PROVIDER=environment" not in dockerfile

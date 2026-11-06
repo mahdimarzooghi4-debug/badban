@@ -10,6 +10,8 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
+    BADBAN_APP_ENV=stage \
+    BADBAN_SECRET_PROVIDER=vault \
     BADBAN_WEB_DIST_DIR=/app/web-dist
 WORKDIR /app
 COPY pyproject.toml README.md ./
