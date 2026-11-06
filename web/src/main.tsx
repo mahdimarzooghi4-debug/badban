@@ -14,8 +14,10 @@ import { AdminServiceQueue } from "./operational-details";
 import { AdminGovernance } from "./operational-governance";
 import { AdminDirectory } from "./admin-directory";
 import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
+import { InstitutionHistoryView, InstitutionReportsView } from "./institution-empty-views";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
+type InstitutionView = "home" | "history" | "reports";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
 
 const sections: Array<{ id: Surface; name: string; description: string; symbol: string }> = [
@@ -282,6 +284,17 @@ function Workspace({ token, surface, choose, logout }: {
   token: string; surface: Surface; choose: (s: Surface | null) => void; logout: () => void;
 }) {
   const selected = sections.find(s => s.id === surface)!;
+  const [institutionView, setInstitutionView] = useState<InstitutionView>("home");
+  const institutionPage = institutionView === "history"
+    ? { title: "سوابق مالی سازمان", description: "پیگیری درخواست‌های تأمین وجه و انتساب آن‌ها به افراد، با وضعیت‌های جداگانه" }
+    : institutionView === "reports"
+      ? { title: "گزارش‌های سازمان", description: "نمای تجمیعی سرمایه متعلق به سازمان و افراد منتسب به برنامه" }
+      : { title: selected.name, description: selected.description };
+  const pageTitle = surface === "institution" ? institutionPage.title : selected.name;
+  const pageDescription = surface === "institution" ? institutionPage.description : selected.description;
+  const breadcrumb = surface === "institution" && institutionView !== "home"
+    ? "بادبان / " + selected.name + " / " + pageTitle
+    : "بادبان / " + selected.name;
   return <div className={"workspace workspace--" + surface} dir="rtl">
     <aside className="sidebar">
       {surface === "individual" ? <button className="applicant-logo-switch" type="button"
@@ -294,18 +307,34 @@ function Workspace({ token, surface, choose, logout }: {
       </span>}
       <p>{selected.name}</p>
       <nav aria-label={"منوی " + selected.name}>
-        {navigation[surface].map((name, index) => <div className={"nav-item" + (!index ? " nav-item--active" : "")}
-          key={name}><span aria-hidden="true">{["▦", "♧", "◇", "▤", "◈", "♢", "♧", "◇", "▣"][index]}</span>
-          {name}{index !== 0 && <small>در مراحل بعد</small>}</div>)}
+        {navigation[surface].map((name, index) => {
+          const activeIndex = institutionView === "home" ? 0 : institutionView === "history" ? 3 : 4;
+          const active = surface === "institution" ? index === activeIndex : index === 0;
+          const enabled = surface === "institution" && [0, 3, 4].includes(index);
+          const navigate = () => {
+            if (!enabled) return;
+            if (index === 0) setInstitutionView("home");
+            else if (index === 3) setInstitutionView("history");
+            else if (index === 4) setInstitutionView("reports");
+          };
+          return <button type="button" className={"nav-item" + (active ? " nav-item--active" : "")}
+            key={name} disabled={!enabled} aria-current={active ? "page" : undefined} onClick={navigate}>
+            <span aria-hidden="true">{["▦", "♧", "◇", "▤", "◈", "♢", "♧", "◇", "▣"][index]}</span>
+            {name}{index !== 0 && !enabled && <small>در مراحل بعد</small>}
+          </button>;
+        })}
       </nav>
       <button className="sidebar-back" onClick={() => choose(null)} type="button">تغییر محیط</button>
       <button className="sidebar-logout" type="button" onClick={logout}>خروج از حساب (محلی)</button>
     </aside>
     <main className="workspace-main">
-      <div className="workspace-top"><span>بادبان / {selected.name}</span><strong>{selected.description}</strong></div>
-      <div className="workspace-heading"><h1>{selected.name}</h1><p>اطلاعات معتبر از API بادبان</p></div>
+      <div className="workspace-top"><span>{breadcrumb}</span><strong>{pageDescription}</strong></div>
+      <div className="workspace-heading"><h1>{pageTitle}</h1>
+        <p>{surface === "institution" && institutionView !== "home" ? "صفحه فعال است؛ منبع داده مالی متصل نیست" : "اطلاعات معتبر از API بادبان"}</p>
+      </div>
       {surface === "individual" ? <Individual token={token} logout={logout}/> : surface === "institution" ?
-        <Institution token={token}/> : surface === "lender" ? <Lender token={token}/> : <Admin token={token}/>}
+        institutionView === "home" ? <Institution token={token}/> : institutionView === "history" ?
+          <InstitutionHistoryView/> : <InstitutionReportsView/> : surface === "lender" ? <Lender token={token}/> : <Admin token={token}/>}
     </main>
   </div>;
 }
