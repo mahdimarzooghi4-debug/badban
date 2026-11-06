@@ -587,9 +587,8 @@ async def read_program_financial_statement(
         raise _source_contract_error() from exc
 
     try:
-        if (
-            snapshot.snapshot_at != snapshot_cutoff
-            or any(record.legal_entity_id != program.legal_entity_id for record in snapshot.records)
+        if snapshot.snapshot_at != snapshot_cutoff or any(
+            record.legal_entity_id != program.legal_entity_id for record in snapshot.records
         ):
             raise _source_contract_error()
         await _assert_snapshot_entries_are_complete(
