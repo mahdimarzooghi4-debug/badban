@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
 import { amount, client, type AdminWorkspace, type Service, type ServiceCode } from "./api";
 import { ApplicantRequests } from "./applicant-requests";
+import { ApplicantAccount } from "./applicant-profile";
 import { validateApplicantRequest } from "./applicant-requests-data";
 import { activeCatalogueServices } from "./applicant-services";
 import "./styles.css";
@@ -150,7 +151,7 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <div className="empty">{children}</div>;
 }
 
-function Individual({ token }: { token: string }) {
+function Individual({ token, logout }: { token: string; logout: () => void }) {
   const catalogue = useRemote(token, client.catalogue, "individual-service-catalogue");
   const financial = useRemote(token, client.financial, "individual-financial");
   const [requestRefreshKey, setRequestRefreshKey] = useState(0);
@@ -246,9 +247,8 @@ function Individual({ token }: { token: string }) {
     </Panel>}
 
     {tab === "account" && <Panel title="حساب من">
-      <div className="notice">شما از طریق سرویس احراز هویت معتبر وارد شده‌اید.
-        اطلاعات هویتی حساس و شناسه ملی از این نما نمایش داده نمی‌شود.</div>
-      <p className="muted">برای خروج از نشست محلی از گزینه «خروج از حساب» در ناوبری استفاده کنید.</p>
+      <ApplicantAccount token={token} onFinancialCase={() => setTab("financial")} onLogout={logout} />
+      <p className="notice">خروج از حساب در ناوبری، فقط نشست محلی را پاک می‌کند و خروج از ارائه‌دهنده هویت نیست.</p>
     </Panel>}
 
     <nav className="individual-tabs" aria-label="تب‌های اپلیکیشن افراد">
@@ -308,7 +308,7 @@ function Workspace({ token, surface, choose, logout }: {
     <main className="workspace-main">
       <div className="workspace-top"><span>بادبان / {selected.name}</span><strong>{selected.description}</strong></div>
       <div className="workspace-heading"><h1>{selected.name}</h1><p>اطلاعات معتبر از API بادبان</p></div>
-      {surface === "individual" ? <Individual token={token}/> : surface === "institution" ?
+      {surface === "individual" ? <Individual token={token} logout={logout}/> : surface === "institution" ?
         <Institution token={token}/> : surface === "lender" ? <Lender token={token}/> : <Admin token={token}/>}
     </main>
   </div>;

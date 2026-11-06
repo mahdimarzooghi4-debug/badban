@@ -1,0 +1,23 @@
+/* Figma account 163:239 / identity 174:145; inherit Badban RTL/navy/gold tokens. */
+.applicant-account {display:flex;flex-direction:column;gap:15px;line-height:1.9;}
+.applicant-account>h3 {font-size:22px;}
+.applicant-account>h4 {font-size:16px;margin-top:4px;}
+.applicant-account>.muted {font-size:12px;margin:0;}
+.applicant-account-hero {background:var(--navy);color:#fff;border-radius:23px;min-height:135px;
+  padding:26px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;}
+.applicant-account-hero strong {font-size:19px;}
+.applicant-account-hero span {font-size:12px;color:#e1e8f3;}
+.applicant-account-entry,.applicant-account-action {border:1px solid var(--line);border-radius:16px;
+  min-height:90px;background:#fff;padding:18px 22px;display:flex;flex-direction:column;gap:9px;
+  text-align:right;color:var(--brand);width:100%;}
+.applicant-account-entry strong,.applicant-account-action strong {font-size:14px;}
+.applicant-account-entry span,.applicant-account-action span {color:var(--muted);font-size:12px;}
+.applicant-account-action:hover {border-color:var(--gold);}
+.applicant-account-id {font-family:monospace;overflow-wrap:anywhere;unicode-bidi:isolate;text-align:left;}
+.applicant-account-back {background:#fff;border:1px solid var(--line);border-radius:9px;
+  color:var(--brand);padding:9px 15px;align-self:flex-start;font-size:12px;}
+.applicant-account-action:focus-visible,.applicant-account-back:focus-visible {outline:3px solid var(--gold);outline-offset:3px;}
+
+.applicant-account-logout {align-self:center;border:0;background:transparent;color:#a32935;
+  padding:13px 25px;font-size:12px;text-decoration:underline;}
+.applicant-account-logout:focus-visible {outline:3px solid var(--gold);outline-offset:3px;}
