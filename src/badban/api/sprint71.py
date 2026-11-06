@@ -147,6 +147,17 @@ async def _authorized_program(
 
     program = await session.get(Program, program_id)
     if program is None or program.status != "ACTIVE" or program.legal_entity_id is None:
+        _audit_read(
+            session,
+            principal=principal,
+            correlation_id=correlation_id,
+            program_id=program_id,
+            action=action,
+            outcome="FAILED",
+            reason_code="SUPPORTING_PROGRAM_NOT_FOUND",
+            scope={"source_status": "NOT_ACTIVE_OR_UNAVAILABLE"},
+        )
+        await session.commit()
         raise ApiError(
             404,
             "SUPPORTING_PROGRAM_NOT_FOUND",
@@ -436,7 +447,8 @@ async def read_program_financial_history(
                 reversal_of_entry_id=entry.reversal_of_entry_id,
                 policy_version_reference=entry.policy_version_reference,
                 posting_template_reference=entry.posting_template_reference,
-                evidence_reference=entry.evidence_reference,
+                # Use only immutable journal identity, never free-form evidence text.
+                evidence_reference=f"journal-entry:{entry.id}",
                 postings=postings,
             )
         )

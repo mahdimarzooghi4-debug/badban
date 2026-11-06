@@ -201,7 +201,7 @@ function HistoryContent({ data }: { data: FinancialHistoryPage }) {
         </div>
         <footer className="institution-ledger-entry__footer">
           <span>ماهیت حساب برای هر ردیف جداگانه نمایش داده شده است</span>
-          <span>مرجع شواهد: {entry.evidence_reference ?? "در این ثبت ارائه نشده است"}</span>
+          <span>مرجع ثبت داخلی: {entry.evidence_reference}</span>
           {entry.policy_version_reference && <span>نسخه سیاست: {entry.policy_version_reference}</span>}
         </footer>
       </article>)}

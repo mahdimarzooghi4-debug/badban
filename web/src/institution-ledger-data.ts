@@ -45,7 +45,7 @@ export interface FinancialHistoryEntry {
   reversal_of_entry_id: string | null;
   policy_version_reference: string | null;
   posting_template_reference: string | null;
-  evidence_reference: string | null;
+  evidence_reference: string;
   postings: FinancialHistoryPosting[];
 }
 export interface FinancialHistoryPage {
@@ -185,7 +185,9 @@ export function verifiedFinancialHistoryPage(
         !nullableUuid(entry.reversal_of_entry_id) ||
         !nullableText(entry.policy_version_reference) ||
         !nullableText(entry.posting_template_reference) ||
-        !nullableText(entry.evidence_reference) || !Array.isArray(entry.postings) ||
+        typeof entry.evidence_reference !== "string" ||
+        entry.evidence_reference.toLowerCase() !== "journal-entry:" + entry.id.toLowerCase() ||
+        !Array.isArray(entry.postings) ||
         entry.postings.length < 2) {
       throw new Error("ثبت دفترکل ناقص یا نامعتبر است.");
     }

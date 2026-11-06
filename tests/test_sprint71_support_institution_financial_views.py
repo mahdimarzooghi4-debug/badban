@@ -6,12 +6,16 @@ from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import func, select, update
 
 from badban.api.app import create_app
 from badban.application.journal import JournalLine, post_journal
 from badban.config import Settings
 from badban.infrastructure.persistence.models import (
+    AuditEvent,
     Identity,
+    JournalEntry,
+    JournalPosting,
     LegalEntity,
     Participant,
     Program,
@@ -173,7 +177,7 @@ async def _post_program_entry(
                 actor_reference=operator.id,
                 actor_type="STAFF",
                 correlation_id=uuid4(),
-                evidence_reference="evidence:sprint71-test",
+                evidence_reference="PRIVATE_EVIDENCE_REFERENCE_SHOULD_NOT_LEAK",
                 settlement_reference="PRIVATE_SETTLEMENT_REFERENCE_SHOULD_NOT_LEAK",
                 reason="PRIVATE_REASON_SHOULD_NOT_LEAK",
                 lines=[
@@ -312,6 +316,12 @@ async def test_financial_history_is_program_scoped_complete_and_paginated(
     )
     payload = str(first_data) + str(second_data)
     assert "PRIVATE_REASON_SHOULD_NOT_LEAK" not in payload
+    assert "PRIVATE_EVIDENCE_REFERENCE_SHOULD_NOT_LEAK" not in payload
+    assert all(
+        entry["evidence_reference"] == "journal-entry:" + entry["id"]
+        for page in (first_data, second_data)
+        for entry in page["items"]
+    )
     assert "PRIVATE_SETTLEMENT_REFERENCE_SHOULD_NOT_LEAK" not in payload
     assert "private-event-id" not in payload
     assert "actor_reference" not in payload
@@ -372,6 +382,7 @@ async def test_program_statement_aggregates_owner_class_and_keeps_privacy_and_la
         "participant_id" not in row and "economic_owner_id" not in row for row in data["items"]
     )
     assert "PRIVATE_REASON_SHOULD_NOT_LEAK" not in str(data)
+    assert "PRIVATE_EVIDENCE_REFERENCE_SHOULD_NOT_LEAK" not in str(data)
     assert "PRIVATE_SETTLEMENT_REFERENCE_SHOULD_NOT_LEAK" not in str(data)
 
 
@@ -425,9 +436,138 @@ async def test_missing_posted_evidence_is_unavailable_not_zero_and_program_grant
             f"{SOURCE}/{program.id}/financial-history",
             headers=_headers(outsider.external_subject),
         )
+        denied_statement = await client.get(
+            f"{SOURCE}/{program.id}/financial-statement",
+            headers=_headers(outsider.external_subject),
+        )
+        no_token = await client.get(f"{SOURCE}/{program.id}/financial-history")
 
     assert history.status_code == 503
     assert history.json()["error"]["code"] == "SOURCE_UNAVAILABLE"
     assert statement.status_code == 503
     assert statement.json()["error"]["code"] == "SOURCE_UNAVAILABLE"
     assert denied.status_code == 403
+    assert denied_statement.status_code == 403
+    assert no_token.status_code == 401
+
+
+@pytest.mark.integration
+async def test_inactive_program_denials_are_audited_for_both_reads(
+    settings: Settings,
+    database,
+    clean_sprint07_guarantee_tables,
+) -> None:
+    seeded = await _seed(database)
+    program = seeded["program"]
+    operator = seeded["operator"]
+    assert isinstance(program, Program)
+    assert isinstance(operator, Identity)
+    await _post_program_entry(database, seeded)
+    async with database.session_factory() as session:
+        async with session.begin():
+            await session.execute(
+                update(Program).where(Program.id == program.id).values(status="INACTIVE")
+            )
+    async with await _client(settings) as client:
+        history = await client.get(
+            f"{SOURCE}/{program.id}/financial-history",
+            headers=_headers(operator.external_subject),
+        )
+        statement = await client.get(
+            f"{SOURCE}/{program.id}/financial-statement",
+            headers=_headers(operator.external_subject),
+        )
+    assert history.status_code == 404
+    assert statement.status_code == 404
+    assert history.json()["error"]["code"] == "SUPPORTING_PROGRAM_NOT_FOUND"
+    assert statement.json()["error"]["code"] == "SUPPORTING_PROGRAM_NOT_FOUND"
+    async with database.session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AuditEvent).where(
+                    AuditEvent.aggregate_type == "SupportingInstitutionProgram",
+                    AuditEvent.aggregate_id == str(program.id),
+                    AuditEvent.action.in_(
+                        (
+                            "SUPPORT_INSTITUTION_PROGRAM_FINANCIAL_HISTORY_READ",
+                            "SUPPORT_INSTITUTION_PROGRAM_FINANCIAL_STATEMENT_READ",
+                        )
+                    ),
+                )
+            )
+        ).all()
+    assert len(rows) == 2
+    assert {row.outcome for row in rows} == {"FAILED"}
+    assert {row.reason_code for row in rows} == {"SUPPORTING_PROGRAM_NOT_FOUND"}
+
+
+@pytest.mark.integration
+async def test_pinned_snapshot_excludes_later_postings_and_financial_reads_are_non_mutating(
+    settings: Settings,
+    database,
+    clean_sprint07_guarantee_tables,
+) -> None:
+    seeded = await _seed(database)
+    program = seeded["program"]
+    operator = seeded["operator"]
+    assert isinstance(program, Program)
+    assert isinstance(operator, Identity)
+    await _post_program_entry(database, seeded, amount="10")
+    await _post_program_entry(database, seeded, amount="20")
+    async with await _client(settings) as client:
+        history = await client.get(
+            f"{SOURCE}/{program.id}/financial-history",
+            params={"limit": 1, "offset": 0},
+            headers=_headers(operator.external_subject),
+        )
+        statement = await client.get(
+            f"{SOURCE}/{program.id}/financial-statement",
+            params={"limit": 1, "offset": 0},
+            headers=_headers(operator.external_subject),
+        )
+        assert history.status_code == 200
+        assert statement.status_code == 200
+        history_snapshot = history.json()["snapshot_at"]
+        statement_snapshot = statement.json()["snapshot_at"]
+        original_statement_hash = statement.json()["content_hash"]
+        assert history.json()["total_entries"] == 2
+
+        await _post_program_entry(database, seeded, amount="30")
+        async with database.session_factory() as session:
+            before = (
+                await session.scalar(select(func.count()).select_from(JournalEntry)),
+                await session.scalar(select(func.count()).select_from(JournalPosting)),
+            )
+
+        later_history = await client.get(
+            f"{SOURCE}/{program.id}/financial-history",
+            params={"limit": 1, "offset": 1, "snapshot_at": history_snapshot},
+            headers=_headers(operator.external_subject),
+        )
+        pinned_statement = await client.get(
+            f"{SOURCE}/{program.id}/financial-statement",
+            params={"limit": 1, "offset": 1, "snapshot_at": statement_snapshot},
+            headers=_headers(operator.external_subject),
+        )
+        future = await client.get(
+            f"{SOURCE}/{program.id}/financial-history",
+            params={"snapshot_at": (datetime.now(UTC) + timedelta(days=1)).isoformat()},
+            headers=_headers(operator.external_subject),
+        )
+
+    assert later_history.status_code == 200
+    assert later_history.json()["total_entries"] == 2
+    assert later_history.json()["snapshot_at"] == history_snapshot
+    assert later_history.json()["items"][0]["id"] != history.json()["items"][0]["id"]
+    assert pinned_statement.status_code == 200
+    assert pinned_statement.json()["snapshot_at"] == statement_snapshot
+    assert pinned_statement.json()["content_hash"] == original_statement_hash
+    assert future.status_code == 422
+    assert future.json()["error"]["code"] == "SNAPSHOT_TIME_INVALID"
+
+    async with database.session_factory() as session:
+        after = (
+            await session.scalar(select(func.count()).select_from(JournalEntry)),
+            await session.scalar(select(func.count()).select_from(JournalPosting)),
+        )
+    assert before == after

@@ -30,7 +30,7 @@ function historyPayload() {
       reversal_of_entry_id: null,
       policy_version_reference: "policy:v1",
       posting_template_reference: "template:v1",
-      evidence_reference: "evidence:source-1",
+      evidence_reference: "journal-entry:" + journal,
       postings: [{
         account_code: "1000.SETTLEMENT_CASH_CONTROL",
         account_name: "Settlement cash control",
@@ -100,6 +100,10 @@ describe("supporting institution ledger read contracts", () => {
   it("validates POSTED complete history and rejects private posting dimensions", () => {
     const result = verifiedFinancialHistoryPage(historyPayload(), program, 25, 0, now);
     expect(result.items).toHaveLength(1);
+    expect(result.items[0].evidence_reference).toBe("journal-entry:" + journal);
+    const unsafe = historyPayload();
+    unsafe.items[0].evidence_reference = "private free-text evidence";
+    expect(() => verifiedFinancialHistoryPage(unsafe, program, 25, 0)).toThrow();
     const invalid = historyPayload();
     (invalid.items[0].postings[0] as Record<string, unknown>).participant_id = journal;
     expect(() => verifiedFinancialHistoryPage(invalid, program, 25, 0)).toThrow("ابعاد خصوصی");
