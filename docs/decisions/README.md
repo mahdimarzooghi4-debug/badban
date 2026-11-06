@@ -87,3 +87,4 @@ Each decision should include:
 
 
 - [0077 — Role-Scoped Administrative Reference Directories](./0077-role-scoped-administrative-reference-directories.md) — Code authorized; read-only scope
+- [0078 — Supporting Institution Internal Financial History and Program Statement](./0078-supporting-institution-internal-financial-history-and-program-statement.md) — **Proposed; owner approval required**
