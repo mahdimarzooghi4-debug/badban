@@ -414,7 +414,7 @@ function App() {
   if (loading) return <div className="auth-state" role="status">در حال تکمیل ورود امن…</div>;
   if (previewSurface) return <PreviewWorkspace key={previewSurface} surface={previewSurface}
     onBack={closePreviewWorkspace}
-    onSelectSurface={openPreviewWorkspace} />;
+    />;
   if (token && surface) return <Workspace key={surface} token={token} surface={surface}
     choose={s => { setSurface(s); if (!s) window.history.replaceState(null, "", "/"); }} logout={() => void logout()} />;
   if (token) {
