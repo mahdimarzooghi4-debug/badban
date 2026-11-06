@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">بادبان - نمایشی</string>
+    <string name="preview_status">نسخه نمایشی • فقط مشاهده</string>
+    <string name="button_home">خانه</string>
+    <string name="button_refresh">بازخوانی</string>
+    <string name="loading_status">در حال بارگذاری پیش‌نمایش…</string>
+    <string name="offline_status">بارگذاری ممکن نشد؛ اینترنت را بررسی و بازخوانی کنید.</string>
+</resources>
