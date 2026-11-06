@@ -49,43 +49,44 @@ async def _seed(database) -> dict[str, object]:
         external_subject=f"sprint71-outsider-{uuid4()}",
         status="ACTIVE",
     )
-    entity = LegalEntity(
-        legal_name="Sprint 71 Supporting Entity",
-        registration_identifier=f"SPRINT71-ENTITY-{uuid4()}",
-        entity_type="TEST",
-        status="ACTIVE",
-        created_by=operator.id,
-        version=1,
-    )
-    program = Program(
-        code=f"SPRINT71-{uuid4()}",
-        name="Sprint 71 Authorized Program",
-        status="ACTIVE",
-        legal_entity_id=entity.id,
-        created_by=operator.id,
-        version=1,
-    )
-    other_program = Program(
-        code=f"SPRINT71-OTHER-{uuid4()}",
-        name="Sprint 71 Other Program",
-        status="ACTIVE",
-        legal_entity_id=entity.id,
-        created_by=operator.id,
-        version=1,
-    )
-    participant_a = Participant(
-        external_reference=f"sprint71-participant-a-{uuid4()}",
-        lifecycle_status="ACTIVE",
-    )
-    participant_b = Participant(
-        external_reference=f"sprint71-participant-b-{uuid4()}",
-        lifecycle_status="ACTIVE",
-    )
     async with database.session_factory() as session:
         async with session.begin():
-            session.add_all(
-                [operator, outsider, entity, program, other_program, participant_a, participant_b]
+            session.add_all([operator, outsider])
+            await session.flush()
+
+            entity = LegalEntity(
+                legal_name="Sprint 71 Supporting Entity",
+                registration_identifier=f"SPRINT71-ENTITY-{uuid4()}",
+                entity_type="TEST",
+                status="ACTIVE",
+                created_by=operator.id,
+                version=1,
             )
+            program = Program(
+                code=f"SPRINT71-{uuid4()}",
+                name="Sprint 71 Authorized Program",
+                status="ACTIVE",
+                legal_entity_id=entity.id,
+                created_by=operator.id,
+                version=1,
+            )
+            other_program = Program(
+                code=f"SPRINT71-OTHER-{uuid4()}",
+                name="Sprint 71 Other Program",
+                status="ACTIVE",
+                legal_entity_id=entity.id,
+                created_by=operator.id,
+                version=1,
+            )
+            participant_a = Participant(
+                external_reference=f"sprint71-participant-a-{uuid4()}",
+                lifecycle_status="ACTIVE",
+            )
+            participant_b = Participant(
+                external_reference=f"sprint71-participant-b-{uuid4()}",
+                lifecycle_status="ACTIVE",
+            )
+            session.add_all([entity, program, other_program, participant_a, participant_b])
             await session.flush()
             session.add_all(
                 [
@@ -124,7 +125,6 @@ async def _seed(database) -> dict[str, object]:
         "participant_a": participant_a,
         "participant_b": participant_b,
     }
-
 
 async def _post_program_entry(
     database,
