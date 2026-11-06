@@ -49,7 +49,7 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
   }
 }
 
-function sidebarIcon(surface: Surface, id: string): string {
+function sidebarIcon(id: string): string {
   if (id === "dashboard") return "grid";
   if (id === "people") return "users";
   if (id === "organizations") return "building";
@@ -90,7 +90,7 @@ function PreviewSidebar({ surface, workspace, pageId, onNavigate, onBack }: {
         className={item.id === pageId ? "preview-nav-item preview-nav-item--active" : "preview-nav-item"}
         aria-current={item.id === pageId ? "page" : undefined}
         onClick={() => onNavigate(item.id)}>
-        <span className="preview-nav-icon"><Icon name={sidebarIcon(surface, item.id)} size={23} /></span>
+        <span className="preview-nav-icon"><Icon name={sidebarIcon(item.id)} size={23} /></span>
         <span>{item.label}</span>
       </button>)}
     </nav>
