@@ -94,6 +94,7 @@ def test_institution_history_and_reporting_empty_states_use_local_figma_icons() 
     directory = ROOT / "web" / "public" / "assets" / "figma"
     views = (ROOT / "web" / "src" / "institution-empty-views.tsx").read_text(encoding="utf-8")
     shell = (ROOT / "web" / "src" / "main.tsx").read_text(encoding="utf-8")
+    navigation = (ROOT / "web" / "src" / "institution-navigation.ts").read_text(encoding="utf-8")
     for name in ("institution-history.svg", "institution-chart.svg"):
         path = directory / name
         assert path.exists() and path.stat().st_size > 200, name
@@ -104,7 +105,11 @@ def test_institution_history_and_reporting_empty_states_use_local_figma_icons() 
         assert f"/assets/figma/{name}" in views
     assert "InstitutionHistoryView" in shell
     assert "InstitutionReportsView" in shell
-    assert 'setInstitutionView("history")' in shell
-    assert 'setInstitutionView("reports")' in shell
+    assert "institutionViewForNavigationIndex" in shell
+    assert 'if (index === 0) return "home";' in navigation
+    assert 'if (index === 3) return "history";' in navigation
+    assert 'if (index === 4) return "reports";' in navigation
     assert 'aria-current={active ? "page" : undefined}' in shell
+    assert "api<" not in views
+    assert "fetch(" not in views
     assert "figma.com/api/mcp/asset/" not in views
