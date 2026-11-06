@@ -18,7 +18,7 @@
 .figma-list-filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .figma-list-filter{min-width:98px;padding:7px 17px;border:1px solid transparent;border-radius:99px;background:var(--gold-light);font-size:10px;color:var(--brand);text-align:center}
 .figma-list-filter.is-active{border-color:var(--gold);font-weight:800}
-.figma-list-static-actions{display:flex;gap:9px;align-items:center;direction:ltr}
+.figma-list-static-actions{display:flex;gap:9px;align-items:center;direction:rtl}
 .figma-list-static-actions span{min-width:135px;padding:11px 17px;border:1px solid var(--line);border-radius:10px;color:var(--brand);background:#fff;font-size:11px;font-weight:700;text-align:center}
 .figma-list-static-actions .figma-list-action-dark{background:var(--navy);border-color:var(--navy);color:#fff}
 .figma-list-records{min-height:218px;display:grid;align-content:start;gap:10px;padding:11px;border:1px solid var(--line);border-radius:17px;background:#fff}
