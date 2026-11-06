@@ -75,7 +75,7 @@ jobs:
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           unzip -t "$APK" | tail -n 1
-          aapt dump badging "$APK" | grep -F "package: name='ir.badban.preview'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='ir.badban.preview'"
           sha256sum "$APK"
 
       - name: Upload downloadable APK
