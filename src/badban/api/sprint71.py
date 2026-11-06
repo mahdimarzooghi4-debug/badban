@@ -588,9 +588,7 @@ async def read_program_financial_statement(
             currency=key[1],
             legal_entity_id=key[2],
             economic_owner_type=key[3],
-            ledger_layer=cast(
-                Literal["MONETARY", "MEMORANDUM_CONTROL", "EXTERNAL_MIRROR"], key[4]
-            ),
+            ledger_layer=cast(Literal["MONETARY", "MEMORANDUM_CONTROL", "EXTERNAL_MIRROR"], key[4]),
             normal_balance=cast(Literal["DEBIT", "CREDIT", "MEMO"], key[5]),
             balance=format(balance, "f"),
         )
