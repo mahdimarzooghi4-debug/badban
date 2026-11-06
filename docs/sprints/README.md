@@ -249,3 +249,11 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Exact-head Web Candidate CI #42056368480 and Full CI #42056368420 passed. Technical reviews are COMMENTED, not release approval.
 - Identity/legal-entity directory APIs, configured OIDC browser E2E, and Figma screenshot regression remain outstanding.
 - Stage remains deferred; no merge, QA admission, release approval, Production or real-money action is authorized.
+
+
+## Sprint 64
+
+- [Sprint 64 — Role-Scoped Administrative Reference Directories](./64-sprint-64-admin-reference-directories.md) — Code in progress; Decision 0077 authorizes bounded read-only scope.
+- Adds audited, paginated directories for human identities, legal entities, and programs, with visibility derived from exact active global roles.
+- Does not add a global beneficiary/participant directory; beneficiary reads remain exact-program scoped and applicant requests remain exact-service scoped.
+- No registry mutations, identity exposure, registration identifiers, financial data, or personal contact details are included.
