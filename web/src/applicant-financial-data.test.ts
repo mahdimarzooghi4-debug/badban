@@ -2,38 +2,39 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   loadApplicantFinancialCase, normalizeFinancialDecimal, validateApplicantFinancialCase,
 } from "./applicant-financial-data";
+import type { FinancialCase } from "./api";
 
 const participant = "123e4567-e89b-42d3-a456-426614174000";
 const guaranteeId = "123e4567-e89b-42d3-a456-426614174001";
 const monthlyId = "123e4567-e89b-42d3-a456-426614174002";
 const supportId = "123e4567-e89b-42d3-a456-426614174003";
 const entitlementId = "123e4567-e89b-42d3-a456-426614174004";
-const guarantee = {
+const guarantee: FinancialCase["guarantee_cases"][number] = {
   id: guaranteeId, status: "ACTIVE", requested_principal: "100000000.00",
   guarantee_exposure: "100000000.00", lender_record_status: "RECORDED",
   loan_state: "ACTIVE", outstanding_principal: "50000000.00", currency: "IRR",
 };
-const entitlement = {
+const entitlement: FinancialCase["monthly_entitlements"][number] = {
   id: monthlyId, period_reference: "1405-08", amount: "1200000.00",
   currency: "IRR", status: "APPROVED", payment_status: "NOT_CONFIGURED",
 };
-const supportEntitlement = {
+const supportEntitlement: FinancialCase["monthly_entitlements"][number] = {
   id: entitlementId, period_reference: "1405-08", amount: "250000.00",
   currency: "IRR", status: "DRAFT", payment_status: "NOT_CONFIGURED",
 };
-const postExit = {
+const postExit: FinancialCase["post_exit_cases"][number] = {
   id: supportId, status: "ACTIVE", exit_at: "2026-10-01T10:00:00+03:30",
   support_start_at: "2026-11-01T00:00:00+03:30", duration_months: 12,
   entitlements: [supportEntitlement],
 };
-const balance = {
+const balance: FinancialCase["balances"][number] = {
   currency: "IRR", outstanding_principal: "50000000.00",
   guarantee_exposure: "100000000.00",
   realized_return_allocated_to_support: "450000.00",
   allocated_support: "300000.00", paid_amount: null,
   payment_status: "NOT_CONFIGURED",
 };
-const response = () => ({
+const response = (): FinancialCase => ({
   participant_id: participant,
   guarantee_cases: [guarantee],
   monthly_entitlements: [entitlement],
