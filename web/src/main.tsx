@@ -18,6 +18,7 @@ import { InstitutionHistoryView, InstitutionReportsView } from "./institution-le
 import { institutionViewForNavigationIndex, type InstitutionView } from "./institution-navigation";
 import { AuthLoginPage } from "./auth-login";
 import { deriveAvailableSurfaces, type Surface } from "./workspace-access";
+import { PreviewWorkspace } from "./preview-workspaces";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
 
 const sections: Array<{ id: Surface; name: string; description: string; symbol: string }> = [
@@ -46,7 +47,7 @@ function Button({ children, onClick, outline = false, disabled = false }:
     type="button" disabled={disabled} onClick={onClick}>{children}</button>;
 }
 
-function Landing({ signIn, openWorkspace }: { signIn: () => void; openWorkspace: (s: Surface) => void }) {
+function Landing({ openPreviewWorkspace }: { openPreviewWorkspace: (s: Surface) => void }) {
   return <div className="landing">
     <header className="site-header">
       <a href="#home" aria-label="خانه بادبان"><Brand light /></a>
@@ -54,7 +55,7 @@ function Landing({ signIn, openWorkspace }: { signIn: () => void; openWorkspace:
         <a href="#home">خانه</a><a href="#about">درباره بادبان</a><a href="#benefits">راهکارها</a>
         <a href="#audiences">مخاطبان</a><a href="#contact">همکاری</a>
       </nav>
-      <Button onClick={signIn}>ورود به سامانه</Button>
+      <a className="button" href="#audiences">مشاهده محیط‌ها</a>
     </header>
     <main>
       <section className="hero" id="home">
@@ -66,7 +67,7 @@ function Landing({ signIn, openWorkspace }: { signIn: () => void; openWorkspace:
           <p>بستری یکپارچه برای مدیریت سرمایه، همکاری نهادهای حمایتگر و
             دسترسی مسئولانه به تسهیلات؛ با حفظ مالکیت منابع و شفافیت تعهدات.</p>
           <div className="hero-actions">
-            <Button onClick={signIn}>ورود به سامانه</Button>
+            <a className="button" href="#audiences">مشاهده محیط‌ها</a>
             <a className="button button--dark-outline" href="#about">آشنایی با بادبان</a>
           </div>
         </div>
@@ -93,12 +94,12 @@ function Landing({ signIn, openWorkspace }: { signIn: () => void; openWorkspace:
         <div className="about-photo" role="img" aria-label="نمای ساختمان اداری مدرن با شیشه‌های آبی" />
       </section>
       <section className="audiences section-container" id="audiences">
-        <h2>ذی‌نفعان و مخاطبان بادبان</h2><div className="audience-grid">
+        <h2>محیط‌های قابل مشاهده بادبان</h2><p className="preview-section-note">چهار محیط در یک نسخه نمایشی؛ داده‌ها نمونه و فقط برای مشاهده هستند.</p><div className="audience-grid">
           {sections.map(item =>
             <article className="audience-card" key={item.id}>
               <span className="audience-icon" aria-hidden="true">{item.symbol}</span>
               <h3>{item.name}</h3><p>{item.description}</p>
-              <button type="button" onClick={() => openWorkspace(item.id)}>مشاهده محیط <span aria-hidden="true">‹</span></button>
+              <button type="button" onClick={() => openPreviewWorkspace(item.id)}>مشاهده پیش‌نمایش <span aria-hidden="true">‹</span></button>
             </article>)}
         </div>
       </section>
@@ -116,7 +117,7 @@ function Landing({ signIn, openWorkspace }: { signIn: () => void; openWorkspace:
       <section className="callout section-container" id="contact">
         <div><h2>به شبکه حمایت و توانمندسازی بادبان بپیوندید</h2>
           <p>برای آشنایی با خدمات و مسیرهای همکاری، از محیط متناسب با نقش خود وارد شوید.</p></div>
-        <Button onClick={signIn}>ورود و آغاز آشنایی</Button>
+        <a className="button" href="#audiences">مشاهده پنل‌ها</a>
       </section>
     </main>
     <footer className="footer"><Brand light />
@@ -339,6 +340,7 @@ function Workspace({ token, surface, choose, logout }: {
 function App() {
   const [token, setToken] = useState<string | null>(null);
   const [surface, setSurface] = useState<Surface | null>(null);
+  const [previewSurface, setPreviewSurface] = useState<Surface | null>(null);
   const [error, setError] = useState("");
   const [loginOpen, setLoginOpen] = useState(window.location.pathname === "/app");
   const [loading, setLoading] = useState(window.location.pathname === "/auth/callback");
@@ -368,6 +370,13 @@ function App() {
     return () => { live = false; };
   }, [token, accessRefresh]);
 
+  function openPreviewWorkspace(next: Surface) {
+    setPreviewSurface(next);
+    setLoginOpen(false);
+    setError("");
+    window.history.replaceState(null, "", "/");
+  }
+
   function openWorkspace(next: Surface) {
     if (!token) {
       setError("");
@@ -396,6 +405,9 @@ function App() {
   }
 
   if (loading) return <div className="auth-state" role="status">در حال تکمیل ورود امن…</div>;
+  if (previewSurface) return <PreviewWorkspace key={previewSurface} surface={previewSurface}
+    onBack={() => { setPreviewSurface(null); window.history.replaceState(null, "", "/"); }}
+    onSelectSurface={setPreviewSurface} />;
   if (token && surface) return <Workspace key={surface} token={token} surface={surface}
     choose={s => { setSurface(s); if (!s) window.history.replaceState(null, "", "/"); }} logout={() => void logout()} />;
   if (token) {
@@ -428,7 +440,7 @@ function App() {
     error={error}
     onDismissError={() => setError("")}
   />;
-  return <><Landing signIn={signIn} openWorkspace={openWorkspace}/>{error &&
+  return <><Landing openPreviewWorkspace={openPreviewWorkspace}/>{error &&
     <div className="floating-error" role="alert">{error}<button type="button" onClick={() => setError("")}>بستن</button></div>}</>;
 }
 
