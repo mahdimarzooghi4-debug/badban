@@ -37,7 +37,7 @@ def test_stage_container_uses_pinned_production_keycloak() -> None:
     assert "exec /opt/keycloak/bin/kc.sh start --optimized" in entrypoint
     assert "KC_HTTP_ENABLED=true" in entrypoint
     assert "KC_PROXY_HEADERS=xforwarded" in entrypoint
-    assert 'unset DATABASE_URL' in entrypoint
+    assert "unset DATABASE_URL" in entrypoint
     assert "RENDER_EXTERNAL_HOSTNAME" in entrypoint
     assert "BADBAN_OIDC_ISSUER" not in entrypoint
     assert "SMS" not in entrypoint and "SHAHKAR" not in entrypoint
