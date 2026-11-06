@@ -78,3 +78,13 @@ The national ID must first come from the user or another **approved, authoritati
 - Tests for mismatch, unavailable Shahkar, unverified national ID, invalid/expired/replayed OTP, and no identity provision or role escalation on any failure.
 
 This addendum is **planning-only**; Decision 0079 remains Proposed, and Sprint 74 has no Code Authorization.
+
+## Integration slots deliberately empty — Owner direction (2026-11-06)
+
+For the current build, leave both external connections **unconfigured**:
+- `SMS_OTP_PROVIDER: UNCONFIGURED` (status notation, **not** an environment variable or runnable provider name).
+- `SHAHKAR_MATCHING_PROVIDER: UNCONFIGURED` (status notation, **not** an API endpoint or a promise that Shahkar returns a national ID).
+
+No vendor, URL, credential, SMS message, synthetic OTP, positive matching response, fake account or bypass is to be supplied. The approved phone/OTP UI remains a non-operational preview; actual request/verification stays unavailable until a real authorized provider and reviewed identity-proofing contract are connected. Missing dependencies must fail closed. See Decision 0079 §12.
+
+This addendum leaves PR #86 Draft/Open, does not activate Code work on an integration, and authorizes no Render provisioning or deployment.

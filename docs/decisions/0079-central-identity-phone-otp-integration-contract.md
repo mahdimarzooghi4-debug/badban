@@ -201,3 +201,24 @@ Therefore, do not implement a phone-number-only `get_national_id_from_shahkar()`
 Before implementation, obtain the **actual authorized Shahkar provider specification** (request fields, normalized identifiers, positive/negative/unavailable semantics, provenance, retention and legal basis, credentials, access/consent constraints), the **SMS/OTP provider contract**, authoritative national-ID source/proofing rules, and the IdP's integration and OIDC-claim contract. Keep vendor selection, security numeric values, and hosting unresolved until explicit approval.
 
 **Status:** Shahkar matching and SMS OTP are intended future integrations; their exact interfaces, sourcing, providers, policy, credentials, and operational readiness remain undecided. No code, network integration, provider purchase, service provisioning, Stage, or Production authorization is implied.
+
+## 12. Owner Direction: Leave External Integrations Unconfigured (2026-11-06)
+
+**Owner direction:** The SMS/OTP provider and Shahkar integration are unavailable today. Preserve their future integration points, but leave them intentionally **UNCONFIGURED** until approved providers, access contracts, and credentials exist.
+
+| Future integration point | Current status | Activation prerequisite |
+| --- | --- | --- |
+| SMS/OTP challenge delivery and verification (IdP-owned) | `UNCONFIGURED` — no provider, URL, token, sender identity, or real OTP challenge | Approved IdP, SMS provider, OTP/anti-abuse policy, secure integration and negative tests |
+| Shahkar mobile ↔ national-ID matching (identity-proofing owner) | `UNCONFIGURED` — no provider, endpoint, credentials, or assumed phone-to-national-ID lookup | Authorized API contract, national-ID source, privacy/legal basis, validation semantics and fail-closed tests |
+
+These rows are **design-time connection slots**, not invented executable adapters or environment-variable names. Do not introduce fake endpoints, demo OTPs, synthetic verification results, default providers, permissive stubs, or temporary identity bypasses.
+
+Until the dependencies exist:
+- Keep the approved Badban mobile/desktop login and four-cell OTP design. The current Sprint 73 code is a clearly labeled **development preview only**; code delivery and verification are disabled.
+- No real request for code or Shahkar verification is made, and no message or match is claimed.
+- A missing SMS or Shahkar dependency is an explicit unavailable/blocked state, never an implicit success, verified national ID, authenticated session, role, or entitlement.
+- Existing independent configured OIDC flows remain subject to their own real issuer, signed-token and scoped authorization rules; do not fabricate OIDC configuration to make Stage work.
+- Do not add a Render service, secret, provider account, or production value for these empty slots.
+- Once a provider is available, first review its actual API and identity policy, then authorize a separate bounded integration implementation with tests.
+
+**Scope:** a recorded delivery constraint, not acceptance of the remainder of Proposed Decision 0079 and not Code, Stage, QA, Release or Production authorization.
