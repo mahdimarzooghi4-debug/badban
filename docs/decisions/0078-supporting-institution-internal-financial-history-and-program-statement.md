@@ -1,6 +1,6 @@
 # Decision 0078 — Supporting Institution Internal Financial History and Program Statement
 
-- **Status:** Proposed — explicit owner approval required before implementation.
+- **Status:** Accepted — owner approval recorded 2026-11-06.
 - **Scope:** Read-only supporting-institution program financial history and program statement.
 - **Related decisions:** 0015 (Accounting and Financial Sub-Ledger Model), 0055 (Internal Posted-Journal Source), 0066 (Supporting Institution Workspace), 0069 (Supporting Institution Financial Case), 0070 (Program Lineage for Benefit Records).
 
@@ -14,7 +14,7 @@ Badban is not connected to a bank or payment provider. The supporting-institutio
 
 The internal journal source is currently an application/reconciliation source, not a public supporting-institution API. The existing finance-journal API is restricted to finance-reconciliation/auditor roles at legal-entity scope. No supporting-institution program-level financial-history or program-statement endpoint currently exists.
 
-## Proposed decision
+## Accepted decision
 
 Authorize a bounded, read-only, exact-program view of Badban's own posted journal records for the supporting-institution operator. This is an internal Badban ledger view, not a bank statement and not proof of external settlement.
 
@@ -28,7 +28,7 @@ Authorize a bounded, read-only, exact-program view of Badban's own posted journa
 
 ### 2. Financial history
 
-Proposed endpoint:
+Accepted endpoint:
 
 `GET /api/v1/support-institution/programs/{program_id}/financial-history`
 
@@ -67,13 +67,13 @@ This proposal does not authorize or imply:
 
 The Figma KPI cards remain unavailable until their exact metric definitions and source lineage are separately approved. The initial report, if approved, is an account-level program statement, not a statutory financial statement or audit-certified export.
 
-## Consequences if accepted
+## Consequences
 
 - The financial-history page is labeled **سوابق ثبت‌شده در دفترکل بادبان** and explicitly states **ثبت داخلی؛ نه تأیید انتقال بانکی**.
 - The reports page presents an account-level **صورت‌وضعیت دفترکل برنامه**, with currency and ledger-layer separation. Unapproved KPI cards remain unavailable.
 - The two read endpoints reuse the existing program-scoped role grant and internal posted-journal facts; no parallel ledger or bank integration is created.
 - Implementation remains subject to exact-head CI, code review, and the normal Stage/QA/Release/Production gates. This decision itself grants no merge or deployment authority.
 
-## Approval required
+## Approval record
 
-This is a proposal only. No API, frontend data binding, new permission, or production behavior is authorized until the owner explicitly accepts or amends this decision.
+The owner explicitly accepted this decision on 2026-11-06. This authorizes only the read-only code scope described above. It does not authorize merge, Stage, QA, Release, Production deployment, or real-money behavior.
