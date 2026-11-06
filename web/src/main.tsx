@@ -19,6 +19,7 @@ import { institutionViewForNavigationIndex, type InstitutionView } from "./insti
 import { AuthLoginPage } from "./auth-login";
 import { deriveAvailableSurfaces, type Surface } from "./workspace-access";
 import { PreviewWorkspace } from "./preview-workspaces";
+import { previewSurfaceFromLocation, previewSurfaceUrl } from "./preview-routing";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
 
 const sections: Array<{ id: Surface; name: string; description: string; symbol: string }> = [
@@ -340,13 +341,21 @@ function Workspace({ token, surface, choose, logout }: {
 function App() {
   const [token, setToken] = useState<string | null>(null);
   const [surface, setSurface] = useState<Surface | null>(null);
-  const [previewSurface, setPreviewSurface] = useState<Surface | null>(null);
+  const [previewSurface, setPreviewSurface] = useState<Surface | null>(() =>
+    previewSurfaceFromLocation(window.location.pathname, window.location.search));
   const [error, setError] = useState("");
   const [loginOpen, setLoginOpen] = useState(window.location.pathname === "/app");
   const [loading, setLoading] = useState(window.location.pathname === "/auth/callback");
   const otpPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("auth-preview") === "otp";
   const [accessRefresh, setAccessRefresh] = useState(0);
   const [access, setAccess] = useState<{ owner: string; status: "loading" | "ready" | "error"; surfaces: Surface[]; message?: string } | null>(null);
+
+  useEffect(() => {
+    const syncPreviewRoute = () => setPreviewSurface(
+      previewSurfaceFromLocation(window.location.pathname, window.location.search));
+    window.addEventListener("popstate", syncPreviewRoute);
+    return () => window.removeEventListener("popstate", syncPreviewRoute);
+  }, []);
 
   useEffect(() => {
     if (window.location.pathname !== "/auth/callback") return;
@@ -374,7 +383,11 @@ function App() {
     setPreviewSurface(next);
     setLoginOpen(false);
     setError("");
-    window.history.replaceState(null, "", "/");
+    window.history.pushState(null, "", previewSurfaceUrl(next));
+  }
+  function closePreviewWorkspace() {
+    setPreviewSurface(null);
+    window.history.pushState(null, "", "/");
   }
 
   function openWorkspace(next: Surface) {
@@ -400,8 +413,8 @@ function App() {
 
   if (loading) return <div className="auth-state" role="status">در حال تکمیل ورود امن…</div>;
   if (previewSurface) return <PreviewWorkspace key={previewSurface} surface={previewSurface}
-    onBack={() => { setPreviewSurface(null); window.history.replaceState(null, "", "/"); }}
-    onSelectSurface={setPreviewSurface} />;
+    onBack={closePreviewWorkspace}
+    onSelectSurface={openPreviewWorkspace} />;
   if (token && surface) return <Workspace key={surface} token={token} surface={surface}
     choose={s => { setSurface(s); if (!s) window.history.replaceState(null, "", "/"); }} logout={() => void logout()} />;
   if (token) {
