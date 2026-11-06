@@ -62,9 +62,7 @@ def test_applicant_finance_figma_icons_are_versioned_and_have_native_geometry() 
         "applicant-wallet.svg": 22,
         "applicant-account.svg": 22,
     }
-    finance = (ROOT / "web" / "src" / "applicant-financial.tsx").read_text(
-        encoding="utf-8"
-    )
+    finance = (ROOT / "web" / "src" / "applicant-financial.tsx").read_text(encoding="utf-8")
     shell = (ROOT / "web" / "src" / "main.tsx").read_text(encoding="utf-8")
     for name, dimension in expected.items():
         path = directory / name
