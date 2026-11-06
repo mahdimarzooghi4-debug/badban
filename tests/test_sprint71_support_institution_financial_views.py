@@ -127,6 +127,7 @@ async def _seed(database) -> dict[str, object]:
         "participant_b": participant_b,
     }
 
+
 async def _post_program_entry(
     database,
     seeded: dict[str, object],
