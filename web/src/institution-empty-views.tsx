@@ -31,7 +31,7 @@ export function InstitutionHistoryView() {
           این صفحه فعال است، اما منبع معتبر درخواست‌های تأمین وجه و پرداخت سازمانی هنوز
           به آن متصل نشده است. تا آن زمان هیچ نام، مبلغ، شناسه تراکنش یا وضعیت پرداختی نمایش داده نمی‌شود.
         </p>
-        <span className="institution-empty-state__hint">بدون داده نمایشی یا تراکنش ساختگی</span>
+        <span className="institution-empty-state__hint">بدون اطلاعات نمونه یا تراکنش ساختگی</span>
       </div>
     </section>
     <aside className="institution-page-note">
