@@ -14,7 +14,7 @@ import { AdminServiceQueue } from "./operational-details";
 import { AdminGovernance } from "./operational-governance";
 import { AdminDirectory } from "./admin-directory";
 import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
-import { InstitutionHistoryView, InstitutionReportsView } from "./institution-empty-views";
+import { InstitutionHistoryView, InstitutionReportsView } from "./institution-ledger-views";
 import { institutionViewForNavigationIndex, type InstitutionView } from "./institution-navigation";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
@@ -286,9 +286,9 @@ function Workspace({ token, surface, choose, logout }: {
   const selected = sections.find(s => s.id === surface)!;
   const [institutionView, setInstitutionView] = useState<InstitutionView>("home");
   const institutionPage = institutionView === "history"
-    ? { title: "سوابق مالی سازمان", description: "پیگیری درخواست‌های تأمین وجه و انتساب آن‌ها به افراد، با وضعیت‌های جداگانه" }
+    ? { title: "سوابق مالی سازمان", description: "سوابق ثبت‌شده در دفترکل داخلی؛ این ثبت‌ها به‌تنهایی تأیید انتقال بانکی نیستند" }
     : institutionView === "reports"
-      ? { title: "گزارش‌های سازمان", description: "نمای تجمیعی سرمایه متعلق به سازمان و افراد منتسب به برنامه" }
+      ? { title: "گزارش‌های سازمان", description: "صورت‌وضعیت حساب‌های برنامه با تفکیک ارز، مالک اقتصادی و لایه دفترکل" }
       : { title: selected.name, description: selected.description };
   const pageTitle = surface === "institution" ? institutionPage.title : selected.name;
   const pageDescription = surface === "institution" ? institutionPage.description : selected.description;
@@ -327,11 +327,11 @@ function Workspace({ token, surface, choose, logout }: {
     <main className="workspace-main">
       <div className="workspace-top"><span>{breadcrumb}</span><strong>{pageDescription}</strong></div>
       <div className="workspace-heading"><h1>{pageTitle}</h1>
-        <p>{surface === "institution" && institutionView !== "home" ? "صفحه فعال است؛ منبع داده مالی متصل نیست" : "اطلاعات معتبر از API بادبان"}</p>
+        <p>{surface === "institution" && institutionView !== "home" ? "منبع: دفترکل داخلی بادبان؛ ثبت داخلی، نه تأیید انتقال بانکی" : "اطلاعات معتبر از API بادبان"}</p>
       </div>
       {surface === "individual" ? <Individual token={token} logout={logout}/> : surface === "institution" ?
         institutionView === "home" ? <Institution token={token}/> : institutionView === "history" ?
-          <InstitutionHistoryView/> : <InstitutionReportsView/> : surface === "lender" ? <Lender token={token}/> : <Admin token={token}/>}
+          <InstitutionHistoryView token={token}/> : <InstitutionReportsView token={token}/> : surface === "lender" ? <Lender token={token}/> : <Admin token={token}/>}
     </main>
   </div>;
 }
