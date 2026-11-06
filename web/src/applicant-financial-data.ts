@@ -161,7 +161,7 @@ function guarantee(raw: unknown, index: number): GuaranteeCaseSummary {
   };
 }
 
-function postExit(raw: unknown, index: number): PostExitCaseSummary {
+function postExitCase(raw: unknown, index: number): PostExitCaseSummary {
   const field = "post_exit_cases[" + index + "]";
   const item = object(raw, field);
   const duration = item.duration_months;
@@ -217,7 +217,7 @@ export function validateApplicantFinancialCase(raw: unknown): FinancialCase {
     "monthly_entitlements",
   );
   const postExit = uniqueIds(
-    list(data.post_exit_cases, "post_exit_cases").map(postExit),
+    list(data.post_exit_cases, "post_exit_cases").map(postExitCase),
     "post_exit_cases",
   );
   const nestedEntitlements = postExit.reduce((total, item) => total + item.entitlements.length, 0);
