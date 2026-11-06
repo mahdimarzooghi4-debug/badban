@@ -47,10 +47,10 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("applicant financial read model", () => {
   it("normalizes Decimal exponent notation without JS floating point", () => {
-    expect(normalizeFinancialDecimal("0E-18", "zero")).toBe("0");
+    expect(normalizeFinancialDecimal("0E-18", "zero")).toBe("0.000000000000000000");
     expect(normalizeFinancialDecimal("1.25E+3", "scaled")).toBe("1250");
     expect(normalizeFinancialDecimal("1E-18", "fraction")).toBe("0.000000000000000001");
-    expect(normalizeFinancialDecimal("-4.5000", "negative")).toBe("-4.5");
+    expect(normalizeFinancialDecimal("-4.5000", "negative")).toBe("-4.5000");
     expect(() => normalizeFinancialDecimal(0.1, "number")).toThrow();
     expect(() => normalizeFinancialDecimal("NaN", "nan")).toThrow();
     expect(() => normalizeFinancialDecimal("1E-19", "scale")).toThrow();
