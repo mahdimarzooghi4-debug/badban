@@ -257,3 +257,15 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - Adds audited, paginated directories for human identities, legal entities, and programs, with visibility derived from exact active global roles.
 - Does not add a global beneficiary/participant directory; beneficiary reads remain exact-program scoped and applicant requests remain exact-service scoped.
 - No registry mutations, identity exposure, registration identifiers, financial data, or personal contact details are included.
+
+
+## Sprint 73
+
+- [Sprint 73 — Shared Phone/OTP Login UI](./73-shared-phone-otp-login-ui.md) — **Draft/Open in PR #85; exact-head Web Candidate CI #67 and Full CI #700 SUCCESS; technical review COMMENTED**
+- Provides a shared responsive login page and four-cell OTP input preview. The phone/OTP flow is not active because no IdP OTP flow, SMS provider, or approved OTP policy is configured.
+
+## Sprint 74 — Planning Proposal
+
+- [Sprint 74 — Central IdP Phone OTP Contract and Readiness](./74-central-identity-phone-otp-contract-readiness.md) — **Planning proposal only; Code not authorized**
+- [Decision 0079 — Central Identity Provider Phone OTP Integration Boundary](../decisions/0079-central-identity-phone-otp-integration-contract.md) — **Proposed; owner approval required**
+- The recommended architecture keeps phone OTP inside the selected central identity provider and preserves Badban's existing OIDC `sub` and verified national-ID claim mapping. Provider selection, identity proofing, OTP values, delivery, privileged MFA, and session policy remain unresolved.
