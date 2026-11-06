@@ -365,8 +365,7 @@ async def test_program_statement_aggregates_owner_class_without_personal_identif
         row["ledger_layer"] for row in data["items"]
     }
     assert all(
-        "participant_id" not in row and "economic_owner_id" not in row
-        for row in data["items"]
+        "participant_id" not in row and "economic_owner_id" not in row for row in data["items"]
     )
     assert "PRIVATE_REASON_SHOULD_NOT_LEAK" not in str(data)
     assert "PRIVATE_SETTLEMENT_REFERENCE_SHOULD_NOT_LEAK" not in str(data)

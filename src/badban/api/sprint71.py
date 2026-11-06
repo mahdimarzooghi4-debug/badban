@@ -260,10 +260,7 @@ async def read_program_financial_history(
     assert program.legal_entity_id is not None
     predicates = _complete_program_entry_predicates(program_id, program.legal_entity_id)
     total_entries = int(
-        await session.scalar(
-            select(func.count()).select_from(JournalEntry).where(*predicates)
-        )
-        or 0
+        await session.scalar(select(func.count()).select_from(JournalEntry).where(*predicates)) or 0
     )
     if total_entries == 0:
         _audit_read(
@@ -334,10 +331,11 @@ async def read_program_financial_history(
                 action=action,
                 scope={"limit": limit, "offset": offset},
             )
-        if (
-            taxonomy.normal_balance not in {"DEBIT", "CREDIT", "MEMO"}
-            or taxonomy.ledger_layer not in {"MONETARY", "MEMORANDUM_CONTROL", "EXTERNAL_MIRROR"}
-        ):
+        if taxonomy.normal_balance not in {
+            "DEBIT",
+            "CREDIT",
+            "MEMO",
+        } or taxonomy.ledger_layer not in {"MONETARY", "MEMORANDUM_CONTROL", "EXTERNAL_MIRROR"}:
             await _fail_source_contract(
                 session,
                 principal=principal,

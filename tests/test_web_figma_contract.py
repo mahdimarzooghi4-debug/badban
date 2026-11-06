@@ -24,7 +24,9 @@ def test_figma_web_client_targets_actual_backend_contracts() -> None:
     """Web endpoints must remain present and bearer protected after refactors."""
     schema = app.openapi()
     source = (ROOT / "web" / "src" / "api.ts").read_text(encoding="utf-8")
-    ledger_source = (ROOT / "web" / "src" / "institution-ledger-data.ts").read_text(encoding="utf-8")
+    ledger_source = (ROOT / "web" / "src" / "institution-ledger-data.ts").read_text(
+        encoding="utf-8"
+    )
     for path, methods in SCOPED_API.items():
         assert path in schema["paths"], path
         # Dynamic segments are encoded by the browser and bound by the router.
