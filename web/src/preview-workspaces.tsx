@@ -369,9 +369,9 @@ export function PreviewWorkspace({ surface, onBack }: {
     return <div className="preview-individual-stage" data-figma-frame="160:3">
       <div className="mobile-screen" dir="rtl">
         <header className="mobile-topbar">
-          <button type="button" className="mobile-notification" aria-label="اعلان‌های نمونه">
+          <span className="mobile-notification" aria-hidden="true">
             <img src="/assets/figma/applicant-bell.svg" alt="" />
-          </button>
+          </span>
           <PreviewBrand onClick={onBack} mobile />
         </header>
         <main className="mobile-content">
