@@ -267,3 +267,42 @@ h1 { line-height: 1.45; }
   .individual-screen .service-card p {font-size:10px;}
   .individual-screen .service-card button {padding:6px 4px;}
 }
+
+
+/* Native Figma 163:160 bottom-tab vector silhouettes; color follows active tab. */
+.individual-tab-glyph {
+  width:22px;height:22px;flex:0 0 22px;display:inline-block;background:currentColor;
+  mask-size:contain;mask-repeat:no-repeat;mask-position:center;
+  -webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;
+}
+.individual-tab--selected .individual-tab-glyph {background:var(--gold);}
+.applicant-financial-container {
+  background:var(--canvas);border-radius:16px;max-width:800px;
+  padding:16px;min-width:0;
+}
+@media(max-width:640px){
+  .applicant-financial-container {padding:0;background:transparent;}
+  .individual-tab-glyph {width:22px;height:22px;flex-basis:22px;}
+}
+
+
+/* Figma applicant top bar 163:161-166 with original logo and native bell icon. */
+.applicant-logo-switch {border:0;background:transparent;align-self:center;padding:0;color:inherit;text-align:inherit;}
+.applicant-bell {display:none;}
+@media(max-width:640px){
+  .workspace--individual .sidebar {
+    background:white;color:var(--brand);height:88px;min-height:88px;
+    flex-direction:row;align-items:center;justify-content:space-between;
+    padding:7px 22px;overflow:visible;box-shadow:none;
+  }
+  .workspace--individual .sidebar .brand {background:transparent;padding:0;box-shadow:none;border-radius:0;}
+  .workspace--individual .sidebar .brand-logo {width:145px;height:73px;object-fit:contain;}
+  .workspace--individual .applicant-bell {
+    display:grid;place-items:center;width:42px;height:42px;flex:none;
+    background:var(--canvas);border-radius:12px;
+  }
+  .workspace--individual .applicant-bell img {display:block;width:24px;height:24px;}
+  .workspace--individual .workspace-top,
+  .workspace--individual .workspace-heading {display:none;}
+  .workspace--individual .workspace-main {padding:17px 18px 108px;}
+}

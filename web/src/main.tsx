@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
-import { amount, client, type AdminWorkspace, type Service, type ServiceCode } from "./api";
+import { client, type AdminWorkspace, type Service, type ServiceCode } from "./api";
 import { ApplicantRequests } from "./applicant-requests";
 import { ApplicantAccount } from "./applicant-profile";
 import { validateApplicantRequest } from "./applicant-requests-data";
 import { loadApplicantFinancialCase } from "./applicant-financial-data";
+import { ApplicantFinancialCase } from "./applicant-financial";
 import { activeCatalogueServices } from "./applicant-services";
 import "./styles.css";
 import "./operational-details.css";
@@ -176,11 +177,11 @@ function Individual({ token, logout }: { token: string; logout: () => void }) {
 
   const [tab, setTab] = useState<"home" | "financial" | "services" | "requests" | "account">("home");
   const tabs = [
-    { id: "home", name: "خانه", icon: "⌂" },
-    { id: "financial", name: "مالی", icon: "▣" },
-    { id: "services", name: "خدمات", icon: "▦" },
-    { id: "requests", name: "درخواست‌ها", icon: "▤" },
-    { id: "account", name: "حساب", icon: "♙" },
+    { id: "home", name: "خانه", icon: "/assets/figma/applicant-home.svg" },
+    { id: "financial", name: "مالی", icon: "/assets/figma/applicant-wallet.svg" },
+    { id: "services", name: "خدمات", icon: "/assets/figma/applicant-services.svg" },
+    { id: "requests", name: "درخواست‌ها", icon: "/assets/figma/applicant-requests.svg" },
+    { id: "account", name: "حساب", icon: "/assets/figma/applicant-account.svg" },
   ] as const;
 
   const renderCatalogue = (data: { items: Service[] }, requestable: boolean) => {
@@ -227,25 +228,9 @@ function Individual({ token, logout }: { token: string; logout: () => void }) {
       <ApplicantRequests token={token} refreshKey={requestRefreshKey} />
     </Panel>}
 
-    {tab === "financial" && <Panel title="پرونده مالی">
-      <Remote state={financial} render={data => <>
-        <div className="metric-grid">
-          <div className="metric"><span>ضمانت‌های ثبت‌شده</span><strong>{data.guarantee_cases.length.toLocaleString("fa-IR")}</strong></div>
-          <div className="metric"><span>مستمری‌های ثبت‌شده</span><strong>{data.monthly_entitlements.length.toLocaleString("fa-IR")}</strong></div>
-          <div className="metric"><span>پرونده‌های پس از خروج</span><strong>{data.post_exit_cases.length.toLocaleString("fa-IR")}</strong></div>
-        </div>
-        <div className="rows">{data.balances.map(b => <div className="data-row" key={b.currency}>
-          <strong>مانده اصل تسهیلات ({b.currency})</strong>
-          <span>{amount(b.outstanding_principal, b.currency)}</span>
-          <small>پرداخت: {b.payment_status === "NOT_CONFIGURED" ? "متصل نیست" : "نامشخص"}</small>
-        </div>)}</div>
-        {!data.balances.length && <Empty>هنوز اطلاعات مالی قابل نمایش وجود ندارد.</Empty>}
-        <div className="notice">واریز و برداشت وجه در API فعلی فعال نشده‌اند.
-          سرمایه شخصی و سرمایه متعلق به سازمان به‌جای جمع‌شدن، باید با حقوق مستقل نمایش داده شوند.</div>
-        <div className="disabled-actions"><Button disabled>واریز وجه — غیرفعال</Button>
-          <Button disabled outline>درخواست برداشت — غیرفعال</Button></div>
-      </>} />
-    </Panel>}
+    {tab === "financial" && <section className="applicant-financial-container">
+      <Remote state={financial} render={data => <ApplicantFinancialCase data={data} />} />
+    </section>}
 
     {tab === "account" && <Panel title="حساب من">
       <ApplicantAccount token={token} onFinancialCase={() => setTab("financial")} onLogout={logout} />
@@ -257,7 +242,8 @@ function Individual({ token, logout }: { token: string; logout: () => void }) {
         aria-current={tab === t.id ? "page" : undefined}
         className={"individual-tab" + (tab === t.id ? " individual-tab--selected" : "")}
         onClick={() => { setTab(t.id); setStatus(""); }}>
-        <span aria-hidden="true">{t.icon}</span><strong>{t.name}</strong>
+        <span aria-hidden="true" className="individual-tab-glyph"
+          style={{ maskImage: `url(${t.icon})`, WebkitMaskImage: `url(${t.icon})` }}/><strong>{t.name}</strong>
       </button>)}
     </nav>
   </div>;
@@ -297,7 +283,15 @@ function Workspace({ token, surface, choose, logout }: {
   const selected = sections.find(s => s.id === surface)!;
   return <div className={"workspace workspace--" + surface} dir="rtl">
     <aside className="sidebar">
-      <Brand light /><p>{selected.name}</p>
+      {surface === "individual" ? <button className="applicant-logo-switch" type="button"
+        aria-label="تغییر محیط بادبان" title="بازگشت به انتخاب محیط" onClick={() => choose(null)}>
+        <Brand light />
+      </button> : <Brand light />}
+      {surface === "individual" && <span className="applicant-bell" title="سرویس اعلان‌ها متصل نیست"
+        aria-label="اعلان‌ها در این نسخه متصل نیستند">
+        <img src="/assets/figma/applicant-bell.svg" alt="" width="24" height="24" />
+      </span>}
+      <p>{selected.name}</p>
       <nav aria-label={"منوی " + selected.name}>
         {navigation[surface].map((name, index) => <div className={"nav-item" + (!index ? " nav-item--active" : "")}
           key={name}><span aria-hidden="true">{["▦", "♧", "◇", "▤", "◈", "♢", "♧", "◇", "▣"][index]}</span>
