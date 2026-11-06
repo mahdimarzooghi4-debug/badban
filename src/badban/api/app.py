@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from badban.api.errors import ApiError, api_error_handler
 from badban.api.health import router as health_router
 from badban.api.middleware import CorrelationIdMiddleware
+from badban.api.web_adapter import mount_same_origin_web
 from badban.api.sprint03 import router as sprint03_router
 from badban.api.sprint04 import router as sprint04_router
 from badban.api.sprint06 import router as sprint06_router
@@ -108,6 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sprint56_router)
     app.include_router(sprint57_router)
     app.include_router(sprint64_router)
+    mount_same_origin_web(app, resolved)
     configure_tracing(app, resolved)
     return app
 

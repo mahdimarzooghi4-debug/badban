@@ -41,3 +41,7 @@ No temporary Figma asset URL is referenced by application code.
 This is a **Draft PR/code candidate**, not Stage, QA approval, production-ready session
 management or a real payment integration. Service request status \`RECEIVED\` is only
 intake and does not create an entitlement or obligation.
+
+## Same-origin Render Stage candidate (Sprint 72)
+
+The opt-in `Dockerfile.render-stage` compiles React and serves it through FastAPI from the exact same origin as `/api/v1/*`. `/runtime-config.js` publishes only the HTTPS issuer and **public** OIDC client ID (`BADBAN_WEB_OIDC_CLIENT_ID`). It does not supply secrets, emulate sessions or bypass the Stage Vault requirement. See `docs/sprints/72-render-same-origin-stage-adapter.md` for remaining deployment gates.

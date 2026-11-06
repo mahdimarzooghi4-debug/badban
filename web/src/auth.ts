@@ -1,7 +1,11 @@
 import { InMemoryWebStorage, UserManager, WebStorageStateStore } from "oidc-client-ts";
+import { resolvePublicOidcConfig } from "./auth-config";
 
-const authority = import.meta.env.VITE_OIDC_AUTHORITY?.trim();
-const clientId = import.meta.env.VITE_OIDC_CLIENT_ID?.trim();
+const runtime = (window as Window & { __BADBAN_PUBLIC_OIDC_CONFIG__?: unknown })
+  .__BADBAN_PUBLIC_OIDC_CONFIG__;
+const publicOidc = resolvePublicOidcConfig(
+  runtime, import.meta.env.VITE_OIDC_AUTHORITY, import.meta.env.VITE_OIDC_CLIENT_ID,
+);
 
 /**
  * An access token exists only in memory, never localStorage, a URL, or a mock
@@ -9,10 +13,10 @@ const clientId = import.meta.env.VITE_OIDC_CLIENT_ID?.trim();
  * This baseline deliberately requires a new sign-in after a page reload.
  * A production BFF/session boundary is future work, not silently simulated.
  */
-export const oidc = authority && clientId
+export const oidc = publicOidc
   ? new UserManager({
-      authority,
-      client_id: clientId,
+      authority: publicOidc.authority,
+      client_id: publicOidc.clientId,
       response_type: "code",
       scope: "openid profile",
       redirect_uri: window.location.origin + "/auth/callback",

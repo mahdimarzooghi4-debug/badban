@@ -4,11 +4,17 @@ on:
   pull_request:
     paths:
       - "web/**"
+      - "Dockerfile.render-stage"
+      - "src/badban/api/web_adapter.py"
+      - "src/badban/config.py"
       - ".github/workflows/web.yml"
   push:
     branches: [main]
     paths:
       - "web/**"
+      - "Dockerfile.render-stage"
+      - "src/badban/api/web_adapter.py"
+      - "src/badban/config.py"
       - ".github/workflows/web.yml"
 
 permissions:
@@ -31,3 +37,5 @@ jobs:
       - name: Type-check and build
         working-directory: web
         run: npm run build
+      - name: Build combined Stage image (validation only; no deploy)
+        run: docker build -f Dockerfile.render-stage -t badban-stage-candidate:${{ github.sha }} .
