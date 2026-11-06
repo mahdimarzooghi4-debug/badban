@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
-import { amount, client, type AdminWorkspace, type ServiceCode, type ServiceRequest } from "./api";
+import { amount, client, type AdminWorkspace, type Service, type ServiceCode, type ServiceRequest } from "./api";
+import { activeCatalogueServices } from "./applicant-services";
 import "./styles.css";
 import "./operational-details.css";
 import { AdminServiceQueue } from "./operational-details";
@@ -148,6 +149,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 function Individual({ token }: { token: string }) {
+  const catalogue = useRemote(token, client.catalogue, "individual-service-catalogue");
   const financial = useRemote(token, client.financial, "individual-financial");
   const requestState = useRemote(token, client.requests, "individual-requests");
   const [items, setItems] = useState<ServiceRequest[] | null>(null);
@@ -188,17 +190,33 @@ function Individual({ token }: { token: string }) {
       </div>)}</div> : <Empty>هنوز درخواستی ثبت نشده است.</Empty>;
   };
 
+  const renderCatalogue = (data: { items: Service[] }, requestable: boolean) => {
+    const offered = activeCatalogueServices(data.items);
+    if (!offered.length) return <Empty>در حال حاضر خدمت فعالی برای ثبت درخواست موجود نیست.</Empty>;
+    return <div className="service-grid">{offered.map(service => {
+      const visual = services.find(s => s.code === service.service_code);
+      if (!visual) return null;
+      const content = <><span className="service-icon">{visual.symbol}</span>
+        <h3>{service.display_name}</h3><p>{service.description}</p></>;
+      return requestable
+        ? <article className="service-card" key={service.service_code}>{content}
+            <Button onClick={() => void submit(service.service_code)} disabled={busy}>ثبت درخواست</Button>
+          </article>
+        : <button type="button" className="service-card" key={service.service_code}
+            onClick={() => setTab("services")}>{content}
+            <span className="service-more">مشاهده خدمات ‹</span>
+          </button>;
+    })}</div>;
+  };
+
   return <div className="workspace-body individual-screen">
     {tab === "home" && <>
       <div className="welcome"><h2>پرونده مالی شما، شفاف و یکپارچه</h2>
         <p>خدمات، سوابق درخواست و پرونده مالی در یک نگاه</p>
         <button className="welcome-link" onClick={() => setTab("financial")} type="button">مشاهده پرونده مالی</button>
       </div>
-      <Panel title="خدمات بادبان"><div className="service-grid">
-        {services.map(s => <button type="button" className="service-card" key={s.code}
-          onClick={() => setTab("services")}><span className="service-icon">{s.symbol}</span>
-          <h3>{s.title}</h3><p>{s.detail}</p><span className="service-more">مشاهده خدمات ‹</span></button>)}
-      </div></Panel>
+      <Panel title="خدمات بادبان"><Remote state={catalogue}
+        render={data => renderCatalogue(data, false)} /></Panel>
       <Panel title="پرونده مالی من"><button className="finance-shortcut" type="button" onClick={() => setTab("financial")}>
         <span className="shortcut-icon">▣</span><span><strong>مشاهده سوابق و وضعیت مالی</strong>
           <small>اطلاعات دریافت‌شده از بک‌اند بادبان</small></span><span aria-hidden="true">‹</span>
@@ -207,10 +225,7 @@ function Individual({ token }: { token: string }) {
     </>}
 
     {tab === "services" && <Panel title="خدمات بادبان">
-      <div className="service-grid">{services.map(service => <article className="service-card" key={service.code}>
-        <span className="service-icon">{service.symbol}</span><h3>{service.title}</h3><p>{service.detail}</p>
-        <Button onClick={() => void submit(service.code)} disabled={busy}>ثبت درخواست</Button>
-      </article>)}</div>
+      <Remote state={catalogue} render={data => renderCatalogue(data, true)} />
       {status && <p className="notice" role="status">{status}</p>}
       <p className="notice">درخواست فقط با وضعیت «دریافت‌شده» ثبت می‌شود؛ هیچ تأیید، ضمانت یا پرداختی ایجاد نمی‌کند.</p>
     </Panel>}
