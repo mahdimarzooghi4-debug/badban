@@ -15,9 +15,9 @@ import { AdminGovernance } from "./operational-governance";
 import { AdminDirectory } from "./admin-directory";
 import { InstitutionWorkspace, LenderWorkspace } from "./paged-workspaces";
 import { InstitutionHistoryView, InstitutionReportsView } from "./institution-empty-views";
+import { institutionViewForNavigationIndex, type InstitutionView } from "./institution-navigation";
 
 type Surface = "individual" | "institution" | "lender" | "admin";
-type InstitutionView = "home" | "history" | "reports";
 type LoadState<T> = { kind: "loading" } | { kind: "ready"; data: T } | { kind: "error"; message: string };
 
 const sections: Array<{ id: Surface; name: string; description: string; symbol: string }> = [
@@ -308,14 +308,11 @@ function Workspace({ token, surface, choose, logout }: {
       <p>{selected.name}</p>
       <nav aria-label={"منوی " + selected.name}>
         {navigation[surface].map((name, index) => {
-          const activeIndex = institutionView === "home" ? 0 : institutionView === "history" ? 3 : 4;
-          const active = surface === "institution" ? index === activeIndex : index === 0;
-          const enabled = surface === "institution" && [0, 3, 4].includes(index);
+          const targetView = institutionViewForNavigationIndex(index);
+          const active = surface === "institution" ? targetView === institutionView : index === 0;
+          const enabled = surface === "institution" && targetView !== null;
           const navigate = () => {
-            if (!enabled) return;
-            if (index === 0) setInstitutionView("home");
-            else if (index === 3) setInstitutionView("history");
-            else if (index === 4) setInstitutionView("reports");
+            if (enabled && targetView) setInstitutionView(targetView);
           };
           return <button type="button" className={"nav-item" + (active ? " nav-item--active" : "")}
             key={name} disabled={!enabled} aria-current={active ? "page" : undefined} onClick={navigate}>
