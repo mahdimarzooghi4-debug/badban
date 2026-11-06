@@ -1,0 +1,50 @@
+/* Figma Badban Institution / 04 • پرونده فرد (244:283).
+   Native 30px person + 26px rights-lock SVGs, responsive cards, real API data only. */
+.institution-case-overview {display:flex;flex-direction:column;gap:19px;color:#09234b;line-height:1.75;}
+.institution-case-context {display:flex;align-items:center;justify-content:space-between;gap:18px;
+  border:1px solid #e2e8f0;background:#fff;border-radius:14px;padding:13px 17px;flex-wrap:wrap;}
+.institution-case-context>div {display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.institution-case-context strong {font-size:12px;}
+.institution-case-context span {font-size:11px;color:#6f7c92;}
+.institution-case-tag,.institution-case-chip {border-radius:20px;background:#fff1cc;color:#09234b;
+  font-size:11px;padding:7px 17px;line-height:1.4;}
+.institution-case-two-cards {display:grid;grid-template-columns:minmax(0,450fr) minmax(0,600fr);gap:14px;}
+.institution-case-identity,.institution-case-capital {padding:20px;border:1px solid #e2e8f0;border-radius:18px;
+  background:#fff;min-width:0;display:flex;flex-direction:column;gap:10px;min-height:160px;}
+.institution-case-identity-header {display:flex;align-items:center;gap:13px;}
+.institution-case-identity-header img {width:30px;height:30px;flex:none;}
+.institution-case-identity-header h3 {font-size:20px;color:#09234b;margin:0;}
+.institution-case-identity p,.institution-case-capital p {margin:0;font-size:12px;overflow-wrap:anywhere;}
+.institution-case-identity p b {font-size:11px;font-weight:650;unicode-bidi:isolate;overflow-wrap:anywhere;}
+.institution-case-identity small,.institution-case-capital small {font-size:11px;color:#6f7c92;}
+.institution-case-labels {display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.institution-case-capital h3 {font-size:17px;margin:0;}
+.institution-case-capital>strong {font-size:20px;color:#09234b;}
+.institution-case-chip--blue {color:#fff;background:#173e71;}
+.institution-case-missing {font-size:12px;color:#6f7c92;flex:1;}
+.institution-case-read-title {font-size:18px;margin:7px 0 0;}
+.institution-case-read-rows {background:white;border:1px solid #e2e8f0;border-radius:18px;padding:15px;
+  display:flex;flex-direction:column;gap:12px;}
+.institution-case-read-row {background:#f5f7fc;border:1px solid #e2e8f0;border-radius:12px;
+  min-height:64px;padding:15px 18px;display:grid;grid-template-columns:minmax(160px,30%) 1fr;
+  align-items:center;gap:18px;}
+.institution-case-read-row span {font-size:12px;color:#6f7c92;}
+.institution-case-read-row strong {font-size:13px;font-weight:650;overflow-wrap:anywhere;}
+.institution-case-assets {display:flex;flex-direction:column;gap:11px;}
+.institution-case-assets h4 {font-size:15px;}
+.institution-case-asset {background:#fff;border:1px solid #e2e8f0;border-radius:13px;
+  padding:14px 18px;display:flex;flex-direction:column;gap:6px;font-size:12px;overflow-wrap:anywhere;}
+.institution-case-asset small {font-size:11px;color:#6f7c92;}
+.institution-case-rights {display:flex;align-items:center;gap:15px;padding:17px 18px;border-radius:14px;
+  background:#fff1cc;color:#09234b;font-weight:600;line-height:1.9;font-size:12px;margin:0;}
+.institution-case-rights img {width:26px;height:26px;flex:none;}
+@media(max-width:850px){
+  .institution-case-two-cards {grid-template-columns:1fr;}
+  .institution-case-read-row {grid-template-columns:1fr;gap:3px;}
+}
+@media(max-width:520px){
+  .institution-case-context,.institution-case-identity,.institution-case-capital {padding:14px;}
+  .institution-case-read-rows {padding:11px;}
+  .institution-case-read-row {padding:12px;}
+  .institution-case-rights {align-items:flex-start;}
+}
