@@ -16,6 +16,7 @@ function historyPayload() {
     source_type: "INTERNAL_BADBAN_POSTED_JOURNAL",
     program_id: program,
     legal_entity_id: legalEntity,
+    snapshot_at: now,
     limit: 25,
     offset: 0,
     total_entries: 1,
