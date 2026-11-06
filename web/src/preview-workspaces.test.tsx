@@ -26,6 +26,8 @@ describe("Figma-aligned Badban preview shells", () => {
     );
     expect(markup).toContain('class="mobile-screen"');
     expect(markup).toContain('aria-label="پیمایش اصلی"');
+    expect(markup).toContain('class="mobile-notification" aria-hidden="true"');
+    expect(markup).not.toContain('aria-label="اعلان‌های نمونه"');
     for (const label of ["حساب", "درخواست‌ها", "خدمات", "مالی", "خانه"]) {
       expect(markup).toContain(label);
     }
