@@ -1,6 +1,6 @@
 # Sprint 71 — Supporting Institution Internal Financial History and Program Statement
 
-- **Status:** Planning proposal only; waiting for explicit acceptance of Decision 0078.
+- **Status:** Code authorized by accepted Decision 0078 on 2026-11-06.
 - **Stack:** Draft PR #81 (Sprint 70) → this proposal.
 - **Primary decision:** [0078 — Supporting Institution Internal Financial History and Program Statement](../decisions/0078-supporting-institution-internal-financial-history-and-program-statement.md).
 
@@ -16,7 +16,7 @@
 | Asset positions and valuation observations | Quantity and separately sourced point-in-time valuation observations | Cash balance or confirmed settlement |
 | Guarantee cases and external-loan mirrors | Guarantee exposure and lender-reported mirror state | Badban cash, bank proof or program capital total |
 
-## Proposed implementation after acceptance
+## Authorized implementation scope
 
 1. Add exact-program, read-only, audited financial-history and program-statement API routes.
 2. Reuse persisted POSTED journal facts and the accepted internal source contract; fail closed for unavailable or mixed-scope evidence.
@@ -25,9 +25,9 @@
 5. Keep undefined KPI cards unavailable until their metric definitions and source lineage are explicitly approved.
 6. Add endpoint-level authorization, isolation, pagination, multi-currency, mixed-scope, reversal, source-unavailable, and no-bank/no-mutation tests.
 
-## Acceptance gates
+## Implementation and release gates
 
-- Decision 0078 must be explicitly accepted before code starts.
+- Decision 0078 is Accepted; implementation must stay within its exact scope.
 - Exact active program grant and active program/legal-entity lineage are mandatory on every read.
 - Only POSTED evidence is eligible; absence is unavailable, not zero.
 - No bank/payment/settlement provider is assumed or called.
