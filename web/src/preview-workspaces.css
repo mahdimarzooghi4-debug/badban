@@ -142,6 +142,7 @@
 .preview-page-heading h1 { color: var(--brand); font-size: 30px; font-weight: 850; line-height: 1.6; }
 .preview-page-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.9; }
 .dashboard-context-bar {
+  direction: ltr;
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -153,7 +154,7 @@
   border-radius: 13px;
   background: #fff;
 }
-.dashboard-context-bar strong { color: var(--brand); font-size: 11px; font-weight: 700; }
+.dashboard-context-bar strong { direction: rtl; text-align: right; color: var(--brand); font-size: 11px; font-weight: 700; }
 .dashboard-context-label {
   min-width: 120px;
   padding: 7px 13px;
@@ -300,6 +301,7 @@
   box-shadow: 0 16px 50px #07193420;
 }
 .mobile-topbar {
+  direction: ltr;
   height: 88px;
   min-height: 88px;
   display: flex;
