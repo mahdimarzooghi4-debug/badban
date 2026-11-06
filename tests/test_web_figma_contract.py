@@ -88,3 +88,25 @@ def test_institution_person_figma_icons_use_exact_vector_dimensions() -> None:
         assert root.attrib.get("height") == str(dimension), name
         assert f"/assets/figma/{name}" in overview
     assert "figma.com/api/mcp/asset/" not in overview
+
+
+def test_institution_history_and_reporting_empty_states_use_local_figma_icons() -> None:
+    directory = ROOT / "web" / "public" / "assets" / "figma"
+    views = (ROOT / "web" / "src" / "institution-empty-views.tsx").read_text(
+        encoding="utf-8"
+    )
+    shell = (ROOT / "web" / "src" / "main.tsx").read_text(encoding="utf-8")
+    for name in ("institution-history.svg", "institution-chart.svg"):
+        path = directory / name
+        assert path.exists() and path.stat().st_size > 200, name
+        root = ElementTree.parse(path).getroot()
+        assert root.tag == "{http://www.w3.org/2000/svg}svg", name
+        assert root.attrib.get("width") == "25", name
+        assert root.attrib.get("height") == "25", name
+        assert f"/assets/figma/{name}" in views
+    assert "InstitutionHistoryView" in shell
+    assert "InstitutionReportsView" in shell
+    assert 'setInstitutionView("history")' in shell
+    assert 'setInstitutionView("reports")' in shell
+    assert "aria-current={active ? \"page\" : undefined}" in shell
+    assert "figma.com/api/mcp/asset/" not in views
