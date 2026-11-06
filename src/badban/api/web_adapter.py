@@ -45,7 +45,9 @@ def mount_same_origin_web(app: FastAPI, settings: Settings) -> None:
         "frame-ancestors 'none'; "
         "form-action 'none'"
     )
-    app.mount("/assets", StaticFiles(directory=str(assets), follow_symlink=False), name="web-assets")
+    app.mount(
+        "/assets", StaticFiles(directory=str(assets), follow_symlink=False), name="web-assets"
+    )
 
     @app.get("/runtime-config.js", include_in_schema=False)
     async def public_oidc_config() -> Response:
@@ -54,9 +56,11 @@ def mount_same_origin_web(app: FastAPI, settings: Settings) -> None:
             "authority": settings.oidc_issuer,
             "clientId": settings.web_oidc_client_id,
         }
-        source = "window.__BADBAN_PUBLIC_OIDC_CONFIG__ = Object.freeze(" + json.dumps(
-            public, ensure_ascii=True, separators=(",", ":")
-        ) + ");"
+        source = (
+            "window.__BADBAN_PUBLIC_OIDC_CONFIG__ = Object.freeze("
+            + json.dumps(public, ensure_ascii=True, separators=(",", ":"))
+            + ");"
+        )
         return Response(
             content=source,
             media_type="application/javascript",

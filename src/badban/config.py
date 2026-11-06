@@ -72,7 +72,9 @@ class Settings(BaseSettings):
             or not self.web_oidc_client_id
             or not self.web_oidc_client_id.strip()
         ):
-            raise ValueError("Serving the web app requires a dist directory and public OIDC client ID")
+            raise ValueError(
+                "Serving the web app requires a dist directory and public OIDC client ID"
+            )
         return self
 
     @property
