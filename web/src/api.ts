@@ -2,21 +2,55 @@ export type ServiceCode = "LOAN_GUARANTEE" | "MONTHLY_PENSION" | "POST_EXIT_SUPP
 export type ServiceRequest = { id: string; service_code: ServiceCode; status: "RECEIVED"; submitted_at: string };
 export type Page<T> = { items: T[]; limit: number; offset: number };
 export type Service = { service_code: ServiceCode; display_name: string; description: string; lifecycle_status: string };
+export type GuaranteeCaseState =
+  | "REQUESTED" | "RESERVED" | "ISSUED" | "ACTIVE" | "DELINQUENT"
+  | "CLAIM_PENDING" | "CLAIM_APPROVED" | "CLAIM_REJECTED" | "ENFORCEMENT"
+  | "SETTLEMENT" | "RELEASED" | "CLOSED" | "CANCELLED" | "EXPIRED";
+export type LoanMirrorState = "PENDING" | "ACTIVE" | "DELINQUENT" | "SETTLED" | "REPLACED";
+export type EntitlementState = "DRAFT" | "APPROVED" | "CANCELLED";
+export type PostExitCaseState = "DRAFT" | "ACTIVE" | "SUSPENDED" | "COMPLETED" | "CANCELLED";
+export type GuaranteeCaseSummary = {
+  id: string;
+  status: GuaranteeCaseState;
+  requested_principal: string;
+  guarantee_exposure: string;
+  lender_record_status: "RECORDED" | "NOT_RECORDED";
+  loan_state: LoanMirrorState | null;
+  outstanding_principal: string | null;
+  currency: string;
+};
+export type EntitlementSummary = {
+  id: string;
+  period_reference: string;
+  amount: string;
+  currency: string;
+  status: EntitlementState;
+  payment_status: "NOT_CONFIGURED";
+};
+export type PostExitCaseSummary = {
+  id: string;
+  status: PostExitCaseState;
+  exit_at: string;
+  support_start_at: string;
+  duration_months: number;
+  entitlements: EntitlementSummary[];
+};
 export type Balance = {
   currency: string;
   outstanding_principal: string | null;
   guarantee_exposure: string | null;
   realized_return_allocated_to_support: string | null;
   allocated_support: string | null;
-  paid_amount: string | null;
+  paid_amount: null;
   payment_status: "NOT_CONFIGURED";
 };
 export type FinancialCase = {
   participant_id: string;
-  guarantee_cases: Array<{ id: string; status: string; guarantee_exposure: string; currency: string }>;
-  monthly_entitlements: Array<{ id: string; amount: string; currency: string; status: string }>;
-  post_exit_cases: Array<{ id: string; status: string }>;
+  guarantee_cases: GuaranteeCaseSummary[];
+  monthly_entitlements: EntitlementSummary[];
+  post_exit_cases: PostExitCaseSummary[];
   balances: Balance[];
+  external_price_source_status: "NOT_CONFIGURED";
   external_payment_status: "NOT_CONFIGURED";
 };
 export type Program = { program_id: string; code: string; name: string; status: string };
