@@ -54,7 +54,7 @@ function Paginator({ offset, page, change, label }: {
     <button type="button" disabled={next===null} onClick={() => { if (next!==null) change(next); }}>صفحه بعد</button>
   </div>;
 }
-function InstitutionPeople({ token, programId }: { token: string; programId: string }) {
+function InstitutionPeople({ token, programId, programName }: { token: string; programId: string; programName: string }) {
   const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [selected, setSelected] = useState<{ participantId: string; episodeId: string } | null>(null);
@@ -80,8 +80,8 @@ function InstitutionPeople({ token, programId }: { token: string; programId: str
       <Paginator offset={offset} page={state} label="افراد" change={next => { setOffset(next); setSelected(null); }}/>
     </ReadPanel>
     {selectedRow && selected && <InstitutionFinancialDetail key={programId+":"+selected.episodeId}
-      token={token} programId={programId} participantId={selected.participantId}
-      episodeId={selected.episodeId} onClose={() => setSelected(null)}/>}
+      token={token} programId={programId} programName={programName} participant={selectedRow}
+      participantId={selected.participantId} episodeId={selected.episodeId} onClose={() => setSelected(null)}/>}
   </>;
 }
 export function InstitutionWorkspace({ token }: { token: string }) {
@@ -106,7 +106,7 @@ export function InstitutionWorkspace({ token }: { token: string }) {
       </div>:<p className="read-empty">برنامه مجازی در این صفحه یافت نشد.</p>}</Loaded>
       <Paginator offset={offset} page={state} label="برنامه‌ها" change={next=>{setOffset(next);setSelectedProgram(null);}}/>
     </ReadPanel>
-    {selected && <InstitutionPeople key={selected.program_id} token={token} programId={selected.program_id}/>}
+    {selected && <InstitutionPeople key={selected.program_id} token={token} programId={selected.program_id} programName={selected.name}/>}
     <p className="read-policy">اصل سرمایه سازمانی متعلق به سازمان می‌ماند و فرد فقط مطابق قرارداد از منافع آن بهره‌مند می‌شود. ورود گروهی و واریز سازمانی در این نسخه فعال نیستند.</p>
   </div>;
 }

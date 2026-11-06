@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { amount, api, type Guarantee } from "./api";
+import { amount, api, type Beneficiary, type Guarantee } from "./api";
+import { InstitutionCaseOverview } from "./institution-case-overview";
 import {
   adminServiceQueuePath, allowedAdminServices, institutionCasePath, serviceLabel,
   valueOrUnavailable, verifiedInstitutionCase, verifiedIntakePage,
@@ -39,8 +40,9 @@ function MiniRow({ title, value }: { title: string; value: React.ReactNode }) {
 function money(value: string | number | null | undefined, currencyCode?: string | null): string {
   return amount(value, currencyCode);
 }
-export function InstitutionFinancialDetail({ token, programId, participantId, episodeId, onClose }: {
-  token: string; programId: string; participantId: string; episodeId: string; onClose: () => void;
+export function InstitutionFinancialDetail({ token, programId, participantId, episodeId, programName, participant, onClose }: {
+  token: string; programId: string; participantId: string; episodeId: string;
+  programName: string; participant: Beneficiary; onClose: () => void;
 }) {
   const scope = programId + ":" + participantId + ":" + episodeId;
   const state = useScopedResource<InstitutionFinancialCase>(scope, token, () =>
@@ -50,6 +52,8 @@ export function InstitutionFinancialDetail({ token, programId, participantId, ep
     <div className="detail-heading"><div><small>پرونده فرد در برنامه مجاز</small><h2 id="institution-case-title">جزئیات مالی و دارایی‌ها</h2></div>
       <button className="detail-close" type="button" onClick={onClose}>بستن جزئیات</button></div>
     <Result state={state}>{data => <>
+      <InstitutionCaseOverview data={data} scope={{ programId, programName, participant }} />
+      <h3 className="detail-support-heading">جزئیات تکمیلی پرونده بر اساس اطلاعات ثبت‌شده</h3>
       <p className="detail-note">مالکیت اصل سرمایه با حق بهره‌مندی از آن یکسان نیست. این نما هیچ پرداخت، انتساب یا تغییر تعهدی انجام نمی‌دهد.</p>
       <div className="detail-columns">
         <article className="detail-card"><h3>دارایی‌های ثبت‌شده</h3>

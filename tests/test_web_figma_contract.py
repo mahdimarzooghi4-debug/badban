@@ -73,3 +73,18 @@ def test_applicant_finance_figma_icons_are_versioned_and_have_native_geometry() 
         assert root.attrib.get("height") == str(dimension), name
         assert name in finance + shell, f"SVG not referenced by UI: {name}"
     assert "figma.com/api/mcp/asset/" not in finance + shell
+
+
+def test_institution_person_figma_icons_use_exact_vector_dimensions() -> None:
+    """Institution node 244:283 uses the native person and rights-lock vectors."""
+    directory = ROOT / "web" / "public" / "assets" / "figma"
+    overview = (ROOT / "web" / "src" / "institution-case-overview.tsx").read_text(encoding="utf-8")
+    for name, dimension in {"institution-person.svg": 30, "institution-lock.svg": 26}.items():
+        path = directory / name
+        assert path.exists() and path.stat().st_size > 200, name
+        root = ElementTree.parse(path).getroot()
+        assert root.tag == "{http://www.w3.org/2000/svg}svg", name
+        assert root.attrib.get("width") == str(dimension), name
+        assert root.attrib.get("height") == str(dimension), name
+        assert f"/assets/figma/{name}" in overview
+    assert "figma.com/api/mcp/asset/" not in overview
