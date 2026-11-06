@@ -1,0 +1,67 @@
+/* Badban Figma — Institution / 07 & 08. Read-only empty-state pages. */
+.institution-empty-pages {gap:20px;}
+.institution-page-status {min-height:49px;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;padding:9px 17px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;}
+.institution-page-status__identity {display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#09234b;font-size:12px;}
+.institution-page-status__identity span {color:#6f7c92;font-size:11px;}
+.institution-page-status__badge,.institution-empty-panel__state {display:inline-flex;align-items:center;
+  justify-content:center;padding:7px 13px;border-radius:16px;background:#fff1cc;color:#09234b;font-size:11px;}
+.institution-empty-panel {background:#fff;border:1px solid #e2e8f0;border-radius:17px;padding:20px;min-width:0;}
+.institution-empty-panel__heading {display:flex;align-items:center;gap:13px;min-height:37px;}
+.institution-empty-panel__heading>img {width:25px;height:25px;flex:none;}
+.institution-empty-panel__heading>div {min-width:0;flex:1;}
+.institution-empty-panel__heading h2 {font-size:18px;font-weight:750;color:#09234b;margin:0;}
+.institution-empty-panel__heading p {font-size:12px;color:#6f7c92;margin:4px 0 0;}
+.institution-empty-panel__state {white-space:nowrap;}
+.institution-empty-state {min-height:255px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;text-align:center;padding:25px 12%;border-top:1px solid #edf0f5;margin-top:16px;}
+.institution-empty-state__icon,.institution-report-chart-empty__icon {width:54px;height:54px;border-radius:16px;
+  display:grid;place-items:center;background:#f5f7fc;border:1px solid #e2e8f0;}
+.institution-empty-state__icon img,.institution-report-chart-empty__icon img {width:25px;height:25px;}
+.institution-empty-state h3,.institution-report-chart-empty h3 {font-size:16px;color:#09234b;margin:0;}
+.institution-empty-state p,.institution-report-chart-empty p {font-size:12px;line-height:2;color:#6f7c92;
+  max-width:650px;margin:0;}
+.institution-empty-state__hint {display:inline-flex;padding:6px 12px;border-radius:14px;background:#f5f7fc;
+  color:#6f7c92;font-size:10px;}
+.institution-page-note {display:flex;flex-direction:column;gap:5px;padding:17px 20px;background:#fff1cc;
+  border:1px solid #f0d598;border-radius:14px;color:#09234b;line-height:1.9;}
+.institution-page-note strong {font-size:13px;}
+.institution-page-note p {font-size:11px;margin:0;}
+.institution-report-indicators {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}
+.institution-report-indicator {min-width:0;min-height:126px;padding:16px;border:1px solid #e2e8f0;
+  border-radius:17px;background:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:10px;}
+.institution-report-indicator>span {font-size:12px;color:#6f7c92;}
+.institution-report-indicator>strong {font-size:15px;line-height:1.7;color:#09234b;overflow-wrap:anywhere;}
+.institution-report-indicator>small {font-size:10px;color:#6f7c92;}
+.institution-report-grid {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:16px;}
+.institution-report-distribution {min-height:310px;}
+.institution-report-chart-empty {min-height:225px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;gap:11px;margin-top:10px;padding:20px 10%;
+  border-top:1px solid #edf0f5;}
+.institution-report-boundary {min-height:310px;}
+.institution-report-boundary ul {list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:10px;}
+.institution-report-boundary li {position:relative;background:#f5f7fc;border:1px solid #edf0f5;
+  border-radius:10px;padding:10px 32px 10px 12px;font-size:11px;color:#09234b;line-height:1.8;}
+.institution-report-boundary li::before {content:"";position:absolute;right:13px;top:18px;width:7px;height:7px;
+  border-radius:50%;background:#d7a440;}
+.institution-page-note--report {flex-direction:row;align-items:center;gap:14px;}
+.institution-page-note--report>img {width:25px;height:25px;flex:none;}
+.institution-page-note--report>div {display:flex;flex-direction:column;gap:4px;}
+@media(max-width:1000px) {
+  .institution-report-indicators {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .institution-report-grid {grid-template-columns:1fr;}
+}
+@media(max-width:600px) {
+  .institution-page-status {align-items:flex-start;flex-direction:column;}
+  .institution-empty-panel {padding:14px;}
+  .institution-empty-panel__heading {align-items:flex-start;flex-wrap:wrap;}
+  .institution-empty-panel__state {margin-right:38px;}
+  .institution-empty-state,.institution-report-chart-empty {padding:25px 8%;}
+  .institution-report-indicators {grid-template-columns:1fr 1fr;gap:9px;}
+  .institution-report-indicator {padding:12px;min-height:135px;}
+  .institution-report-indicator>strong {font-size:12px;}
+  .institution-page-note--report {align-items:flex-start;}
+}
+@media(max-width:380px) {
+  .institution-report-indicators {grid-template-columns:1fr;}
+}
