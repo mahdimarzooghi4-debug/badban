@@ -236,3 +236,16 @@ The historical Sprint 04 proposal above was superseded by later accepted Sprint 
 - An active participant identity with a verified national-ID claim now resolves or creates the exact matching individual profile during authenticated request handling.
 - Existing institution-introduced profiles are reused; creation is race-safe and audited.
 - Authentication does not enroll the individual or create any service or financial state.
+
+
+## Current Figma-to-web code candidate — 2026-11-05
+
+- [Sprints 59–63 — PR #70](https://github.com/mahdimarzooghi4-debug/badban/pull/70) remain **Draft/Open and unmerged**.
+- Sprint 59: Figma-based web foundation and four role environments.
+- Sprint 60: operational details and scoped read workspaces.
+- Sprint 61: admin access and benefit-lineage read queues.
+- Sprint 62: program, beneficiary, provider and guarantee list pagination.
+- Sprint 63: supporting-institution and lender grant request, maker-checker approval and reasoned revocation UI.
+- Exact-head Web Candidate CI #42056368480 and Full CI #42056368420 passed. Technical reviews are COMMENTED, not release approval.
+- Identity/legal-entity directory APIs, configured OIDC browser E2E, and Figma screenshot regression remain outstanding.
+- Stage remains deferred; no merge, QA admission, release approval, Production or real-money action is authorized.

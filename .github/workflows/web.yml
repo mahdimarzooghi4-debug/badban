@@ -1,0 +1,33 @@
+name: Web Candidate CI
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
+      - name: Unit tests
+        working-directory: web
+        run: npm test
+      - name: Type-check and build
+        working-directory: web
+        run: npm run build
