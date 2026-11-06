@@ -284,7 +284,15 @@ function Workspace({ token, surface, choose, logout }: {
   const selected = sections.find(s => s.id === surface)!;
   return <div className={"workspace workspace--" + surface} dir="rtl">
     <aside className="sidebar">
-      <Brand light /><p>{selected.name}</p>
+      {surface === "individual" ? <button className="applicant-logo-switch" type="button"
+        aria-label="تغییر محیط بادبان" title="بازگشت به انتخاب محیط" onClick={() => choose(null)}>
+        <Brand light />
+      </button> : <Brand light />}
+      {surface === "individual" && <span className="applicant-bell" title="سرویس اعلان‌ها متصل نیست"
+        aria-label="اعلان‌ها در این نسخه متصل نیستند">
+        <img src="/assets/figma/applicant-bell.svg" alt="" width="24" height="24" />
+      </span>}
+      <p>{selected.name}</p>
       <nav aria-label={"منوی " + selected.name}>
         {navigation[surface].map((name, index) => <div className={"nav-item" + (!index ? " nav-item--active" : "")}
           key={name}><span aria-hidden="true">{["▦", "♧", "◇", "▤", "◈", "♢", "♧", "◇", "▣"][index]}</span>
