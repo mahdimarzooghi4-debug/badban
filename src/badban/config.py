@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     oidc_discovery_url: str | None = None
     oidc_jwks_cache_seconds: int = 300
     oidc_national_id_claim: str = Field(default="national_id", min_length=1, max_length=128)
+    web_dist_dir: str | None = None
+    web_oidc_client_id: str | None = None
 
     @model_validator(mode="after")
     def validate_runtime_security(self) -> Settings:
@@ -65,6 +67,14 @@ class Settings(BaseSettings):
             raise ValueError("OIDC discovery URL must share the configured issuer origin")
         if not self.oidc_audience.strip():
             raise ValueError("BADBAN_OIDC_AUDIENCE must not be empty")
+        if self.web_dist_dir is not None and (
+            not self.web_dist_dir.strip()
+            or not self.web_oidc_client_id
+            or not self.web_oidc_client_id.strip()
+        ):
+            raise ValueError(
+                "Serving the web app requires a dist directory and public OIDC client ID"
+            )
         return self
 
     @property

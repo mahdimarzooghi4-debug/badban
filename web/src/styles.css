@@ -126,7 +126,10 @@ h1 { line-height: 1.45; }
 .sidebar>p {text-align:center;font-size:13px;color:#d3ddef;margin:21px 0;}
 .sidebar nav {display:flex;flex-direction:column;gap:6px;}
 .nav-item {display:flex;gap:11px;align-items:center;padding:11px 13px;min-height:45px;font-size:13px;
-  border-radius:12px;color:#d4dded;position:relative;}
+  border-radius:12px;color:#d4dded;position:relative;border:0;background:transparent;width:100%;
+  font-family:inherit;text-align:right;cursor:pointer;}
+.nav-item:disabled {opacity:1;cursor:default;}
+.nav-item:not(:disabled):hover:not(.nav-item--active) {background:#ffffff12;}
 .nav-item>span {width:30px;height:30px;background:#173e71;border-radius:9px;
   display:inline-flex;align-items:center;justify-content:center;color:#e0b24f;font-size:19px;}
 .nav-item small {font-size:9px;margin-right:auto;color:#b8c6df;}

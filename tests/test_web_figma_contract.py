@@ -12,6 +12,8 @@ SCOPED_API = {
     "/api/v1/applicant/service-requests": {"get", "post"},
     "/api/v1/support-institution/programs": {"get"},
     "/api/v1/support-institution/programs/{program_id}/beneficiaries": {"get"},
+    "/api/v1/support-institution/programs/{program_id}/financial-history": {"get"},
+    "/api/v1/support-institution/programs/{program_id}/financial-statement": {"get"},
     "/api/v1/lender/providers": {"get"},
     "/api/v1/lender/providers/{provider_id}/guarantees": {"get"},
     "/api/v1/admin/workspace": {"get"},
@@ -22,11 +24,14 @@ def test_figma_web_client_targets_actual_backend_contracts() -> None:
     """Web endpoints must remain present and bearer protected after refactors."""
     schema = app.openapi()
     source = (ROOT / "web" / "src" / "api.ts").read_text(encoding="utf-8")
+    ledger_source = (ROOT / "web" / "src" / "institution-ledger-data.ts").read_text(
+        encoding="utf-8"
+    )
     for path, methods in SCOPED_API.items():
         assert path in schema["paths"], path
         # Dynamic segments are encoded by the browser and bound by the router.
         fragment = path.split("/{")[0]
-        assert fragment in source, fragment
+        assert fragment in source + ledger_source, fragment
         for method in methods:
             route = schema["paths"][path][method]
             assert route.get("security"), f"Unauthenticated: {method.upper()} {path}"
@@ -88,3 +93,42 @@ def test_institution_person_figma_icons_use_exact_vector_dimensions() -> None:
         assert root.attrib.get("height") == str(dimension), name
         assert f"/assets/figma/{name}" in overview
     assert "figma.com/api/mcp/asset/" not in overview
+
+
+def test_institution_history_and_reporting_empty_states_use_local_figma_icons() -> None:
+    directory = ROOT / "web" / "public" / "assets" / "figma"
+    views = (ROOT / "web" / "src" / "institution-empty-views.tsx").read_text(encoding="utf-8")
+    shell = (ROOT / "web" / "src" / "main.tsx").read_text(encoding="utf-8")
+    navigation = (ROOT / "web" / "src" / "institution-navigation.ts").read_text(encoding="utf-8")
+    for name in ("institution-history.svg", "institution-chart.svg"):
+        path = directory / name
+        assert path.exists() and path.stat().st_size > 200, name
+        root = ElementTree.parse(path).getroot()
+        assert root.tag == "{http://www.w3.org/2000/svg}svg", name
+        assert root.attrib.get("width") == "25", name
+        assert root.attrib.get("height") == "25", name
+        assert f"/assets/figma/{name}" in views
+    assert "InstitutionHistoryView" in shell
+    assert "InstitutionReportsView" in shell
+    assert "institutionViewForNavigationIndex" in shell
+    assert 'if (index === 0) return "home";' in navigation
+    assert 'if (index === 3) return "history";' in navigation
+    assert 'if (index === 4) return "reports";' in navigation
+    assert 'aria-current={active ? "page" : undefined}' in shell
+    assert "api<" not in views
+    assert "fetch(" not in views
+    assert "figma.com/api/mcp/asset/" not in views
+
+
+def test_institution_ledger_pages_use_the_scoped_internal_journal_contract() -> None:
+    data = (ROOT / "web" / "src" / "institution-ledger-data.ts").read_text(encoding="utf-8")
+    views = (ROOT / "web" / "src" / "institution-ledger-views.tsx").read_text(encoding="utf-8")
+    assert "financialHistoryPath" in data
+    assert "financialStatementPath" in data
+    assert "verifiedFinancialHistoryPage" in data
+    assert "verifiedProgramStatement" in data
+    assert "INTERNAL_BADBAN_POSTED_JOURNAL" in data
+    assert "ثبت داخلی؛ نه تأیید انتقال بانکی" in views
+    assert "participant_id" not in views
+    assert "settlement_reference" not in views
+    assert "figma.com/api/mcp/asset/" not in data + views
