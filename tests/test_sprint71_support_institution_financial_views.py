@@ -319,7 +319,7 @@ async def test_financial_history_is_program_scoped_complete_and_paginated(
 
 
 @pytest.mark.integration
-async def test_program_statement_aggregates_owner_class_without_personal_identifiers_and_keeps_layers(
+async def test_program_statement_aggregates_owner_class_and_keeps_privacy_and_layers(
     settings: Settings,
     database,
     clean_sprint07_guarantee_tables,
@@ -349,7 +349,9 @@ async def test_program_statement_aggregates_owner_class_without_personal_identif
     data = response.json()
     assert data["source_type"] == "INTERNAL_BADBAN_POSTED_JOURNAL"
     assert data["program_id"] == str(program.id)
-    assert data["legal_entity_id"] == str(seeded["entity"].id)
+    entity = seeded["entity"]
+    assert isinstance(entity, LegalEntity)
+    assert data["legal_entity_id"] == str(entity.id)
     assert len(data["content_hash"]) == 64
     assert data["evidence_references"]
     participant_row = next(

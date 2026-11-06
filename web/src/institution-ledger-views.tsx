@@ -186,20 +186,21 @@ function HistoryContent({ data }: { data: FinancialHistoryPage }) {
           <table className="institution-ledger-table">
             <thead><tr>
               <th>حساب</th><th>مالک اقتصادی</th><th>طبقه حساب</th>
-              <th>لایه دفترکل</th><th>بدهکار</th><th>بستانکار</th>
+              <th>لایه دفترکل</th><th>ماهیت حساب</th><th>بدهکار</th><th>بستانکار</th>
             </tr></thead>
             <tbody>{entry.postings.map((posting, index) => <tr key={entry.id + ":" + index}>
               <td><strong>{posting.account_name}</strong><small dir="ltr">{posting.account_code}</small></td>
               <td>{posting.economic_owner_type}</td>
               <td>{posting.account_class}</td>
               <td>{ledgerLayerLabel(posting.ledger_layer)}</td>
+              <td>{normalBalanceLabel(posting.normal_balance)}</td>
               <td dir="ltr">{amount(posting.debit_amount, posting.currency)}</td>
               <td dir="ltr">{amount(posting.credit_amount, posting.currency)}</td>
             </tr>)}</tbody>
           </table>
         </div>
         <footer className="institution-ledger-entry__footer">
-          <span>ماهیت حساب: {normalBalanceLabel(entry.postings[0].normal_balance)}</span>
+          <span>ماهیت حساب برای هر ردیف جداگانه نمایش داده شده است</span>
           <span>مرجع شواهد: {entry.evidence_reference ?? "در این ثبت ارائه نشده است"}</span>
           {entry.policy_version_reference && <span>نسخه سیاست: {entry.policy_version_reference}</span>}
         </footer>

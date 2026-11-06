@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Literal, NoReturn
+from typing import Annotated, Literal, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -354,8 +354,11 @@ async def read_program_financial_history(
                 account_name=taxonomy.name,
                 account_class=taxonomy.account_class,
                 economic_owner_type=posting.economic_owner_type,
-                normal_balance=taxonomy.normal_balance,
-                ledger_layer=taxonomy.ledger_layer,
+                normal_balance=cast(Literal["DEBIT", "CREDIT", "MEMO"], taxonomy.normal_balance),
+                ledger_layer=cast(
+                    Literal["MONETARY", "MEMORANDUM_CONTROL", "EXTERNAL_MIRROR"],
+                    taxonomy.ledger_layer,
+                ),
                 debit_amount=debit,
                 credit_amount=credit,
                 currency=posting.currency,
@@ -585,8 +588,10 @@ async def read_program_financial_statement(
             currency=key[1],
             legal_entity_id=key[2],
             economic_owner_type=key[3],
-            ledger_layer=key[4],
-            normal_balance=key[5],
+            ledger_layer=cast(
+                Literal["MONETARY", "MEMORANDUM_CONTROL", "EXTERNAL_MIRROR"], key[4]
+            ),
+            normal_balance=cast(Literal["DEBIT", "CREDIT", "MEMO"], key[5]),
             balance=format(balance, "f"),
         )
         for key, balance in sorted(grouped.items(), key=lambda item: item[0])
