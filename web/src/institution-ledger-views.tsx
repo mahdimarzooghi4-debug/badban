@@ -364,6 +364,7 @@ function InstitutionLedgerWorkspace({ token, mode }: { token: string; mode: Mode
                 total={history.data.total_entries}
                 limit={LEDGER_PAGE_SIZE}
                 onOffset={value => {
+                  if (history.status !== "ready" || !history.data) return;
                   setHistorySnapshotAt(history.data.snapshot_at);
                   setDataOffset(value);
                 }}
@@ -379,6 +380,7 @@ function InstitutionLedgerWorkspace({ token, mode }: { token: string; mode: Mode
                 total={statement.data.total_rows}
                 limit={LEDGER_PAGE_SIZE}
                 onOffset={value => {
+                  if (statement.status !== "ready" || !statement.data) return;
                   setStatementSnapshotAt(statement.data.snapshot_at);
                   setDataOffset(value);
                 }}
