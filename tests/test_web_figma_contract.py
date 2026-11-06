@@ -92,9 +92,7 @@ def test_institution_person_figma_icons_use_exact_vector_dimensions() -> None:
 
 def test_institution_history_and_reporting_empty_states_use_local_figma_icons() -> None:
     directory = ROOT / "web" / "public" / "assets" / "figma"
-    views = (ROOT / "web" / "src" / "institution-empty-views.tsx").read_text(
-        encoding="utf-8"
-    )
+    views = (ROOT / "web" / "src" / "institution-empty-views.tsx").read_text(encoding="utf-8")
     shell = (ROOT / "web" / "src" / "main.tsx").read_text(encoding="utf-8")
     for name in ("institution-history.svg", "institution-chart.svg"):
         path = directory / name
@@ -108,5 +106,5 @@ def test_institution_history_and_reporting_empty_states_use_local_figma_icons() 
     assert "InstitutionReportsView" in shell
     assert 'setInstitutionView("history")' in shell
     assert 'setInstitutionView("reports")' in shell
-    assert "aria-current={active ? \"page\" : undefined}" in shell
+    assert 'aria-current={active ? "page" : undefined}' in shell
     assert "figma.com/api/mcp/asset/" not in views
