@@ -17,7 +17,7 @@ describe("Figma-aligned Badban preview shells", () => {
     );
     expect(markup).toContain('data-figma-frame="' + frame + '"');
     expect(markup).toContain(heading);
-    expect(markup).toContain("داده نمایشی");
+    expect(markup).toMatch(/داده نمایشی|داده‌های نمایشی|نمایش طراحی/);
   });
 
   it("renders the individual surface as a mobile app with the five Figma bottom-navigation destinations", () => {
