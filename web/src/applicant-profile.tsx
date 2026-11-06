@@ -7,8 +7,8 @@ type ProfileState =
   | { kind: "ready"; data: ApplicantProfile }
   | { kind: "error"; message: string };
 
-export function ApplicantAccount({ token, onFinancialCase }: {
-  token: string; onFinancialCase: () => void;
+export function ApplicantAccount({ token, onFinancialCase, onLogout }: {
+  token: string; onFinancialCase: () => void; onLogout: () => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -84,5 +84,8 @@ export function ApplicantAccount({ token, onFinancialCase }: {
         </div>
       </>}
     </>}
+    {!showDetails && <button type="button" className="applicant-account-logout" onClick={onLogout}>
+      خروج از حساب (محلی)
+    </button>}
   </section>;
 }
