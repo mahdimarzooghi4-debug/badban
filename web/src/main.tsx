@@ -398,18 +398,6 @@ function App() {
   if (loading) return <div className="auth-state" role="status">در حال تکمیل ورود امن…</div>;
   if (token && surface) return <Workspace key={surface} token={token} surface={surface}
     choose={s => { setSurface(s); if (!s) window.history.replaceState(null, "", "/"); }} logout={() => void logout()} />;
-  if (token) { setSurface(null); window.history.replaceState(null, "", "/app"); return; }
-    void beginSignIn().catch((e: unknown) => setError(e instanceof Error ? e.message : "ورود امکان‌پذیر نیست."));
-  }
-  async function logout() {
-    await localSignOut();
-    setToken(null); setSurface(null); setAccess(null); setError("");
-    window.history.replaceState(null, "", "/");
-  }
-
-  if (loading) return <div className="auth-state" role="status">در حال تکمیل ورود امن…</div>;
-  if (token && surface) return <Workspace key={surface} token={token} surface={surface}
-    choose={s => { setSurface(s); if (!s) window.history.replaceState(null, "", "/"); }} logout={() => void logout()} />;
   if (token) {
     const currentAccess = access?.owner === token ? access : null;
     if (!currentAccess || currentAccess.status === "loading") return <div className="choose-surface">
