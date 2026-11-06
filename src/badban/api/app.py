@@ -8,7 +8,6 @@ from fastapi import FastAPI
 from badban.api.errors import ApiError, api_error_handler
 from badban.api.health import router as health_router
 from badban.api.middleware import CorrelationIdMiddleware
-from badban.api.web_adapter import mount_same_origin_web
 from badban.api.sprint03 import router as sprint03_router
 from badban.api.sprint04 import router as sprint04_router
 from badban.api.sprint06 import router as sprint06_router
@@ -43,6 +42,7 @@ from badban.api.sprint57 import router as sprint57_router
 from badban.api.sprint64 import router as sprint64_router
 from badban.api.sprint71 import router as sprint71_router
 from badban.api.v1 import router as v1_router
+from badban.api.web_adapter import mount_same_origin_web
 from badban.application.external_evidence import EvidenceAdapterRegistry
 from badban.application.lender_adapter import LenderAdapterRegistry
 from badban.config import Settings, get_settings
