@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
 import { amount, client, type AdminWorkspace, type Service, type ServiceCode } from "./api";
 import { ApplicantRequests } from "./applicant-requests";
+import { ApplicantAccount } from "./applicant-profile";
 import { validateApplicantRequest } from "./applicant-requests-data";
 import { activeCatalogueServices } from "./applicant-services";
 import "./styles.css";
@@ -247,9 +248,8 @@ function Individual({ token }: { token: string }) {
     </Panel>}
 
     {tab === "account" && <Panel title="حساب من">
-      <div className="notice">شما از طریق سرویس احراز هویت معتبر وارد شده‌اید.
-        اطلاعات هویتی حساس و شناسه ملی از این نما نمایش داده نمی‌شود.</div>
-      <p className="muted">برای خروج از نشست محلی از گزینه «خروج از حساب» در ناوبری استفاده کنید.</p>
+      <ApplicantAccount token={token} onFinancialCase={() => setTab("financial")} />
+      <p className="notice">خروج از حساب در ناوبری، فقط نشست محلی را پاک می‌کند و خروج از ارائه‌دهنده هویت نیست.</p>
     </Panel>}
 
     <nav className="individual-tabs" aria-label="تب‌های اپلیکیشن افراد">
