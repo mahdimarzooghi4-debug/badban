@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { beginSignIn, completeSignIn, localSignOut } from "./auth";
-import { amount, client, type AdminWorkspace, type Service, type ServiceCode, type ServiceRequest } from "./api";
+import { amount, client, type AdminWorkspace, type Service, type ServiceCode } from "./api";
+import { ApplicantRequests } from "./applicant-requests";
+import { validateApplicantRequest } from "./applicant-requests-data";
 import { activeCatalogueServices } from "./applicant-services";
 import "./styles.css";
 import "./operational-details.css";
@@ -151,8 +153,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 function Individual({ token }: { token: string }) {
   const catalogue = useRemote(token, client.catalogue, "individual-service-catalogue");
   const financial = useRemote(token, client.financial, "individual-financial");
-  const requestState = useRemote(token, client.requests, "individual-requests");
-  const [items, setItems] = useState<ServiceRequest[] | null>(null);
+  const [requestRefreshKey, setRequestRefreshKey] = useState(0);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const pendingKey = useRef<{ code: ServiceCode; key: string } | null>(null);
@@ -162,8 +163,8 @@ function Individual({ token }: { token: string }) {
     setBusy(true); setStatus("");
     if (pendingKey.current?.code !== code) pendingKey.current = { code, key: crypto.randomUUID() };
     try {
-      const item = await client.submitRequest(token, code, pendingKey.current.key);
-      setItems(prev => [item, ...(prev ?? (requestState.kind === "ready" ? requestState.data.items : []))]);
+      validateApplicantRequest(await client.submitRequest(token, code, pendingKey.current.key), code);
+      setRequestRefreshKey(current => current + 1);
       setStatus("درخواست ثبت شد؛ وضعیت: دریافت‌شده. این به معنی تأیید یا پرداخت نیست.");
       pendingKey.current = null;
     } catch (error) {
@@ -179,16 +180,6 @@ function Individual({ token }: { token: string }) {
     { id: "requests", name: "درخواست‌ها", icon: "▤" },
     { id: "account", name: "حساب", icon: "♙" },
   ] as const;
-
-  const requestRows = (data: { items: ServiceRequest[] }) => {
-    const rows = items ?? data.items;
-    return rows.length ? <div className="rows">{rows.map(r =>
-      <div className="data-row" key={r.id}>
-        <strong>{services.find(s => s.code === r.service_code)?.title ?? r.service_code}</strong>
-        <span>دریافت‌شده</span>
-        <small>{new Date(r.submitted_at).toLocaleDateString("fa-IR")}</small>
-      </div>)}</div> : <Empty>هنوز درخواستی ثبت نشده است.</Empty>;
-  };
 
   const renderCatalogue = (data: { items: Service[] }, requestable: boolean) => {
     const offered = activeCatalogueServices(data.items);
@@ -221,7 +212,7 @@ function Individual({ token }: { token: string }) {
         <span className="shortcut-icon">▣</span><span><strong>مشاهده سوابق و وضعیت مالی</strong>
           <small>اطلاعات دریافت‌شده از بک‌اند بادبان</small></span><span aria-hidden="true">‹</span>
       </button></Panel>
-      <Panel title="آخرین درخواست‌ها"><Remote state={requestState} render={requestRows} /></Panel>
+      <Panel title="آخرین درخواست‌ها"><ApplicantRequests token={token} refreshKey={requestRefreshKey} compact /></Panel>
     </>}
 
     {tab === "services" && <Panel title="خدمات بادبان">
@@ -231,7 +222,7 @@ function Individual({ token }: { token: string }) {
     </Panel>}
 
     {tab === "requests" && <Panel title="درخواست‌های من">
-      <Remote state={requestState} render={requestRows} />
+      <ApplicantRequests token={token} refreshKey={requestRefreshKey} />
     </Panel>}
 
     {tab === "financial" && <Panel title="پرونده مالی">

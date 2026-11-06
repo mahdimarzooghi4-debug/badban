@@ -1,0 +1,48 @@
+/* Figma applicant nodes 163:81 and 173:2. RTL flow uses existing Badban tokens. */
+.applicant-requests, .applicant-request-detail { display:flex; flex-direction:column; gap:16px; }
+.applicant-requests>.muted, .applicant-request-detail>.muted {font-size:12px;margin:0;}
+.applicant-request-filters {display:flex;gap:9px;flex-wrap:wrap;}
+.applicant-request-filters button {border:1px solid var(--line);background:#fff;color:var(--muted);
+  border-radius:28px;min-height:36px;padding:7px 19px;font-size:12px;}
+.applicant-request-filters button.active {background:var(--navy);color:#fff;border-color:var(--navy);}
+.applicant-request-filters button:focus-visible,
+.applicant-request-card:focus-visible,
+.applicant-request-pagination button:focus-visible,
+.applicant-request-back:focus-visible {outline:3px solid var(--gold);outline-offset:3px;}
+.applicant-request-cards {display:flex;flex-direction:column;gap:11px;}
+.applicant-request-card {display:grid;grid-template-columns:minmax(0,1fr) minmax(140px,auto);gap:12px;
+  align-items:center;min-height:105px;padding:18px 20px;background:#fff;text-align:right;color:var(--brand);
+  border:1px solid var(--line);border-radius:17px;}
+.applicant-request-card:hover {border-color:var(--gold);}
+.applicant-request-type {font-size:15px;font-weight:750;}
+.applicant-request-reference {color:var(--muted);font-size:11px;unicode-bidi:isolate;text-align:left;overflow-wrap:anywhere;}
+.applicant-request-state {width:max-content;color:var(--brand);background:var(--gold-light);
+  border-radius:25px;padding:6px 18px;font-size:12px;}
+.applicant-request-date {color:var(--muted);font-size:11px;text-align:left;}
+.applicant-request-pagination {display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.applicant-request-pagination button,.applicant-request-retry,.applicant-request-back {border:1px solid var(--line);
+  border-radius:9px;padding:9px 15px;color:var(--brand);background:white;font-size:12px;}
+.applicant-request-pagination span {font-size:12px;color:var(--muted);}
+.applicant-request-retry {margin-inline-start:12px;}
+.applicant-request-guidance {background:var(--gold-light);border-radius:15px;padding:20px 23px;
+  color:var(--brand);font-size:12px;line-height:1.9;}
+.applicant-request-guidance p {margin:6px 0 0;}
+.applicant-request-detail h3 {font-size:22px;}
+.applicant-request-detail h4 {font-size:16px;margin:4px 0 0;}
+.applicant-request-back {align-self:start;}
+.applicant-request-hero {background:var(--navy);border-radius:22px;min-height:135px;
+  color:#fff;display:flex;justify-content:center;flex-direction:column;gap:9px;padding:23px 27px;}
+.applicant-request-hero strong {font-size:19px;}
+.applicant-request-hero span {font-size:12px;color:#e1e8f4;}
+.applicant-request-evidence {background:white;border-radius:16px;border:1px solid var(--line);
+  padding:22px;min-height:95px;color:var(--brand);font-size:13px;}
+.applicant-request-evidence p {margin:9px 0 0;font-weight:650;}
+.applicant-request-id {overflow-wrap:anywhere;unicode-bidi:isolate;text-align:left;direction:ltr;font-family:monospace;}
+@media(max-width:640px) {
+  .applicant-request-card {grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:16px 14px;}
+  .applicant-request-type {font-size:13px;}
+  .applicant-request-reference {font-size:10px;max-width:138px;}
+  .applicant-request-filters {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;}
+  .applicant-request-filters button {padding:6px 3px;font-size:10px;}
+  .applicant-request-state {padding:6px 12px;}
+}
